@@ -2,15 +2,16 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Brain,
   ChevronLeft,
+  Cpu,
+  Download,
+  Eraser,
+  Globe2,
+  Heart,
   Menu,
   MoreVertical,
   Pencil,
   Sparkles,
   Trash2,
-  Users,
-  Download,
-  Eraser,
-  X,
 } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { parseInput } from '@/lib/commands'
@@ -26,6 +27,8 @@ import { cn, download, uid } from '@/lib/utils'
 import type { Message } from '@/types'
 
 export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
+  const theme = useStore((s) => s.settings.theme)
+  const model = useStore((s) => s.settings.model)
   const conversation = useStore((s) =>
     s.conversations.find((c) => c.id === s.activeConversationId),
   )
@@ -62,15 +65,16 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
     streamRef.current = streaming
   }, [streaming])
 
-  const applyState = (convId: string, update: NonNullable<ReturnType<typeof extractState>['update']>) => {
+  const applyState = (
+    convId: string,
+    update: NonNullable<ReturnType<typeof extractState>['update']>,
+  ) => {
     const conv = useStore.getState().conversations.find((c) => c.id === convId)
     if (!conv?.worldState) return
     const ws = conv.worldState
     updateWorldState(convId, {
       reputation: { ...ws.reputation, ...(update.reputation ?? {}) },
-      events: update.events
-        ? [...ws.events, ...update.events].slice(-40)
-        : ws.events,
+      events: update.events ? [...ws.events, ...update.events].slice(-40) : ws.events,
       notes: update.notes ?? ws.notes,
     })
   }
@@ -87,7 +91,7 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
         id: uid('msg'),
         role: 'assistant',
         content:
-          '⚠ No API key set yet. Open **Settings → Connection**, choose your provider, paste your key and save — then send again and I will respond.',
+          '⚠ No API key configured. Open **Settings → Connection**, paste your API key, then retry.',
         timestamp: Date.now(),
         error: true,
       })
@@ -150,13 +154,13 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
           const mem = await updateMemory({ settings: state.settings, conversation: latest })
           if (mem) setMemory(convId, mem)
         } catch {
-          /* memory is best-effort; never disturb the reply on failure (e.g. rate limit) */
+          /* memory is best-effort */
         }
       }
     } catch (err) {
       const aborted = err instanceof DOMException && err.name === 'AbortError'
       const text = aborted
-        ? (acc.trim() || '_Stopped._')
+        ? acc.trim() || '_Stopped._'
         : `⚠ ${err instanceof Error ? err.message : 'Request failed.'}`
       updateMessage(convId, assistantId, { content: text, error: !aborted })
     } finally {
@@ -180,7 +184,10 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
     addMessage(convId, message)
 
     const worldCmds = parsed.commands.filter((c) => c.type === 'world')
-    if (worldCmds.length && useStore.getState().conversations.find((c) => c.id === convId)?.worldState) {
+    if (
+      worldCmds.length &&
+      useStore.getState().conversations.find((c) => c.id === convId)?.worldState
+    ) {
       const conv = useStore.getState().conversations.find((c) => c.id === convId)!
       updateWorldState(convId, {
         events: [...(conv.worldState?.events ?? []), ...worldCmds.map((c) => c.text)].slice(-40),
@@ -205,180 +212,288 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
 
   const messages = conversation?.messages ?? []
   const lastAssistantId = useMemo(() => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].role === 'assistant') return messages[i].id
+    if (!conversation) return null
+    for (let i = conversation.messages.length - 1; i >= 0; i--) {
+      if (conversation.messages[i].role === 'assistant') return conversation.messages[i].id
     }
     return null
-  }, [messages])
+  }, [conversation])
 
   if (!conversation) return null
 
+  // Reputation with this character in World mode
+  const currentRep =
+    world && character?.name && conversation.worldState?.reputation?.[character.name] !== undefined
+      ? conversation.worldState.reputation[character.name]
+      : null
+
   return (
     <div className="flex h-full min-w-0 flex-1 flex-col">
-      {/* header */}
-      <header className="hairline material pad-top flex items-center gap-2 px-2 py-2.5 sm:gap-3 sm:px-4">
-        <button
-          onClick={() => setUI({ sidebarOpen: true })}
-          className="btn btn-ghost grid size-11 shrink-0 place-items-center rounded-full p-0 lg:hidden"
-          aria-label="Open sidebar"
-        >
-          <Menu size={20} />
-        </button>
-
-        <Avatar
-          name={character?.name ?? '?'}
-          avatar={character?.avatar}
-          color={character?.avatarColor}
-          size={40}
-          ring
-          className="hidden sm:inline-flex"
-        />
-        <div className="min-w-0 flex-1">
-          {renaming ? (
-            <input
-              autoFocus
-              defaultValue={conversation.title}
-              className="field py-1 text-sm"
-              onBlur={(e) => {
-                useStore.getState().renameConversation(conversation.id, e.target.value.trim() || conversation.title)
-                setRenaming(false)
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-                if (e.key === 'Escape') setRenaming(false)
-              }}
-            />
-          ) : (
-            <h1 className="truncate font-display text-body font-semibold">
-              {character?.name ?? conversation.title}
-            </h1>
-          )}
-          <p className="truncate text-xs text-muted">
-            {character?.tagline || character?.source || 'Ready'}
-            {world ? ` · ${world.name}` : ''}
-          </p>
-        </div>
-
-        <button
-          onClick={() => setUI({ rightPanel: rightPanel === 'memory' ? 'none' : 'memory' })}
-          className={cn(
-            'btn btn-ghost size-10 shrink-0 rounded-full p-0 sm:size-9',
-            rightPanel === 'memory' && 'bg-surface-2',
-          )}
-          title="Memory"
-        >
-          <Brain size={17} />
-        </button>
-        {world && (
+      {/* Universal Header with Mode Nuances */}
+      <header className="hairline material pad-top flex items-center justify-between gap-2 px-3 py-2.5 sm:px-5">
+        <div className="flex items-center gap-2.5 min-w-0">
           <button
-            onClick={() => setUI({ rightPanel: rightPanel === 'reputation' ? 'none' : 'reputation' })}
-            className={cn(
-              'btn btn-ghost size-10 shrink-0 rounded-full p-0 sm:size-9',
-              rightPanel === 'reputation' && 'bg-surface-2',
-            )}
-            title="Reputation"
+            onClick={() => setUI({ sidebarOpen: true })}
+            className="btn btn-ghost grid size-9 shrink-0 place-items-center rounded-xl p-0 lg:hidden"
+            aria-label="Open sidebar"
           >
-            <Users size={17} />
+            <Menu size={18} />
           </button>
-        )}
 
-        <div className="relative shrink-0">
-          <button
-            onClick={() => setMenuOpen((v) => !v)}
-            className="btn btn-ghost size-10 rounded-full p-0 sm:size-9"
-            title="More"
-          >
-            <MoreVertical size={17} />
-          </button>
-          {menuOpen && (
-            <>
-              <div className="fixed inset-0 z-20" onClick={() => setMenuOpen(false)} />
-              <div className="panel anim-pop scroll-thin absolute right-0 z-30 mt-1 max-h-[70dvh] w-52 overflow-y-auto rounded-2xl p-1.5 shadow-2xl">
-                <MenuItem
-                  icon={<Pencil size={15} />}
-                  onClick={() => {
-                    setRenaming(true)
-                    setMenuOpen(false)
-                  }}
-                >
-                  Rename chat
-                </MenuItem>
-                <MenuItem
-                  icon={<Sparkles size={15} />}
-                  onClick={() => {
-                    onShowCommands()
-                    setMenuOpen(false)
-                  }}
-                >
-                  Command help
-                </MenuItem>
-                <MenuItem
-                  icon={<Download size={15} />}
-                  onClick={() => {
-                    const text = messages
-                      .map((m) => `${m.role === 'user' ? 'You' : character?.name}: ${m.content}`)
-                      .join('\n\n')
-                    download(`${conversation.title}.txt`, text)
-                    setMenuOpen(false)
-                  }}
-                >
-                  Export transcript
-                </MenuItem>
-                <MenuItem
-                  icon={<Eraser size={15} />}
-                  onClick={() => {
-                    useStore.getState().clearConversation(conversation.id)
-                    setMenuOpen(false)
-                  }}
-                >
-                  Clear messages
-                </MenuItem>
-                <div className="my-1 h-px bg-border" />
-                <MenuItem
-                  danger
-                  icon={<Trash2 size={15} />}
-                  onClick={() => {
-                    useStore.getState().deleteConversation(conversation.id)
-                    setMenuOpen(false)
-                  }}
-                >
-                  Delete chat
-                </MenuItem>
+          <Avatar
+            name={character?.name ?? '?'}
+            avatar={character?.avatar}
+            color={character?.avatarColor}
+            size={36}
+            ring
+            className="shrink-0"
+          />
+
+          <div className="min-w-0">
+            {renaming ? (
+              <input
+                autoFocus
+                defaultValue={conversation.title}
+                className="field py-0.5 text-xs h-7"
+                onBlur={(e) => {
+                  useStore
+                    .getState()
+                    .renameConversation(
+                      conversation.id,
+                      e.target.value.trim() || conversation.title,
+                    )
+                  setRenaming(false)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                  if (e.key === 'Escape') setRenaming(false)
+                }}
+              />
+            ) : (
+              <div className="flex items-center gap-2">
+                <h1 className="truncate font-display text-sm font-semibold text-fg">
+                  {character?.name ?? conversation.title}
+                </h1>
+                {theme === 'anime' && character?.canon === 'canon' && (
+                  <span className="hidden sm:inline rounded bg-accent/15 px-1.5 py-0.2 text-2xs text-accent font-medium border border-accent/25">
+                    Canon
+                  </span>
+                )}
+                {theme === 'world' && currentRep !== null && (
+                  <span
+                    className="hidden sm:inline rounded-full px-2 py-0.2 text-2xs font-semibold tabular-nums"
+                    style={{
+                      backgroundColor: 'var(--c-contrast-surface)',
+                      color: 'var(--c-accent-contrast)',
+                      border: '1px solid var(--c-contrast-border)',
+                    }}
+                  >
+                    Rep: {currentRep > 0 ? `+${currentRep}` : currentRep}
+                  </span>
+                )}
               </div>
-            </>
-          )}
+            )}
+            <p className="truncate text-2xs text-muted flex items-center gap-1.5">
+              <span>{character?.tagline || character?.source || 'Conversation'}</span>
+              {world && <span className="text-faint">· {world.name}</span>}
+            </p>
+          </div>
         </div>
 
-        <button
-          onClick={() => setUI({ sidebarOpen: false })}
-          className="btn btn-ghost hidden"
-          aria-label="Close"
-        >
-          <X size={16} />
-        </button>
+        {/* Right Header Controls */}
+        <div className="flex items-center gap-1 shrink-0">
+          {/* Quick Model Badge */}
+          <button
+            onClick={() => setUI({ settingsOpen: true, settingsTab: 'connection' })}
+            className="hidden md:flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1 text-2xs text-muted hover:bg-surface-2 hover:text-fg transition"
+            title="Active Model (Click to change)"
+          >
+            <Cpu size={12} className="text-accent" />
+            <span className="font-mono truncate max-w-[140px]">{model}</span>
+          </button>
+
+          {/* Memory toggle */}
+          <button
+            onClick={() => setUI({ rightPanel: rightPanel === 'memory' ? 'none' : 'memory' })}
+            className={cn(
+              'btn btn-ghost size-9 rounded-xl p-0',
+              rightPanel === 'memory' && 'bg-surface-2 text-accent',
+            )}
+            title="Conversation Memory"
+            aria-label="Conversation Memory"
+          >
+            <Brain size={16} />
+          </button>
+
+          {/* World HUD toggle */}
+          {world && (
+            <button
+              onClick={() =>
+                setUI({ rightPanel: rightPanel === 'reputation' ? 'none' : 'reputation' })
+              }
+              className={cn(
+                'btn btn-ghost size-9 rounded-xl p-0',
+                rightPanel === 'reputation' && 'bg-surface-2 text-accent',
+              )}
+              title="World State & Reputation"
+              aria-label="World State & Reputation"
+            >
+              <Heart size={16} />
+            </button>
+          )}
+
+          {/* Menu popover */}
+          <div className="relative">
+            <button
+              onClick={() => setMenuOpen((v) => !v)}
+              className="btn btn-ghost size-9 rounded-xl p-0"
+              title="More actions"
+              aria-label="More actions"
+            >
+              <MoreVertical size={16} />
+            </button>
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-20" onClick={() => setMenuOpen(false)} />
+                <div className="panel anim-pop scroll-thin absolute right-0 z-30 mt-1 max-h-[70dvh] w-52 overflow-y-auto rounded-xl p-1.5 shadow-2xl">
+                  <MenuItem
+                    icon={<Pencil size={14} />}
+                    onClick={() => {
+                      setRenaming(true)
+                      setMenuOpen(false)
+                    }}
+                  >
+                    Rename conversation
+                  </MenuItem>
+                  <MenuItem
+                    icon={<Sparkles size={14} />}
+                    onClick={() => {
+                      onShowCommands()
+                      setMenuOpen(false)
+                    }}
+                  >
+                    Command cheatsheet
+                  </MenuItem>
+                  <MenuItem
+                    icon={<Download size={14} />}
+                    onClick={() => {
+                      const text = messages
+                        .map(
+                          (m) =>
+                            `${m.role === 'user' ? 'You' : character?.name ?? 'Assistant'}: ${m.content}`,
+                        )
+                        .join('\n\n')
+                      download(`${conversation.title}.txt`, text)
+                      setMenuOpen(false)
+                    }}
+                  >
+                    Export transcript
+                  </MenuItem>
+                  <MenuItem
+                    icon={<Eraser size={14} />}
+                    onClick={() => {
+                      useStore.getState().clearConversation(conversation.id)
+                      setMenuOpen(false)
+                    }}
+                  >
+                    Clear messages
+                  </MenuItem>
+                  <div className="my-1 h-px bg-border" />
+                  <MenuItem
+                    danger
+                    icon={<Trash2 size={14} />}
+                    onClick={() => {
+                      useStore.getState().deleteConversation(conversation.id)
+                      setMenuOpen(false)
+                    }}
+                  >
+                    Delete conversation
+                  </MenuItem>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </header>
 
+      {/* Main Chat Area */}
       <div className="flex min-h-0 flex-1">
         <div className="flex min-w-0 flex-1 flex-col">
-          <div className="scroll-thin flex-1 overflow-y-auto px-3 py-5 sm:px-5">
+          <div className="scroll-thin flex-1 overflow-y-auto px-3 py-6 sm:px-6">
             <div className="mx-auto flex max-w-3xl flex-col gap-5">
+              {/* Empty state presentation tailored per mode */}
               {messages.length === 0 && (
-                <div className="anim-fade mt-10 flex flex-col items-center text-center">
+                <div className="anim-fade my-auto py-8 flex flex-col items-center text-center">
                   <Avatar
                     name={character?.name ?? '?'}
                     avatar={character?.avatar}
                     color={character?.avatarColor}
-                    size={72}
+                    size={68}
                     ring
-                    className="anim-floaty mb-4"
+                    className="mb-4 shadow-lg"
                   />
-                  <h3 className="font-display text-xl font-semibold">
-                    Talk to {character?.name}
-                  </h3>
-                  <p className="mt-1 max-w-sm text-sm text-muted">
-                    {character?.tagline || 'Say something to begin the scene.'}
-                  </p>
-                  <div className="mt-5 flex flex-wrap justify-center gap-2 text-xs">
+
+                  {theme === 'anime' ? (
+                    /* Anime Editorial Header */
+                    <div className="max-w-md space-y-2">
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="rounded bg-accent/15 px-2 py-0.5 text-2xs font-semibold text-accent border border-accent/25">
+                          {character?.source || 'Anime Cast'}
+                        </span>
+                        {character?.canon && (
+                          <span className="rounded bg-surface-2 px-2 py-0.5 text-2xs text-faint border border-border">
+                            {character.canon === 'canon' ? 'Canon Personality' : 'Original Creation'}
+                          </span>
+                        )}
+                      </div>
+                      <h2 className="font-display text-2xl font-bold text-fg">
+                        {character?.name}
+                      </h2>
+                      <p className="text-xs text-muted leading-relaxed">
+                        {character?.description || character?.tagline}
+                      </p>
+                      {character?.greeting && (
+                        <div className="mt-4 rounded-xl border border-accent/20 bg-accent/5 p-3.5 text-left text-xs text-fg leading-relaxed italic">
+                          "{character.greeting}"
+                        </div>
+                      )}
+                    </div>
+                  ) : theme === 'world' ? (
+                    /* World Game Interface Header */
+                    <div className="max-w-md space-y-2">
+                      <div className="flex items-center justify-center gap-1.5 text-xs text-accent">
+                        <Globe2 size={14} />
+                        <span className="font-semibold">{world?.name || 'Interactive World'}</span>
+                        <span className="text-faint">({world?.genre || 'Setting'})</span>
+                      </div>
+                      <h2 className="font-display text-2xl font-bold text-fg">
+                        Encounter with {character?.name}
+                      </h2>
+                      <p className="text-xs text-muted leading-relaxed">
+                        {character?.tagline || character?.description}
+                      </p>
+                      {world?.playerName && (
+                        <div className="mt-3 rounded-xl border border-border bg-surface p-3 text-left text-2xs space-y-1">
+                          <span className="font-semibold text-fg">Player Identity:</span>
+                          <span className="text-muted block">
+                            Playing as <strong>{world.playerName}</strong> ({world.playerRole || 'Adventurer'})
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* Chatbot Minimal Header */
+                    <div className="max-w-md space-y-1.5">
+                      <h2 className="font-display text-xl font-bold text-fg">
+                        {character?.name || 'Chatbot'}
+                      </h2>
+                      <p className="text-xs text-muted leading-relaxed">
+                        {character?.tagline || 'Ready to start the conversation.'}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="mt-5 flex flex-wrap justify-center gap-2 text-2xs text-faint">
                     <span className="chip font-mono">(thoughts)</span>
                     <span className="chip font-mono">"actions"</span>
                     <span className="chip font-mono">&lt;god command&gt;</span>
@@ -386,12 +501,18 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
                   </div>
                 </div>
               )}
+
+              {/* Message List */}
               {messages.map((m) => (
                 <MessageBubble
                   key={m.id}
                   message={m}
                   character={character}
-                  streaming={streaming && m.id === messages[messages.length - 1]?.id && m.role === 'assistant'}
+                  streaming={
+                    streaming &&
+                    m.id === messages[messages.length - 1]?.id &&
+                    m.role === 'assistant'
+                  }
                   canRegenerate={m.id === lastAssistantId && !streaming}
                   onRegenerate={handleRegenerate}
                   onDelete={() => removeMessage(conversation.id, m.id)}
@@ -400,6 +521,8 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
               <div ref={bottomRef} />
             </div>
           </div>
+
+          {/* Composer */}
           <Composer
             value={input}
             onChange={setInput}
@@ -411,6 +534,7 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
           />
         </div>
 
+        {/* Right contextual panel */}
         {rightPanel !== 'none' && (
           <RightPanel
             conversation={conversation}
@@ -440,13 +564,13 @@ function MenuItem({
     <button
       onClick={onClick}
       className={cn(
-        'flex w-full items-center gap-2.5 rounded-xl px-3 py-3 text-left text-sm transition hover:bg-surface-2 sm:py-2',
-        danger && 'text-danger hover:bg-danger/10',
+        'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs transition hover:bg-surface-2',
+        danger ? 'text-danger hover:bg-danger/10' : 'text-fg',
       )}
     >
       {icon}
       {children}
-      <ChevronLeft size={14} className="ml-auto opacity-0" />
+      <ChevronLeft size={13} className="ml-auto opacity-0" />
     </button>
   )
 }

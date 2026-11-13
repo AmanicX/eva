@@ -23,6 +23,13 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     keyUrl: 'https://console.groq.com/keys',
   },
   {
+    id: 'ollamacloud',
+    label: 'Ollama Cloud',
+    baseUrl: 'https://ollama.com/v1',
+    keyHint: 'ollama_…',
+    keyUrl: 'https://ollama.com/settings/keys',
+  },
+  {
     id: 'openrouter',
     label: 'OpenRouter',
     baseUrl: 'https://openrouter.ai/api/v1',
@@ -37,7 +44,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
   },
   {
     id: 'ollama',
-    label: 'Ollama',
+    label: 'Ollama (Local)',
     baseUrl: 'http://localhost:11434/v1',
     keyHint: 'not needed',
   },
@@ -95,6 +102,17 @@ export const GROQ_MODELS: GroqModel[] = [
  */
 export const MODEL_SUGGESTIONS: Record<string, string[]> = {
   groq: GROQ_MODELS.map((m) => m.id),
+  ollamacloud: [
+    'gemma4',
+    'gemma4:e4b',
+    'gemma4:e2b',
+    'gemma4:12b',
+    'gemma4:31b',
+    'gemma4:31b-cloud',
+    'gemma2',
+    'qwen2.5:32b',
+    'deepseek-r1:32b',
+  ],
   openrouter: [
     'cognitivecomputations/dolphin-mixtral-8x22b',
     'sao10k/l3.1-euryale-70b',
@@ -102,6 +120,8 @@ export const MODEL_SUGGESTIONS: Record<string, string[]> = {
     'anthropic/claude-3.5-sonnet',
   ],
   ollama: [
+    'gemma4',
+    'gemma4:e4b',
     'qwen2.5',
     'mistral-nemo',
     'mixtral',
@@ -232,8 +252,13 @@ export async function listGroqModels(apiKey: string, baseUrl?: string): Promise<
   })
   if (!res.ok) throw errorFrom(await res.text().catch(() => ''), res.status)
   const json = await res.json()
-  return (json?.data ?? [])
-    .map((m: { id: string }) => m.id)
-    .filter((id: string) => !NON_CHAT.test(id))
+  const rawList = Array.isArray(json?.data)
+    ? json.data
+    : Array.isArray(json?.models)
+      ? json.models
+      : []
+  return rawList
+    .map((m: { id?: string; name?: string }) => m.id || m.name || '')
+    .filter((id: string) => id && !NON_CHAT.test(id))
     .sort()
 }

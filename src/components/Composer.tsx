@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { ArrowUp, HelpCircle, Square, Zap } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface Props {
   value: string
@@ -37,7 +38,7 @@ export function Composer({
     const el = ref.current
     if (!el) return
     el.style.height = 'auto'
-    el.style.height = `${Math.min(el.scrollHeight, 220)}px`
+    el.style.height = `${Math.min(el.scrollHeight, 200)}px`
   }, [value])
 
   const insert = (left: string, right: string) => {
@@ -62,15 +63,16 @@ export function Composer({
   }
 
   return (
-    <div className="material hairline-top pad-bottom px-3 pt-2 pb-3 sm:px-5 sm:pb-4">
+    <div className="hairline-top material pad-bottom px-3 pt-2.5 pb-3 sm:px-5 sm:pb-4 transition-colors">
       <div className="mx-auto max-w-3xl">
+        {/* Command Quick Chips */}
         <div className="scrollbar-none mb-2 -mx-3 flex items-center gap-1.5 overflow-x-auto px-3 sm:mx-0 sm:flex-wrap sm:px-0">
           {SNIPPETS.map((s) => (
             <button
               key={s.label}
               onClick={() => insert(s.left, s.right)}
               title={s.title}
-              className="chip shrink-0 font-mono text-2xs"
+              className="chip shrink-0 font-mono text-2xs py-1"
             >
               {s.label}
             </button>
@@ -78,14 +80,15 @@ export function Composer({
           <button
             onClick={onShowHelp}
             title="Command reference"
-            className="chip ml-auto shrink-0 gap-1 text-2xs"
+            className="chip ml-auto shrink-0 gap-1 text-2xs py-1"
           >
             <HelpCircle size={12} /> Commands
           </button>
         </div>
 
+        {/* Input & Send control */}
         <div className="flex items-end gap-2">
-          <div className="flex min-w-0 flex-1 items-end rounded-[22px] border border-border bg-surface px-4 py-1.5 transition focus-within:border-transparent focus-within:ring-[3.5px] focus-within:ring-accent/25">
+          <div className="flex min-w-0 flex-1 items-end rounded-2xl border border-border bg-surface px-3.5 py-1 transition focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/30">
             <textarea
               ref={ref}
               value={value}
@@ -97,37 +100,49 @@ export function Composer({
               autoCorrect="on"
               placeholder={
                 characterName
-                  ? `Message ${characterName}…  (thoughts) "actions" <god> [world]`
+                  ? `Message ${characterName}… (thoughts) "actions" <god> [world]`
                   : 'Write a message…'
               }
-              className="scroll-thin max-h-56 flex-1 resize-none bg-transparent py-2 text-body leading-relaxed text-fg outline-none placeholder:text-faint"
+              className="scroll-thin max-h-52 flex-1 resize-none bg-transparent py-2 text-sm leading-relaxed text-fg outline-none placeholder:text-faint"
             />
           </div>
           {streaming ? (
             <button
               onClick={onStop}
-              className="btn btn-accent size-11 shrink-0 rounded-full p-0 sm:size-9"
+              className="btn btn-accent size-10 shrink-0 rounded-xl p-0 shadow-md transition active:scale-95"
               title="Stop generating"
+              aria-label="Stop generation"
             >
-              <Square size={15} fill="currentColor" />
+              <Square size={14} fill="currentColor" />
             </button>
           ) : (
             <button
               onClick={onSend}
               disabled={disabled || !value.trim()}
-              className="btn btn-accent size-11 shrink-0 rounded-full p-0 sm:size-9"
+              className={cn(
+                'btn size-10 shrink-0 rounded-xl p-0 transition active:scale-95',
+                value.trim()
+                  ? 'btn-accent shadow-md'
+                  : 'bg-surface-2 text-faint border-border opacity-50 cursor-not-allowed',
+              )}
               title="Send"
+              aria-label="Send message"
             >
-              <ArrowUp size={19} strokeWidth={2.6} />
+              <ArrowUp size={18} strokeWidth={2.4} />
             </button>
           )}
         </div>
+
+        {/* Footer shortcuts */}
         <div className="mt-1.5 flex items-center justify-between px-1.5 text-2xs text-faint">
           <span className="flex items-center gap-1">
-            <Zap size={11} /> Enter to send
-            <span className="hidden sm:inline">· Shift+Enter for a new line</span>
+            <Zap size={11} className="text-accent" />
+            <span>Enter to send</span>
+            <span className="hidden sm:inline">· Shift+Enter for new line</span>
           </span>
-          <span className="hidden font-mono sm:inline">( ) " " (:N) &lt; &gt; [ ]</span>
+          <span className="hidden sm:inline font-mono text-2xs">
+            (thoughts) "actions" &lt;god&gt; [world]
+          </span>
         </div>
       </div>
     </div>

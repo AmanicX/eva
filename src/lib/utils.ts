@@ -47,7 +47,7 @@ export function initials(name: string) {
 
 export function isEmoji(value: string) {
   if (!value) return false
-  const stripped = value.replace(/[\p{Extended_Pictographic}\u200d\ufe0f\s]/gu, '')
+  const stripped = value.replace(/\uFE0F/gu, '').replace(/[\p{Extended_Pictographic}\u200d\s]/gu, '')
   return stripped.length === 0
 }
 

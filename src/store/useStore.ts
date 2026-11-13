@@ -12,6 +12,7 @@ import type {
 import { DEFAULT_GLOBAL_PROMPT, DEFAULT_USER_PERSONA, PREVIOUS_DEFAULT_GLOBAL_PROMPT } from '@/lib/prompt'
 import { DEFAULT_BASE_URL } from '@/lib/groq'
 import { uid } from '@/lib/utils'
+import { DEFAULT_THEME_PALETTES } from '@/data/palettes'
 
 export const MIN_AGE = 18
 
@@ -26,13 +27,14 @@ export function normalizeAge(raw: string | undefined | null): string {
 
 export interface UIState {
   settingsOpen: boolean
-  settingsTab: 'connection' | 'persona' | 'themes' | 'commands' | 'data'
+  settingsTab: 'connection' | 'appearance' | 'persona' | 'themes' | 'commands' | 'data'
   characterModal: null | { tab: 'create' | 'browse'; editId?: string }
   worldModal: null | { tab: 'world' | 'cast'; editId?: string }
   sidebarOpen: boolean
   memoryOpen: boolean
   rightPanel: 'none' | 'reputation' | 'memory'
   welcomeOpen: boolean
+  commandPaletteOpen: boolean
 }
 
 interface State {
@@ -102,6 +104,17 @@ export const DEFAULT_SETTINGS: Settings = {
   showThoughts: true,
   bubbleStyle: 'bubbles',
   onboarded: false,
+  // Appearance & Design System
+  appearanceMode: 'dark',
+  accentPalette: 'cobalt',
+  frostedGlass: true,
+  customAccentColor: '#0a84ff',
+  customContrastColor: '#38bdf8',
+  themeAccents: {
+    chatbot: { ...DEFAULT_THEME_PALETTES.chatbot },
+    anime: { ...DEFAULT_THEME_PALETTES.anime },
+    world: { ...DEFAULT_THEME_PALETTES.world },
+  },
 }
 
 const defaultUI: UIState = {
@@ -113,6 +126,7 @@ const defaultUI: UIState = {
   memoryOpen: false,
   rightPanel: 'none',
   welcomeOpen: false,
+  commandPaletteOpen: false,
 }
 
 function emptyWorldState(npc?: string): WorldState {
@@ -142,8 +156,15 @@ export const useStore = create<State>()(
           const firstConv = s.conversations
             .filter((c) => c.theme === theme)
             .sort((a, b) => b.updatedAt - a.updatedAt)[0]
+          const savedAccent = s.settings.themeAccents?.[theme] ?? DEFAULT_THEME_PALETTES[theme]
           return {
-            settings: { ...s.settings, theme },
+            settings: {
+              ...s.settings,
+              theme,
+              accentPalette: savedAccent?.paletteId ?? s.settings.accentPalette,
+              customAccentColor: savedAccent?.primary ?? s.settings.customAccentColor,
+              customContrastColor: savedAccent?.contrast ?? s.settings.customContrastColor,
+            },
             activeConversationId: firstConv?.id ?? null,
             ui: { ...s.ui, sidebarOpen: false, rightPanel: 'none' },
           }
@@ -450,6 +471,20 @@ export const useStore = create<State>()(
       name: 'nexus-chat-store',
       version: 6,
       migrate: (persisted: any) => {
+        if (persisted?.settings) {
+          if (!persisted.settings.appearanceMode) persisted.settings.appearanceMode = 'dark'
+          if (!persisted.settings.accentPalette) persisted.settings.accentPalette = 'cobalt'
+          if (persisted.settings.frostedGlass === undefined) persisted.settings.frostedGlass = true
+          if (!persisted.settings.customAccentColor) persisted.settings.customAccentColor = '#0a84ff'
+          if (!persisted.settings.customContrastColor) persisted.settings.customContrastColor = '#38bdf8'
+          if (!persisted.settings.themeAccents) {
+            persisted.settings.themeAccents = {
+              chatbot: { ...DEFAULT_THEME_PALETTES.chatbot },
+              anime: { ...DEFAULT_THEME_PALETTES.anime },
+              world: { ...DEFAULT_THEME_PALETTES.world },
+            }
+          }
+        }
         if (persisted?.settings?.globalSystemPrompt === PREVIOUS_DEFAULT_GLOBAL_PROMPT) {
           persisted.settings.globalSystemPrompt = DEFAULT_GLOBAL_PROMPT
         }

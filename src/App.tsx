@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Menu, Terminal } from 'lucide-react'
+import { Command, Menu, Terminal } from 'lucide-react'
 import { useStore } from '@/store/useStore'
-import type { ThemeId } from '@/types'
 import { Sidebar } from '@/components/Sidebar'
 import { ChatView } from '@/components/ChatView'
 import { EmptyState } from '@/components/EmptyState'
@@ -9,29 +8,70 @@ import { SettingsModal } from '@/components/SettingsModal'
 import { CharacterModal } from '@/components/CharacterModal'
 import { WorldModal } from '@/components/WorldModal'
 import { CommandCheatsheet } from '@/components/CommandCheatsheet'
+import { CommandPalette } from '@/components/CommandPalette'
 import { Welcome } from '@/components/Welcome'
 import { Modal } from '@/components/Modal'
-
-/** Matches --c-bg in index.css, so the mobile status bar follows the theme. */
-const THEME_COLORS: Record<ThemeId, string> = {
-  chatbot: '#000000',
-  anime: '#060310',
-  world: '#03100a',
-}
+import { applyThemeTokens } from '@/data/palettes'
 
 function App() {
-  const theme = useStore((s) => s.settings.theme)
+  const settings = useStore((s) => s.settings)
   const conversation = useStore((s) =>
     s.conversations.find((c) => c.id === s.activeConversationId),
   )
   const setUI = useStore((s) => s.setUI)
   const [showCommands, setShowCommands] = useState(false)
 
+  // Apply theme tokens immediately and on preference updates
   useEffect(() => {
-    document.documentElement.dataset.theme = theme
-    const color = THEME_COLORS[theme] ?? '#000000'
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color)
-  }, [theme])
+    applyThemeTokens(
+      settings.appearanceMode,
+      settings.theme,
+      settings.customAccentColor,
+      settings.customContrastColor,
+      settings.frostedGlass,
+    )
+  }, [
+    settings.appearanceMode,
+    settings.theme,
+    settings.customAccentColor,
+    settings.customContrastColor,
+    settings.frostedGlass,
+  ])
+
+  // System appearance media query listener
+  useEffect(() => {
+    if (settings.appearanceMode !== 'system' || typeof window === 'undefined') return
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const handler = () => {
+      applyThemeTokens(
+        'system',
+        settings.theme,
+        settings.customAccentColor,
+        settings.customContrastColor,
+        settings.frostedGlass,
+      )
+    }
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [
+    settings.appearanceMode,
+    settings.theme,
+    settings.customAccentColor,
+    settings.customContrastColor,
+    settings.frostedGlass,
+  ])
+
+  // Global keyboard shortcut: Ctrl+K / Cmd+K for Command Palette
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setUI({ commandPaletteOpen: !useStore.getState().ui.commandPaletteOpen })
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [setUI])
 
   return (
     <div className="app-bg flex h-full w-full overflow-hidden text-fg">
@@ -42,15 +82,25 @@ function App() {
           <ChatView onShowCommands={() => setShowCommands(true)} />
         ) : (
           <div className="flex h-full min-w-0 flex-1 flex-col">
-            <header className="hairline material pad-top flex items-center gap-2 px-2 py-2.5 lg:hidden">
+            <header className="hairline material pad-top flex items-center justify-between px-3 py-2.5 lg:hidden">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setUI({ sidebarOpen: true })}
+                  className="btn btn-ghost grid size-10 place-items-center rounded-xl p-0"
+                  aria-label="Open sidebar"
+                >
+                  <Menu size={18} />
+                </button>
+                <span className="font-display text-body font-semibold">Nexus</span>
+              </div>
               <button
-                onClick={() => setUI({ sidebarOpen: true })}
-                className="btn btn-ghost grid size-11 place-items-center rounded-full p-0"
-                aria-label="Open sidebar"
+                onClick={() => setUI({ commandPaletteOpen: true })}
+                className="btn btn-ghost flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs text-muted"
+                aria-label="Open command palette"
               >
-                <Menu size={20} />
+                <Command size={14} />
+                <span className="text-2xs">Commands</span>
               </button>
-              <span className="font-display text-body font-semibold">Nexus</span>
             </header>
             <EmptyState />
           </div>
@@ -61,6 +111,7 @@ function App() {
       <CharacterModal />
       <WorldModal />
       <Welcome />
+      <CommandPalette />
 
       <Modal
         open={showCommands}

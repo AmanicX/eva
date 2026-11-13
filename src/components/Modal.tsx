@@ -20,7 +20,7 @@ const SIZES: Record<NonNullable<ModalProps['size']>, string> = {
   sm: 'sm:max-w-md',
   md: 'sm:max-w-xl',
   lg: 'sm:max-w-3xl',
-  xl: 'sm:max-w-5xl',
+  xl: 'sm:max-w-4xl',
 }
 
 export function Modal({
@@ -53,50 +53,51 @@ export function Modal({
       {open && (
         <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden sm:items-center sm:p-6">
           <motion.div
-            className="absolute inset-0 bg-black/55"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.18 }}
             onClick={onClose}
           />
           <motion.div
             role="dialog"
             aria-modal="true"
-            initial={{ opacity: 0, transform: 'translateY(40px) scale(0.99)' }}
-            animate={{ opacity: 1, transform: 'translateY(0px) scale(1)' }}
-            exit={{ opacity: 0, transform: 'translateY(30px) scale(0.99)' }}
-            transition={{ type: 'spring', stiffness: 420, damping: 38 }}
+            initial={{ opacity: 0, transform: 'scale(0.96) translateY(24px)' }}
+            animate={{ opacity: 1, transform: 'scale(1) translateY(0px)' }}
+            exit={{ opacity: 0, transform: 'scale(0.97) translateY(18px)' }}
+            transition={{ type: 'spring', stiffness: 400, damping: 36 }}
             className={cn(
-              'panel-solid relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-4xl shadow-2xl will-change-transform sm:my-auto sm:max-h-[88dvh] sm:rounded-4xl',
+              'panel-solid relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl shadow-2xl sm:my-auto sm:max-h-[88dvh] sm:rounded-2xl border border-border',
               SIZES[size],
             )}
           >
+            {/* Mobile drag handle */}
             <div className="flex justify-center pt-2.5 pb-1 sm:hidden">
-              <span className="h-1.5 w-9 rounded-full bg-border-strong" />
+              <span className="h-1.5 w-10 rounded-full bg-border-strong" />
             </div>
 
             {(title || icon) && (
-              <div className="flex items-start gap-3 border-b border-border px-5 py-4 sm:px-6">
+              <div className="flex items-start gap-3 border-b border-border px-5 py-3.5 sm:px-6">
                 {icon && (
-                  <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-grad text-accent-fg shadow-lg">
+                  <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent-grad text-accent-fg shadow-md">
                     {icon}
                   </span>
                 )}
                 <div className="min-w-0 flex-1">
                   {title && (
-                    <h2 className="font-display text-lg leading-tight font-semibold tracking-tight">
+                    <h2 className="font-display text-base font-semibold tracking-tight text-fg">
                       {title}
                     </h2>
                   )}
-                  {subtitle && <p className="mt-0.5 text-sm text-muted">{subtitle}</p>}
+                  {subtitle && <p className="mt-0.5 text-xs text-muted">{subtitle}</p>}
                 </div>
                 <button
                   onClick={onClose}
-                  className="btn btn-ghost -mr-2 -mt-1.5 grid size-11 shrink-0 place-items-center rounded-full p-0 sm:-mr-1.5 sm:-mt-1 sm:size-9"
+                  className="btn btn-ghost -mr-1.5 -mt-1 grid size-8 shrink-0 place-items-center rounded-lg p-0 text-faint hover:text-fg"
                   aria-label="Close"
                 >
-                  <X size={18} />
+                  <X size={16} />
                 </button>
               </div>
             )}
@@ -111,7 +112,7 @@ export function Modal({
             </div>
 
             {footer && (
-              <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border px-5 py-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] sm:px-6 sm:pb-3.5">
+              <div className="flex items-center justify-end gap-2 border-t border-border bg-surface px-5 py-3 sm:px-6">
                 {footer}
               </div>
             )}

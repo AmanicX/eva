@@ -101,6 +101,14 @@ export interface Conversation {
   pinned?: boolean
 }
 
+export type AppearanceMode = 'dark' | 'light' | 'system'
+
+export interface ThemeAccentConfig {
+  paletteId?: string
+  primary: string
+  contrast: string
+}
+
 export interface Settings {
   apiKey: string
   baseUrl: string
@@ -117,6 +125,13 @@ export interface Settings {
   showThoughts: boolean
   bubbleStyle: 'bubbles' | 'document'
   onboarded: boolean
+  // Appearance & Design System
+  appearanceMode: AppearanceMode
+  accentPalette: string
+  frostedGlass: boolean
+  customAccentColor: string
+  customContrastColor: string
+  themeAccents: Record<ThemeId, ThemeAccentConfig>
 }
 
 export interface GroqModel {
