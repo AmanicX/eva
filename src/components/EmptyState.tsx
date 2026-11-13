@@ -1,8 +1,9 @@
-import { Globe2, KeyRound, Plus, Sparkles, Users } from 'lucide-react'
+import { Check, Globe2, KeyRound, MessageSquare, Plus, Sparkles, Users } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { THEMES } from '@/data/themes'
 import { providerNeedsKey } from '@/lib/groq'
 import { Avatar } from './Avatar'
+import appIcon from '@/assets/icon.png'
 
 export function EmptyState() {
   const theme = useStore((s) => s.settings.theme)
@@ -48,9 +49,22 @@ export function EmptyState() {
           </button>
         )}
 
-        {/* Mode Icon */}
-        <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-accent-grad text-2xl text-accent-fg shadow-lg">
-          {meta.icon}
+        {/* Nexus Brand Hero & Mode Indicator */}
+        <div className="relative mx-auto mb-5 flex size-16 items-center justify-center">
+          <img
+            src={appIcon}
+            alt="Nexus Logo"
+            className="size-16 rounded-2xl object-cover shadow-2xl ring-1 ring-border/80"
+          />
+          <span className="absolute -bottom-1 -right-1 flex size-6.5 items-center justify-center rounded-lg bg-accent-grad text-xs text-accent-fg shadow-md ring-2 ring-bg">
+            {theme === 'chatbot' ? (
+              <MessageSquare size={13} />
+            ) : theme === 'anime' ? (
+              <Sparkles size={13} />
+            ) : (
+              <Globe2 size={13} />
+            )}
+          </span>
         </div>
 
         <h2 className="font-display text-2xl font-bold tracking-tight text-fg">
@@ -64,7 +78,7 @@ export function EmptyState() {
         <ul className="list mx-auto mt-6 max-w-sm text-left">
           {meta.features.map((f) => (
             <li key={f} className="list-row text-xs text-muted">
-              <Sparkles size={14} className="shrink-0 text-accent" />
+              <Check size={14} className="shrink-0 text-accent" />
               <span>{f}</span>
             </li>
           ))}

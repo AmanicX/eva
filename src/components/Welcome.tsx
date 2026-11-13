@@ -26,6 +26,7 @@ import {
 } from '@/lib/groq'
 import { Modal } from './Modal'
 import { cn } from '@/lib/utils'
+import appIcon from '@/assets/icon.png'
 
 const STEPS = [
   { label: 'Welcome', title: 'Welcome to Nexus', subtitle: 'A studio for characters, worlds and the model you choose.' },
@@ -183,6 +184,17 @@ export function Welcome() {
       <div className="scroll-thin max-h-[58dvh] overflow-y-auto p-5 sm:p-6">
         {step === 0 && (
           <div className="space-y-4">
+            <div className="flex items-center gap-3.5 p-3 rounded-2xl border border-border/70 material">
+              <img
+                src={appIcon}
+                alt="Nexus"
+                className="size-11 rounded-xl object-cover shadow-md ring-1 ring-border/80 shrink-0"
+              />
+              <div className="min-w-0">
+                <h3 className="font-display text-sm font-bold text-fg">Nexus Studio</h3>
+                <p className="text-2xs text-muted">A dedicated studio for characters, worlds, and intelligence.</p>
+              </div>
+            </div>
             <p className="text-sm leading-relaxed text-muted">
               Nexus is a free studio for writing AI characters and living inside their worlds.
               You bring the model — hosted or running on your own machine — and Nexus keeps your

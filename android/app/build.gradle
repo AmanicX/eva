@@ -18,18 +18,27 @@ android {
     }
     signingConfigs {
         release {
-            storeFile file('../nexus-release.keystore')
-            storePassword 'nexusapp2026'
-            keyAlias 'nexus'
-            keyPassword 'nexusapp2026'
+            def keystorePath = System.getenv("ANDROID_KEYSTORE_PATH") ?: "../nexus-release.keystore"
+            def keystoreFile = file(keystorePath)
+            if (keystoreFile.exists()) {
+                storeFile keystoreFile
+                storePassword System.getenv("KEYSTORE_PASSWORD") ?: (project.findProperty("KEYSTORE_PASSWORD") ?: "")
+                keyAlias System.getenv("KEY_ALIAS") ?: (project.findProperty("KEY_ALIAS") ?: "nexus")
+                keyPassword System.getenv("KEY_PASSWORD") ?: (project.findProperty("KEY_PASSWORD") ?: "")
+            }
         }
     }
     buildTypes {
         debug {
-            signingConfig signingConfigs.release
+            // Debug builds use standard Android debug key
         }
         release {
-            signingConfig signingConfigs.release
+            def keystorePath = System.getenv("ANDROID_KEYSTORE_PATH") ?: "../nexus-release.keystore"
+            def keystoreFile = file(keystorePath)
+            def hasPassword = System.getenv("KEYSTORE_PASSWORD") || project.findProperty("KEYSTORE_PASSWORD")
+            if (keystoreFile.exists() && hasPassword) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

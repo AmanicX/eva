@@ -99,9 +99,11 @@
   --c-sep: rgba(255, 255, 255, 0.06);
   --c-fill: rgba(255, 255, 255, 0.08);
   --c-fill-2: rgba(255, 255, 255, 0.04);
-  --c-glass: rgba(15, 15, 18, 0.82);
-  --c-glass-surface: rgba(21, 21, 25, 0.78);
-  --glass-blur: 16px;
+  --c-glass: rgba(13, 16, 23, 0.65);
+  --c-glass-surface: rgba(20, 24, 34, 0.60);
+  --glass-blur: 20px;
+  --c-accent-rgb: 10, 132, 255;
+  --c-contrast-rgb: 56, 189, 248;
   --c-fg: #f4f4f6;
   --c-muted: #a1a1aa;
   --c-faint: #71717a;
@@ -150,8 +152,9 @@ html.light,
   --c-sep: rgba(0, 0, 0, 0.06);
   --c-fill: rgba(0, 0, 0, 0.05);
   --c-fill-2: rgba(0, 0, 0, 0.03);
-  --c-glass: rgba(255, 255, 255, 0.85);
-  --c-glass-surface: rgba(248, 249, 250, 0.82);
+  --c-glass: rgba(255, 255, 255, 0.70);
+  --c-glass-surface: rgba(248, 250, 252, 0.65);
+  --glass-blur: 20px;
   --c-fg: #18181b;
   --c-muted: #52525b;
   --c-faint: #8c8c96;
@@ -327,21 +330,26 @@ html.light,
   .app-bg {
     position: relative;
     background-color: var(--c-bg);
+    background-image: 
+      radial-gradient(circle at 12% 18%, rgba(var(--c-accent-rgb, 10, 132, 255), 0.08) 0%, transparent 42%),
+      radial-gradient(circle at 88% 82%, rgba(var(--c-contrast-rgb, 56, 189, 248), 0.06) 0%, transparent 44%),
+      radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.012) 0%, transparent 65%);
+    background-attachment: fixed;
   }
 
   /* Surfaces & Materials (Restrained Frosted Glass) */
   .material {
     background-color: var(--c-glass);
-    backdrop-filter: blur(var(--glass-blur, 16px));
-    -webkit-backdrop-filter: blur(var(--glass-blur, 16px));
+    backdrop-filter: blur(var(--glass-blur, 20px)) saturate(180%);
+    -webkit-backdrop-filter: blur(var(--glass-blur, 20px)) saturate(180%);
   }
 
   .panel {
     background-color: var(--c-glass-surface);
     border: 1px solid var(--c-border);
-    backdrop-filter: blur(var(--glass-blur, 16px));
-    -webkit-backdrop-filter: blur(var(--glass-blur, 16px));
-    box-shadow: 0 16px 36px -12px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(var(--glass-blur, 20px)) saturate(180%);
+    -webkit-backdrop-filter: blur(var(--glass-blur, 20px)) saturate(180%);
+    box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.07);
   }
 
   .panel-solid {
@@ -352,8 +360,8 @@ html.light,
 
   .glass {
     background-color: var(--c-glass);
-    backdrop-filter: blur(var(--glass-blur, 16px));
-    -webkit-backdrop-filter: blur(var(--glass-blur, 16px));
+    backdrop-filter: blur(var(--glass-blur, 20px)) saturate(180%);
+    -webkit-backdrop-filter: blur(var(--glass-blur, 20px)) saturate(180%);
   }
 
   .bg-accent-grad {

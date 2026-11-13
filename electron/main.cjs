@@ -1,4 +1,4 @@
-const { app, BrowserWindow, session, shell } = require('electron')
+const { app, BrowserWindow, session, shell, ipcMain } = require('electron')
 const fs = require('node:fs')
 const path = require('node:path')
 
@@ -26,15 +26,18 @@ function createWindow() {
     height: 860,
     minWidth: 880,
     minHeight: 600,
-    backgroundColor: '#0b0b14',
+    backgroundColor: '#09090b',
     title: 'Nexus',
     icon: windowIcon,
     show: false,
+    frame: false,
+    titleBarStyle: 'hidden',
     autoHideMenuBar: true,
     webPreferences: {
+      preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true,
+      sandbox: false,
     },
   })
 
@@ -51,6 +54,30 @@ function createWindow() {
     win.loadFile(path.join(__dirname, '..', 'dist', 'index.html'))
   }
 }
+
+// IPC Handlers for frameless blended window controls
+ipcMain.on('window-minimize', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender)
+  if (win) win.minimize()
+})
+
+ipcMain.on('window-maximize', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender)
+  if (win) {
+    if (win.isMaximized()) win.unmaximize()
+    else win.maximize()
+  }
+})
+
+ipcMain.on('window-close', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender)
+  if (win) win.close()
+})
+
+ipcMain.handle('window-is-maximized', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender)
+  return win ? win.isMaximized() : false
+})
 
 app.whenReady().then(() => {
   if (!devServerUrl) applyCsp()

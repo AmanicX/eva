@@ -68,7 +68,7 @@ export function Modal({
             exit={{ opacity: 0, transform: 'scale(0.97) translateY(18px)' }}
             transition={{ type: 'spring', stiffness: 400, damping: 36 }}
             className={cn(
-              'panel-solid relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl shadow-2xl sm:my-auto sm:max-h-[88dvh] sm:rounded-2xl border border-border',
+              'panel relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl shadow-2xl sm:my-auto sm:max-h-[88dvh] sm:rounded-2xl border border-border/80',
               SIZES[size],
             )}
           >
@@ -112,7 +112,7 @@ export function Modal({
             </div>
 
             {footer && (
-              <div className="flex items-center justify-end gap-2 border-t border-border bg-surface px-5 py-3 sm:px-6">
+              <div className="flex items-center justify-end gap-2 border-t border-border/80 material px-5 py-3 sm:px-6">
                 {footer}
               </div>
             )}

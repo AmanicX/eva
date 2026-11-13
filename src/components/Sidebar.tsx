@@ -19,6 +19,7 @@ import { providerNeedsKey } from '@/lib/groq'
 import { Avatar } from './Avatar'
 import { ThemeSwitcher } from './ThemeSwitcher'
 import { cn, timeAgo } from '@/lib/utils'
+import appIcon from '@/assets/icon.png'
 
 export function Sidebar() {
   const theme = useStore((s) => s.settings.theme)
@@ -83,16 +84,18 @@ export function Sidebar() {
       )}
       <aside
         className={cn(
-          'safe-left fixed inset-y-0 left-0 z-40 flex w-[86%] max-w-xs flex-col border-r border-border bg-bg-2 transition-transform duration-250 lg:static lg:z-auto lg:w-72 lg:translate-x-0',
+          'safe-left fixed inset-y-0 left-0 z-40 flex w-[86%] max-w-xs flex-col border-r border-border/80 material transition-transform duration-250 lg:static lg:z-auto lg:w-72 lg:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >
         {/* Brand & Command Palette Trigger */}
         <div className="pad-top flex items-center justify-between px-4 pt-4 pb-3">
           <div className="flex items-center gap-2.5">
-            <span className="flex size-8 items-center justify-center rounded-xl bg-accent-grad text-accent-fg shadow-md">
-              <span className="font-display text-sm font-bold">N</span>
-            </span>
+            <img
+              src={appIcon}
+              alt="Nexus"
+              className="size-8 rounded-xl object-cover shadow-md ring-1 ring-border/80 shrink-0"
+            />
             <div className="min-w-0">
               <h1 className="font-display text-sm leading-none font-bold tracking-tight text-fg">
                 Nexus

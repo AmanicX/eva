@@ -32,6 +32,7 @@ import {
   suggestionsFor,
 } from '@/lib/groq'
 import { THEMES, THEME_ORDER } from '@/data/themes'
+import appIcon from '@/assets/icon.png'
 import {
   CURATED_PALETTES,
   applyThemeTokens,
@@ -109,9 +110,11 @@ export function SettingsModal() {
   }
 
   const exportData = () => {
+    // SECURITY: Strip sensitive credentials before exporting backups
+    const sanitizedSettings = { ...settings, apiKey: '' }
     download(
       `nexus-backup-${new Date().toISOString().slice(0, 10)}.json`,
-      JSON.stringify({ settings, characters, worlds, conversations }, null, 2),
+      JSON.stringify({ settings: sanitizedSettings, characters, worlds, conversations }, null, 2),
     )
   }
 
@@ -119,6 +122,10 @@ export function SettingsModal() {
     try {
       const text = await file.text()
       const parsed = JSON.parse(text)
+      // If importing an external file, preserve user's active API key unless explicitly supplied
+      if (parsed?.settings && !parsed.settings.apiKey) {
+        parsed.settings.apiKey = settings.apiKey
+      }
       replaceAll(parsed)
     } catch {
       alert('Could not read that backup file.')
@@ -416,17 +423,26 @@ export function SettingsModal() {
 
               {/* Live Design System Preview Card */}
               <Section title="Live Preview" hint="How your current combination renders in Nexus.">
-                <div className="rounded-2xl border border-border bg-surface p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-fg">Component Tokens</span>
-                    <span className="rounded-full bg-accent/15 px-2.5 py-0.5 text-2xs font-semibold text-accent border border-accent/25">
-                      Accent Active
-                    </span>
+                <div className="rounded-2xl border border-border/80 material p-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={appIcon}
+                      alt="Nexus"
+                      className="size-10 rounded-xl object-cover shadow-md ring-1 ring-border/80 shrink-0"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-fg">Component Tokens</span>
+                        <span className="rounded-full bg-accent/15 px-2.5 py-0.5 text-2xs font-semibold text-accent border border-accent/25">
+                          Accent Active
+                        </span>
+                      </div>
+                      <p className="text-2xs text-muted">
+                        Nexus balances a 60% neutral foundation with 30% structured typography and 10%
+                        accent highlights.
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted leading-relaxed">
-                    Nexus balances a 60% neutral foundation with 30% structured typography and 10%
-                    accent highlights.
-                  </p>
                   <div className="flex flex-wrap items-center gap-2 pt-1">
                     <button className="btn btn-accent text-xs px-3.5 py-2">
                       Primary Action
@@ -490,7 +506,7 @@ export function SettingsModal() {
                 <p className="text-2xs text-faint">
                   {presetId === 'ollamacloud' ? (
                     <>
-                      Ollama Cloud endpoints host Google’s Gemma 4 models. Get your API key at{' '}
+                      Ollama Cloud endpoints host hosted models (e.g. Gemma 4 31B, Llama 3.3). Usage is metered per token (~$0.14 in / $0.40 out per 1M tokens; free tier has starter usage). Get your API key at{' '}
                       <a
                         href="https://ollama.com/settings/keys"
                         target="_blank"

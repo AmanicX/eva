@@ -9,9 +9,11 @@ import { CharacterModal } from '@/components/CharacterModal'
 import { WorldModal } from '@/components/WorldModal'
 import { CommandCheatsheet } from '@/components/CommandCheatsheet'
 import { CommandPalette } from '@/components/CommandPalette'
+import { TitleBar } from '@/components/TitleBar'
 import { Welcome } from '@/components/Welcome'
 import { Modal } from '@/components/Modal'
 import { applyThemeTokens } from '@/data/palettes'
+import appIcon from '@/assets/icon.png'
 
 function App() {
   const settings = useStore((s) => s.settings)
@@ -74,38 +76,47 @@ function App() {
   }, [setUI])
 
   return (
-    <div className="app-bg flex h-full w-full overflow-hidden text-fg">
-      <Sidebar />
+    <div className="app-bg flex h-full w-full flex-col overflow-hidden text-fg">
+      <TitleBar />
 
-      <main className="flex min-w-0 flex-1 flex-col">
-        {conversation ? (
-          <ChatView onShowCommands={() => setShowCommands(true)} />
-        ) : (
-          <div className="flex h-full min-w-0 flex-1 flex-col">
-            <header className="hairline material pad-top flex items-center justify-between px-3 py-2.5 lg:hidden">
-              <div className="flex items-center gap-2">
+      <div className="flex min-h-0 flex-1 w-full overflow-hidden">
+        <Sidebar />
+
+        <main className="flex min-w-0 flex-1 flex-col">
+          {conversation ? (
+            <ChatView onShowCommands={() => setShowCommands(true)} />
+          ) : (
+            <div className="flex h-full min-w-0 flex-1 flex-col">
+              <header className="hairline material pad-top flex items-center justify-between px-3 py-2.5 lg:hidden">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setUI({ sidebarOpen: true })}
+                    className="btn btn-ghost grid size-10 place-items-center rounded-xl p-0"
+                    aria-label="Open sidebar"
+                  >
+                    <Menu size={18} />
+                  </button>
+                  <img
+                    src={appIcon}
+                    alt="Nexus"
+                    className="size-6.5 rounded-lg object-cover ring-1 ring-border/80"
+                  />
+                  <span className="font-display text-body font-semibold">Nexus</span>
+                </div>
                 <button
-                  onClick={() => setUI({ sidebarOpen: true })}
-                  className="btn btn-ghost grid size-10 place-items-center rounded-xl p-0"
-                  aria-label="Open sidebar"
+                  onClick={() => setUI({ commandPaletteOpen: true })}
+                  className="btn btn-ghost flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs text-muted"
+                  aria-label="Open command palette"
                 >
-                  <Menu size={18} />
+                  <Command size={14} />
+                  <span className="text-2xs">Commands</span>
                 </button>
-                <span className="font-display text-body font-semibold">Nexus</span>
-              </div>
-              <button
-                onClick={() => setUI({ commandPaletteOpen: true })}
-                className="btn btn-ghost flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs text-muted"
-                aria-label="Open command palette"
-              >
-                <Command size={14} />
-                <span className="text-2xs">Commands</span>
-              </button>
-            </header>
-            <EmptyState />
-          </div>
-        )}
-      </main>
+              </header>
+              <EmptyState />
+            </div>
+          )}
+        </main>
+      </div>
 
       <SettingsModal />
       <CharacterModal />

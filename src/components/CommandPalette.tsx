@@ -21,6 +21,7 @@ import { useStore } from '@/store/useStore'
 import { CURATED_PALETTES, applyThemeTokens } from '@/data/palettes'
 import { PROVIDER_PRESETS } from '@/lib/groq'
 import { cn } from '@/lib/utils'
+import appIcon from '@/assets/icon.png'
 
 interface CommandItem {
   id: string
@@ -145,15 +146,21 @@ export function CommandPalette() {
     })
 
     // 3. Appearance
-    const isDark = settings.appearanceMode === 'dark'
+    const isSystem = settings.appearanceMode === 'system'
+    const systemIsDark =
+      typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches
+    const resolvedDark = isSystem ? systemIsDark : settings.appearanceMode === 'dark'
+
     list.push({
       id: 'app-mode-toggle',
       category: 'Appearance',
-      title: `Switch to ${isDark ? 'Light' : 'Dark'} Appearance`,
-      subtitle: `Currently using ${settings.appearanceMode} mode`,
-      icon: isDark ? <Sun size={16} /> : <Moon size={16} />,
+      title: `Switch to ${resolvedDark ? 'Light' : 'Dark'} Appearance`,
+      subtitle: isSystem
+        ? `Currently following System (${resolvedDark ? 'Dark' : 'Light'})`
+        : `Currently using ${settings.appearanceMode} mode`,
+      icon: resolvedDark ? <Sun size={16} /> : <Moon size={16} />,
       action: () => {
-        const nextMode = isDark ? 'light' : 'dark'
+        const nextMode = resolvedDark ? 'light' : 'dark'
         updateSettings({ appearanceMode: nextMode })
         applyThemeTokens(
           nextMode,
@@ -164,6 +171,26 @@ export function CommandPalette() {
         )
       },
     })
+
+    if (!isSystem) {
+      list.push({
+        id: 'app-mode-system',
+        category: 'Appearance',
+        title: 'Follow System Appearance',
+        subtitle: `Match OS default (currently ${systemIsDark ? 'Dark' : 'Light'})`,
+        icon: <Zap size={16} />,
+        action: () => {
+          updateSettings({ appearanceMode: 'system' })
+          applyThemeTokens(
+            'system',
+            settings.theme,
+            settings.customAccentColor,
+            settings.customContrastColor,
+            settings.frostedGlass,
+          )
+        },
+      })
+    }
 
     list.push({
       id: 'app-frosted-toggle',
@@ -383,7 +410,7 @@ export function CommandPalette() {
         role="dialog"
         aria-modal="true"
         aria-label="Command Palette"
-        className="panel-solid relative z-10 flex max-h-[80dvh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+        className="panel relative z-10 flex max-h-[80dvh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border/80 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
       >
         {/* Search Input bar */}
         <div className="flex items-center gap-3 border-b border-border px-4 py-3 sm:px-5">
@@ -468,7 +495,7 @@ export function CommandPalette() {
         </div>
 
         {/* Footer shortcuts hint */}
-        <div className="border-t border-border bg-surface px-4 py-2 flex items-center justify-between text-2xs text-faint">
+        <div className="border-t border-border/80 material px-4 py-2 flex items-center justify-between text-2xs text-faint">
           <div className="flex items-center gap-3">
             <span>
               <kbd className="font-mono bg-surface-3 px-1 py-0.5 rounded border border-border">↑</kbd>{' '}
@@ -482,7 +509,10 @@ export function CommandPalette() {
               to select
             </span>
           </div>
-          <span>Nexus Command Palette</span>
+          <div className="flex items-center gap-1.5">
+            <img src={appIcon} alt="" className="size-3.5 rounded object-cover ring-1 ring-border/80" />
+            <span>Nexus Command Palette</span>
+          </div>
         </div>
       </div>
     </div>
