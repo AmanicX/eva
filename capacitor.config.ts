@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
   appId: 'com.nexus.chatstudio',
-  appName: 'Eva - Advanced AI chatbot app',
+  appName: 'Eva',
   webDir: 'dist',
   android: {
     // Local models (Ollama, LM Studio) are reached over plain http on the LAN,

@@ -27,7 +27,7 @@ export function normalizeAge(raw: string | undefined | null): string {
 
 export interface UIState {
   settingsOpen: boolean
-  settingsTab: 'connection' | 'appearance' | 'persona' | 'themes' | 'commands' | 'data'
+  settingsTab: 'connection' | 'appearance' | 'persona' | 'themes' | 'commands' | 'data' | 'about'
   characterModal: null | { tab: 'create' | 'browse' | 'generate'; editId?: string }
   worldModal: null | { tab: 'world' | 'cast'; editId?: string }
   sidebarOpen: boolean
