@@ -1,7 +1,7 @@
 {
-  "name": "nexus",
+  "name": "eva",
   "private": true,
-  "version": "1.3.6",
+  "version": "1.3.7",
   "description": "Eva - Advanced AI chatbot app — a multi-theme, memory-aware AI character chat studio for any OpenAI-compatible provider (Groq, OpenRouter, Ollama, LM Studio).",
   "author": "Eva",
   "license": "MIT",
@@ -54,7 +54,17 @@
       "category": "Utility",
       "synopsis": "Eva - Advanced AI chatbot app",
       "description": "Eva - Advanced AI chatbot app — a multi-theme, memory-aware AI character chat studio.",
-      "maintainer": "Eva <noreply@example.com>"
+      "maintainer": "Eva <noreply@example.com>",
+      "artifactName": "Eva-${version}.${ext}"
+    },
+    "deb": {
+      "artifactName": "eva_${version}_${arch}.${ext}"
+    },
+    "rpm": {
+      "artifactName": "eva-${version}.${arch}.${ext}"
+    },
+    "pacman": {
+      "artifactName": "eva-${version}.${ext}"
     }
   },
   "dependencies": {
