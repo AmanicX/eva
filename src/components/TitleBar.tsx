@@ -3,6 +3,7 @@ import { Minus, Search, Square, X } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { THEMES } from '@/data/themes'
 import { AppLogo } from './AppLogo'
+import { isAndroidPlatform } from '@/lib/platform'
 
 declare global {
   interface Window {
@@ -17,6 +18,7 @@ declare global {
 }
 
 export function TitleBar() {
+  const isAndroid = isAndroidPlatform()
   const [isDesktop] = useState(() => typeof window !== 'undefined' && !!window.nexusDesktop?.isElectron)
   const [isMax, setIsMax] = useState(false)
   const theme = useStore((s) => s.settings.theme)
@@ -28,6 +30,8 @@ export function TitleBar() {
       window.nexusDesktop.isMaximized().then(setIsMax)
     }
   }, [])
+
+  if (isAndroid) return null
 
   const handleMinimize = () => window.nexusDesktop?.minimize()
   const handleMaximize = async () => {

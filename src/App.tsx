@@ -13,7 +13,10 @@ import { TitleBar } from '@/components/TitleBar'
 import { Welcome } from '@/components/Welcome'
 import { Modal } from '@/components/Modal'
 import { applyThemeTokens } from '@/data/palettes'
+import { THEMES } from '@/data/themes'
 import { AppLogo } from '@/components/AppLogo'
+import { isAndroidPlatform, isDesktopPlatform } from '@/lib/platform'
+import { cn } from '@/lib/utils'
 
 function App() {
   const settings = useStore((s) => s.settings)
@@ -22,14 +25,17 @@ function App() {
   )
   const setUI = useStore((s) => s.setUI)
   const [showCommands, setShowCommands] = useState(false)
-  const isDesktop = typeof window !== 'undefined' && !!(window as any).nexusDesktop?.isElectron
+  const isAndroid = isAndroidPlatform()
+  const isDesktop = isDesktopPlatform()
 
   // Synchronize platform & frosted state on root elements
   useEffect(() => {
-    document.documentElement.dataset.platform = isDesktop ? 'desktop' : 'web'
+    const platform = isAndroid ? 'android' : isDesktop ? 'desktop' : 'web'
+    document.documentElement.dataset.platform = platform
+    document.body.dataset.platform = platform
     document.documentElement.dataset.frosted = String(settings.frostedGlass)
     document.body.dataset.frosted = String(settings.frostedGlass)
-  }, [isDesktop, settings.frostedGlass])
+  }, [isAndroid, isDesktop, settings.frostedGlass])
 
   // Apply theme tokens immediately and on preference updates
   useEffect(() => {
@@ -86,7 +92,7 @@ function App() {
   return (
     <div className="app-bg relative flex h-full w-full flex-col overflow-hidden text-fg">
       <div className="relative z-10 flex h-full w-full flex-col overflow-hidden">
-        <TitleBar />
+        {!isAndroid && <TitleBar />}
 
         <div className="flex min-h-0 flex-1 w-full overflow-hidden">
           <Sidebar />
@@ -96,26 +102,45 @@ function App() {
               <ChatView onShowCommands={() => setShowCommands(true)} />
             ) : (
               <div className="flex h-full min-w-0 flex-1 flex-col material-workspace">
-                <header className="hairline material-header pad-top flex items-center justify-between px-3 py-2.5 lg:hidden">
-                  <div className="flex items-center gap-2">
+                <header
+                  className={cn(
+                    'hairline material-header pad-top flex items-center px-3 py-2.5 lg:hidden',
+                    isAndroid ? 'gap-2.5' : 'justify-between',
+                  )}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
                     <button
                       onClick={() => setUI({ sidebarOpen: true })}
-                      className="btn btn-ghost grid size-10 place-items-center rounded-xl p-0"
+                      className="btn btn-ghost grid size-10 place-items-center rounded-xl p-0 shrink-0"
                       aria-label="Open sidebar"
                     >
                       <Menu size={18} />
                     </button>
-                    <AppLogo className="size-6.5 rounded-lg ring-1 ring-border/80" />
-                    <span className="font-display text-body font-semibold">Nexus</span>
+                    <AppLogo className="size-7 rounded-lg ring-1 ring-border/80 shadow-xs shrink-0" />
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="font-display text-sm font-semibold tracking-tight text-fg">
+                        Nexus
+                      </span>
+                      {isAndroid && (
+                        <>
+                          <span className="text-3xs text-faint">·</span>
+                          <span className="text-2xs text-muted font-medium truncate">
+                            {THEMES[settings.theme].name}
+                          </span>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <button
-                    onClick={() => setUI({ commandPaletteOpen: true })}
-                    className="btn btn-ghost flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs text-muted"
-                    aria-label="Open command palette"
-                  >
-                    <Command size={14} />
-                    <span className="text-2xs">Commands</span>
-                  </button>
+                  {!isAndroid && (
+                    <button
+                      onClick={() => setUI({ commandPaletteOpen: true })}
+                      className="btn btn-ghost flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs text-muted shrink-0"
+                      aria-label="Open command palette"
+                    >
+                      <Command size={14} />
+                      <span className="text-2xs">Commands</span>
+                    </button>
+                  )}
                 </header>
                 <EmptyState />
               </div>
