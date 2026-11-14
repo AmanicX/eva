@@ -68,12 +68,18 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK packages
+      - name: Configure Android SDK and licenses
         run: |
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
-          sdkmanager "platform-tools" "platforms;android-35" "platforms;android-36" "build-tools;35.0.0" "build-tools;36.0.0"
+          ANDROID_SDK_PATH="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          echo "sdk.dir=$ANDROID_SDK_PATH" > android/local.properties
+          echo "ANDROID_HOME=$ANDROID_SDK_PATH" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_PATH" >> $GITHUB_ENV
+          echo "$ANDROID_SDK_PATH/cmdline-tools/latest/bin" >> $GITHUB_PATH
+          echo "$ANDROID_SDK_PATH/platform-tools" >> $GITHUB_PATH
+          
+          SDKMANAGER="$ANDROID_SDK_PATH/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-35" "platforms;android-36" "build-tools;35.0.0" "build-tools;36.0.0" || true
 
       - uses: gradle/actions/setup-gradle@v4
 
@@ -85,18 +91,26 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Configure signing keystore
+      - name: Configure and verify signing keystore
         run: |
           if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
-            echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/nexus-release.keystore
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > /tmp/override.keystore
+            if keytool -list -keystore /tmp/override.keystore -storepass "${KEYSTORE_PASSWORD:-nexusapp2026}" > /dev/null 2>&1; then
+              cp /tmp/override.keystore android/nexus-release.keystore
+              echo "Using verified keystore from ANDROID_KEYSTORE_BASE64 secret."
+            else
+              echo "Warning: ANDROID_KEYSTORE_BASE64 secret could not be read; using committed android/nexus-release.keystore."
+            fi
           fi
           if [ ! -f "android/nexus-release.keystore" ]; then
             echo "Error: android/nexus-release.keystore not found!"
             exit 1
           fi
-          echo "Verified release keystore exists at android/nexus-release.keystore"
+          echo "=== Keystore Verification ==="
+          keytool -list -v -keystore android/nexus-release.keystore -storepass "${KEYSTORE_PASSWORD:-nexusapp2026}"
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || 'nexusapp2026' }}
 
       - name: Build release APK
         run: |

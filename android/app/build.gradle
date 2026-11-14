@@ -20,36 +20,26 @@ android {
         debug {
             v1SigningEnabled true
             v2SigningEnabled true
+            storeFile file(System.getenv("ANDROID_KEYSTORE_PATH") ?: '../nexus-release.keystore')
+            storePassword System.getenv("KEYSTORE_PASSWORD") ?: 'nexusapp2026'
+            keyAlias System.getenv("KEY_ALIAS") ?: 'nexus'
+            keyPassword System.getenv("KEY_PASSWORD") ?: 'nexusapp2026'
         }
         release {
             v1SigningEnabled true
             v2SigningEnabled true
-            def keystorePath = System.getenv("ANDROID_KEYSTORE_PATH") ?: "../nexus-release.keystore"
-            def keystoreFile = file(keystorePath)
-            if (keystoreFile.exists()) {
-                storeFile keystoreFile
-                storePassword System.getenv("KEYSTORE_PASSWORD") ?: "nexusapp2026"
-                keyAlias System.getenv("KEY_ALIAS") ?: "nexus"
-                keyPassword System.getenv("KEY_PASSWORD") ?: "nexusapp2026"
-            }
+            storeFile file(System.getenv("ANDROID_KEYSTORE_PATH") ?: '../nexus-release.keystore')
+            storePassword System.getenv("KEYSTORE_PASSWORD") ?: 'nexusapp2026'
+            keyAlias System.getenv("KEY_ALIAS") ?: 'nexus'
+            keyPassword System.getenv("KEY_PASSWORD") ?: 'nexusapp2026'
         }
     }
     buildTypes {
         debug {
-            def keystorePath = System.getenv("ANDROID_KEYSTORE_PATH") ?: "../nexus-release.keystore"
-            def keystoreFile = file(keystorePath)
-            if (keystoreFile.exists()) {
-                signingConfig signingConfigs.release
-            }
+            signingConfig signingConfigs.release
         }
         release {
-            def keystorePath = System.getenv("ANDROID_KEYSTORE_PATH") ?: "../nexus-release.keystore"
-            def keystoreFile = file(keystorePath)
-            if (keystoreFile.exists()) {
-                signingConfig signingConfigs.release
-            } else {
-                signingConfig signingConfigs.debug
-            }
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
