@@ -112,21 +112,6 @@ export function Sidebar() {
           <ThemeSwitcher />
         </div>
 
-        {/* Quick Search / Command Palette Access */}
-        <div className="mt-2.5 px-3">
-          <button
-            onClick={() => {
-              setUI({ commandPaletteOpen: true, sidebarOpen: false })
-            }}
-            className="flex w-full items-center gap-2 rounded-xl border border-border/80 bg-surface/60 px-3 py-1.5 text-xs text-muted hover:border-accent/40 hover:bg-surface hover:text-fg transition shadow-2xs"
-            title="Search chats, models & commands"
-            aria-label="Search chats, models and commands"
-          >
-            <Search size={13} className="text-faint shrink-0" />
-            <span className="truncate">Search chats & commands…</span>
-          </button>
-        </div>
-
         {/* World selector + Create button */}
         <div className="mt-3 flex items-center gap-2 px-3">
           <button
