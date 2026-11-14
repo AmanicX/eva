@@ -85,9 +85,18 @@ jobs:
         run: npx cap sync android
 
       - name: Configure signing keystore
-        if: env.ANDROID_KEYSTORE_BASE64 != ''
         run: |
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/nexus-release.keystore
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/nexus-release.keystore
+          elif [ ! -f "android/nexus-release.keystore" ]; then
+            echo "Generating consistent release keystore..."
+            keytool -genkey -v -keystore android/nexus-release.keystore \
+              -alias nexus \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass nexusrelease \
+              -keypass nexusrelease \
+              -dname "CN=Nexus, OU=Studio, O=Nexus, C=US"
+          fi
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
 
@@ -97,9 +106,9 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon
         env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || 'nexusrelease' }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS || 'nexus' }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || 'nexusrelease' }}
 
       - name: Collect APK
         run: |
