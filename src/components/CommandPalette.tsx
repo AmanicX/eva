@@ -21,7 +21,7 @@ import { useStore } from '@/store/useStore'
 import { CURATED_PALETTES, applyThemeTokens } from '@/data/palettes'
 import { PROVIDER_PRESETS } from '@/lib/groq'
 import { cn } from '@/lib/utils'
-import appIcon from '@/assets/icon.png'
+import { AppLogo } from '@/components/AppLogo'
 
 interface CommandItem {
   id: string
@@ -510,7 +510,7 @@ export function CommandPalette() {
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <img src={appIcon} alt="" className="size-3.5 rounded object-cover ring-1 ring-border/80" />
+            <AppLogo alt="" className="size-3.5 rounded object-cover ring-1 ring-border/80" />
             <span>Nexus Command Palette</span>
           </div>
         </div>

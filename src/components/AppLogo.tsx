@@ -10,7 +10,10 @@ interface AppLogoProps {
 
 export function AppLogo({ className, alt = 'Nexus' }: AppLogoProps) {
   const appearanceMode = useStore((s) => s.settings.appearanceMode)
-  const isLight = appearanceMode === 'light'
+  const isSystem = appearanceMode === 'system'
+  const systemIsLight =
+    typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: light)').matches
+  const isLight = isSystem ? systemIsLight : appearanceMode === 'light'
   return (
     <img
       src={isLight ? iconLight : iconDark}

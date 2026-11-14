@@ -122,9 +122,19 @@ export function SettingsModal() {
     try {
       const text = await file.text()
       const parsed = JSON.parse(text)
-      // If importing an external file, preserve user's active API key unless explicitly supplied
-      if (parsed?.settings && !parsed.settings.apiKey) {
-        parsed.settings.apiKey = settings.apiKey
+      if (parsed?.settings) {
+        if (!parsed.settings.apiKey) {
+          // Preserve existing active API key if backup does not contain one
+          parsed.settings.apiKey = settings.apiKey
+        } else if (settings.apiKey && parsed.settings.apiKey !== settings.apiKey) {
+          // If backup contains a different API key, confirm with user before overwriting
+          const shouldOverwrite = window.confirm(
+            'The backup file contains an API key. Would you like to overwrite your active API key with the one from the backup?'
+          )
+          if (!shouldOverwrite) {
+            parsed.settings.apiKey = settings.apiKey
+          }
+        }
       }
       replaceAll(parsed)
     } catch {
@@ -533,6 +543,7 @@ export function SettingsModal() {
                       type={showKey ? 'text' : 'password'}
                       value={settings.apiKey}
                       onChange={(e) => updateSettings({ apiKey: e.target.value })}
+                      onBlur={(e) => updateSettings({ apiKey: e.target.value.trim() })}
                       placeholder={activePreset?.keyHint ?? 'your key'}
                       className="field pr-12 font-mono text-xs sm:pr-9"
                       spellCheck={false}
