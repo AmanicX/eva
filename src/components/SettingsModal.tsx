@@ -32,8 +32,7 @@ import {
   suggestionsFor,
 } from '@/lib/groq'
 import { THEMES, THEME_ORDER } from '@/data/themes'
-import appIcon from '@/assets/icon.png'
-import { WALLPAPER_PRESETS } from '@/data/wallpapers'
+import { AppLogo } from './AppLogo'
 import {
   CURATED_PALETTES,
   applyThemeTokens,
@@ -411,89 +410,22 @@ export function SettingsModal() {
                 hint="Controlled background blur on floating panels and headers. Disable for solid, high-contrast surfaces."
               >
                 <Toggle
-                  label="Enable Frosted Glass"
+                  label="Frosted Glass & Window Transparency"
                   desc={
                     settings.frostedGlass
-                      ? 'Subtle translucency & backdrop blur enabled on overlays and header surfaces.'
-                      : 'Solid opaque surfaces enabled everywhere for crisp readability.'
+                      ? 'Real operating-system desktop transparency on desktop (Windows 11 acrylic, macOS vibrancy, Linux Wayland/X11 compositors). Translucent smoky panels with subtle depth.'
+                      : 'Solid opaque surfaces with zero transparency and zero blur for distraction-free, maximum contrast reading.'
                   }
                   checked={settings.frostedGlass}
                   onChange={handleFrostedToggle}
                 />
               </Section>
 
-              {/* Wallpaper & Scrim Setting */}
-              {settings.frostedGlass && (
-                <Section
-                  title="Atmospheric Wallpaper"
-                  hint="Select the scenic background image that softly diffuses through your frosted glass panels."
-                >
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                    {WALLPAPER_PRESETS.map((wp) => {
-                      const active = (settings.wallpaper || 'midnight-mountain') === wp.id
-                      return (
-                        <button
-                          key={wp.id}
-                          onClick={() => updateSettings({ wallpaper: wp.id })}
-                          className={cn(
-                            'group relative flex flex-col items-center gap-1.5 rounded-xl border p-2 text-left transition',
-                            active
-                              ? 'border-accent bg-accent/10 ring-2 ring-accent/30'
-                              : 'border-border bg-surface hover:border-border-strong hover:bg-surface-2',
-                          )}
-                        >
-                          <div className="relative h-16 w-full overflow-hidden rounded-lg bg-bg-2 border border-border/60">
-                            {wp.url ? (
-                              <img
-                                src={wp.url}
-                                alt={wp.label}
-                                className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                              />
-                            ) : (
-                              <div className="flex h-full w-full items-center justify-center bg-surface-2 text-2xs text-faint">
-                                None
-                              </div>
-                            )}
-                            {active && (
-                              <span className="absolute top-1 right-1 flex size-4 items-center justify-center rounded-full bg-accent text-accent-fg shadow-xs">
-                                <Check size={10} />
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-2xs font-semibold text-fg truncate w-full text-center">
-                            {wp.label}
-                          </span>
-                        </button>
-                      )
-                    })}
-                  </div>
-
-                  <div className="pt-2">
-                    <Slider
-                      label="Wallpaper Smoky Tint / Darkness"
-                      value={Math.round((settings.wallpaperDarkness ?? 0.55) * 100)}
-                      min={25}
-                      max={85}
-                      step={5}
-                      display={`${Math.round((settings.wallpaperDarkness ?? 0.55) * 100)}%`}
-                      onChange={(v) => updateSettings({ wallpaperDarkness: v / 100 })}
-                    />
-                    <p className="text-3xs text-faint mt-1">
-                      Controls the dark translucent scrim over the background. Higher values increase contrast and text legibility.
-                    </p>
-                  </div>
-                </Section>
-              )}
-
               {/* Live Design System Preview Card */}
               <Section title="Live Preview" hint="How your current combination renders in Nexus.">
                 <div className="rounded-2xl border border-border/80 material p-4 space-y-3">
                   <div className="flex items-center gap-3">
-                    <img
-                      src={appIcon}
-                      alt="Nexus"
-                      className="size-10 rounded-xl object-cover shadow-md ring-1 ring-border/80 shrink-0"
-                    />
+                    <AppLogo className="size-10 shadow-md ring-1 ring-border/80" />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-semibold text-fg">Component Tokens</span>

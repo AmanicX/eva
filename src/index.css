@@ -101,16 +101,15 @@
   --c-fill-2: rgba(255, 255, 255, 0.04);
 
   /* Multi-tier Frosted Glass Tokens (Dark Mode) */
-  --c-glass-sidebar: rgba(11, 13, 18, 0.62);
-  --c-glass-header: rgba(13, 16, 23, 0.65);
+  --c-glass-sidebar: rgba(11, 13, 18, 0.65);
+  --c-glass-header: rgba(13, 16, 23, 0.68);
   --c-glass-composer: rgba(14, 17, 24, 0.72);
-  --c-glass-workspace: rgba(9, 10, 14, 0.38);
-  --c-glass-panel: rgba(18, 22, 30, 0.78);
-  --c-glass-modal: rgba(15, 18, 26, 0.82);
-  --c-glass: rgba(13, 16, 23, 0.65);
+  --c-glass-workspace: rgba(9, 10, 14, 0.40);
+  --c-glass-panel: rgba(18, 22, 30, 0.80);
+  --c-glass-modal: rgba(15, 18, 26, 0.85);
+  --c-glass: rgba(13, 16, 23, 0.68);
   --c-glass-surface: rgba(18, 22, 30, 0.75);
   --glass-blur: 24px;
-  --c-wallpaper-darkness: 0.55;
 
   --c-accent-rgb: 37, 99, 235;
   --c-contrast-rgb: 2, 132, 199;
@@ -173,7 +172,6 @@ html.light,
   --c-glass: rgba(255, 255, 255, 0.70);
   --c-glass-surface: rgba(248, 250, 252, 0.80);
   --glass-blur: 24px;
-  --c-wallpaper-darkness: 0.65;
 
   --c-fg: #0f172a;
   --c-muted: #475569;
@@ -206,6 +204,30 @@ html.light,
 [data-frosted='false'] .glass {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+}
+
+/* Mobile & Android Material Optimization: Subtle, performant card translucency */
+@media (max-width: 768px), (pointer: coarse) {
+  :root {
+    --glass-blur: 10px;
+    --c-glass-sidebar: rgba(14, 17, 24, 0.88);
+    --c-glass-header: rgba(15, 18, 26, 0.90);
+    --c-glass-composer: rgba(16, 20, 28, 0.92);
+    --c-glass-workspace: rgba(11, 13, 18, 0.65);
+    --c-glass-panel: rgba(18, 22, 32, 0.92);
+    --c-glass-modal: rgba(16, 19, 28, 0.95);
+  }
+
+  html.light,
+  [data-appearance='light'] {
+    --glass-blur: 10px;
+    --c-glass-sidebar: rgba(255, 255, 255, 0.88);
+    --c-glass-header: rgba(255, 255, 255, 0.90);
+    --c-glass-composer: rgba(255, 255, 255, 0.92);
+    --c-glass-workspace: rgba(255, 255, 255, 0.65);
+    --c-glass-panel: rgba(255, 255, 255, 0.92);
+    --c-glass-modal: rgba(255, 255, 255, 0.96);
+  }
 }
 
 /* ------------------------------------------------------------------ *
@@ -365,14 +387,31 @@ html.light,
     background: transparent;
   }
 
-  /* App Shell & Background */
+  /* Application Atmospheric Background Canvas (Self-contained, no external wallpapers) */
   .app-bg {
     position: relative;
     background-color: var(--c-bg);
+    background-image:
+      radial-gradient(ellipse 90% 60% at 50% -10%, rgba(var(--c-accent-rgb), 0.14), transparent 70%),
+      radial-gradient(ellipse 70% 50% at 85% 85%, rgba(var(--c-contrast-rgb), 0.08), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 15% 75%, rgba(var(--c-accent-rgb), 0.06), transparent 50%);
+    background-attachment: fixed;
+    background-size: 100% 100%;
+    transition: background 0.3s ease;
   }
 
-  [data-frosted='true'] .app-bg {
-    background-color: transparent !important;
+  html.light .app-bg,
+  [data-appearance='light'] .app-bg {
+    background-color: var(--c-bg);
+    background-image:
+      radial-gradient(ellipse 90% 60% at 50% -10%, rgba(var(--c-accent-rgb), 0.08), transparent 70%),
+      radial-gradient(ellipse 70% 50% at 85% 85%, rgba(var(--c-contrast-rgb), 0.05), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 15% 75%, rgba(var(--c-accent-rgb), 0.04), transparent 50%);
+  }
+
+  [data-frosted='false'] .app-bg {
+    background-image: none !important;
+    background-color: var(--c-bg) !important;
   }
 
   /* Multi-tier Material System (Atmospheric Frosted Glass) */

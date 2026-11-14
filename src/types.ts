@@ -129,9 +129,6 @@ export interface Settings {
   appearanceMode: AppearanceMode
   accentPalette: string
   frostedGlass: boolean
-  wallpaper: string
-  customWallpaperUrl?: string
-  wallpaperDarkness: number
   customAccentColor: string
   customContrastColor: string
   themeAccents: Record<ThemeId, ThemeAccentConfig>

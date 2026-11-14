@@ -11,7 +11,6 @@ import {
   Compass,
   X,
   Info,
-  Command,
 } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { THEMES } from '@/data/themes'
@@ -19,7 +18,7 @@ import { providerNeedsKey } from '@/lib/groq'
 import { Avatar } from './Avatar'
 import { ThemeSwitcher } from './ThemeSwitcher'
 import { cn, timeAgo } from '@/lib/utils'
-import appIcon from '@/assets/icon.png'
+import { AppLogo } from './AppLogo'
 
 export function Sidebar() {
   const theme = useStore((s) => s.settings.theme)
@@ -88,14 +87,10 @@ export function Sidebar() {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        {/* Brand & Command Palette Trigger */}
+        {/* Brand */}
         <div className="pad-top flex items-center justify-between px-4 pt-4 pb-3">
           <div className="flex items-center gap-2.5">
-            <img
-              src={appIcon}
-              alt="Nexus"
-              className="size-8 rounded-xl object-cover shadow-md ring-1 ring-border/80 shrink-0"
-            />
+            <AppLogo className="size-8 shadow-md ring-1 ring-border/80" />
             <div className="min-w-0">
               <h1 className="font-display text-sm leading-none font-bold tracking-tight text-fg">
                 Nexus
@@ -103,24 +98,13 @@ export function Sidebar() {
               <p className="mt-0.5 truncate text-2xs text-faint">{meta.name} Mode</p>
             </div>
           </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setUI({ commandPaletteOpen: true })}
-              className="flex items-center gap-1 rounded-lg border border-border bg-surface px-2 py-1 text-2xs text-muted hover:bg-surface-2 hover:text-fg transition"
-              title="Command Palette (Ctrl+K / Cmd+K)"
-              aria-label="Open command palette"
-            >
-              <Command size={12} />
-              <span className="font-mono text-2xs font-semibold">K</span>
-            </button>
-            <button
-              className="btn btn-ghost grid size-8 place-items-center rounded-lg p-0 lg:hidden text-faint"
-              onClick={() => setUI({ sidebarOpen: false })}
-              aria-label="Close sidebar"
-            >
-              <X size={16} />
-            </button>
-          </div>
+          <button
+            className="btn btn-ghost grid size-8 place-items-center rounded-lg p-0 lg:hidden text-faint"
+            onClick={() => setUI({ sidebarOpen: false })}
+            aria-label="Close sidebar"
+          >
+            <X size={16} />
+          </button>
         </div>
 
         {/* Theme mode switcher */}

@@ -3,7 +3,7 @@ import { useStore } from '@/store/useStore'
 import { THEMES } from '@/data/themes'
 import { providerNeedsKey } from '@/lib/groq'
 import { Avatar } from './Avatar'
-import appIcon from '@/assets/icon.png'
+import { AppLogo } from './AppLogo'
 
 export function EmptyState() {
   const theme = useStore((s) => s.settings.theme)
@@ -51,11 +51,7 @@ export function EmptyState() {
 
         {/* Nexus Brand Hero & Mode Indicator */}
         <div className="relative mx-auto mb-5 flex size-16 items-center justify-center">
-          <img
-            src={appIcon}
-            alt="Nexus Logo"
-            className="size-16 rounded-2xl object-cover shadow-2xl ring-1 ring-border/80"
-          />
+          <AppLogo className="size-16 rounded-2xl shadow-2xl ring-1 ring-border/80" />
           <span className="absolute -bottom-1 -right-1 flex size-6.5 items-center justify-center rounded-lg bg-accent-grad text-xs text-accent-fg shadow-md ring-2 ring-bg">
             {theme === 'chatbot' ? (
               <MessageSquare size={13} />

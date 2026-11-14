@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Command, Menu, Terminal } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { Sidebar } from '@/components/Sidebar'
@@ -13,8 +13,7 @@ import { TitleBar } from '@/components/TitleBar'
 import { Welcome } from '@/components/Welcome'
 import { Modal } from '@/components/Modal'
 import { applyThemeTokens } from '@/data/palettes'
-import { WALLPAPER_PRESETS } from '@/data/wallpapers'
-import appIcon from '@/assets/icon.png'
+import { AppLogo } from '@/components/AppLogo'
 
 function App() {
   const settings = useStore((s) => s.settings)
@@ -23,6 +22,14 @@ function App() {
   )
   const setUI = useStore((s) => s.setUI)
   const [showCommands, setShowCommands] = useState(false)
+  const isDesktop = typeof window !== 'undefined' && !!(window as any).nexusDesktop?.isElectron
+
+  // Synchronize platform & frosted state on root elements
+  useEffect(() => {
+    document.documentElement.dataset.platform = isDesktop ? 'desktop' : 'web'
+    document.documentElement.dataset.frosted = String(settings.frostedGlass)
+    document.body.dataset.frosted = String(settings.frostedGlass)
+  }, [isDesktop, settings.frostedGlass])
 
   // Apply theme tokens immediately and on preference updates
   useEffect(() => {
@@ -76,36 +83,8 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [setUI])
 
-  const currentWallpaper = useMemo(() => {
-    if (!settings.frostedGlass || settings.wallpaper === 'none') return null
-    if (settings.wallpaper === 'custom' && settings.customWallpaperUrl) {
-      return settings.customWallpaperUrl
-    }
-    const preset = WALLPAPER_PRESETS.find((w) => w.id === settings.wallpaper)
-    return preset?.url || WALLPAPER_PRESETS[0].url
-  }, [settings.frostedGlass, settings.wallpaper, settings.customWallpaperUrl])
-
   return (
     <div className="app-bg relative flex h-full w-full flex-col overflow-hidden text-fg">
-      {/* Real Atmospheric Wallpaper Layer behind translucent panels */}
-      {currentWallpaper && (
-        <div
-          className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
-          aria-hidden="true"
-        >
-          <img
-            src={currentWallpaper}
-            alt=""
-            className="h-full w-full object-cover transition-opacity duration-500"
-          />
-          {/* Dark smoky translucent overlay so text remains 100% legible */}
-          <div
-            className="absolute inset-0 bg-bg transition-opacity duration-300"
-            style={{ opacity: settings.wallpaperDarkness ?? 0.55 }}
-          />
-        </div>
-      )}
-
       <div className="relative z-10 flex h-full w-full flex-col overflow-hidden">
         <TitleBar />
 
@@ -116,7 +95,7 @@ function App() {
             {conversation ? (
               <ChatView onShowCommands={() => setShowCommands(true)} />
             ) : (
-              <div className="flex h-full min-w-0 flex-1 flex-col">
+              <div className="flex h-full min-w-0 flex-1 flex-col material-workspace">
                 <header className="hairline material-header pad-top flex items-center justify-between px-3 py-2.5 lg:hidden">
                   <div className="flex items-center gap-2">
                     <button
@@ -126,11 +105,7 @@ function App() {
                     >
                       <Menu size={18} />
                     </button>
-                    <img
-                      src={appIcon}
-                      alt="Nexus"
-                      className="size-6.5 rounded-lg object-cover ring-1 ring-border/80"
-                    />
+                    <AppLogo className="size-6.5 rounded-lg ring-1 ring-border/80" />
                     <span className="font-display text-body font-semibold">Nexus</span>
                   </div>
                   <button

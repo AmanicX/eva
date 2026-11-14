@@ -1,15 +1,19 @@
 const { app, BrowserWindow, session, shell, ipcMain } = require('electron')
 const fs = require('node:fs')
 const path = require('node:path')
+const os = require('node:os')
 
 const devServerUrl = process.env.VITE_DEV_SERVER_URL
 
 const iconFile = path.join(__dirname, '..', 'build', 'icon.png')
 const windowIcon = fs.existsSync(iconFile) ? iconFile : undefined
 
-// Enable hardware accelerated transparency on Linux compositors (Wayland/X11)
+// Ensure consistent application name for window managers and desktop compositors
+app.setName('nexus')
+
+// Enable auto ozone platform for modern Wayland/X11 compatibility on Linux
 if (process.platform === 'linux') {
-  app.commandLine.appendSwitch('enable-transparent-visuals')
+  app.commandLine.appendSwitch('ozone-platform-hint', 'auto')
 }
 
 function applyCsp() {
@@ -26,16 +30,13 @@ function applyCsp() {
 }
 
 function createWindow() {
-  const isMac = process.platform === 'darwin'
-  const isWin = process.platform === 'win32'
-
   const win = new BrowserWindow({
     width: 1280,
     height: 860,
     minWidth: 880,
     minHeight: 600,
-    transparent: true,
-    backgroundColor: '#00000000',
+    transparent: false,
+    backgroundColor: '#09090b',
     title: 'Nexus',
     icon: windowIcon,
     show: false,
@@ -44,8 +45,6 @@ function createWindow() {
     roundedCorners: true,
     titleBarStyle: 'hidden',
     autoHideMenuBar: true,
-    ...(isMac ? { vibrancy: 'under-window', visualEffectState: 'active' } : {}),
-    ...(isWin ? { backgroundMaterial: 'acrylic' } : {}),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,

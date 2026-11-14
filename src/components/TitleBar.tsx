@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Minus, Search, Square, X } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { THEMES } from '@/data/themes'
-import appIcon from '@/assets/icon.png'
+import { AppLogo } from './AppLogo'
 
 declare global {
   interface Window {
@@ -49,11 +49,7 @@ export function TitleBar() {
         className="flex items-center gap-2"
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
       >
-        <img
-          src={appIcon}
-          alt="Nexus"
-          className="size-4.5 rounded-md object-cover ring-1 ring-border/80 shadow-xs"
-        />
+        <AppLogo className="size-4.5 rounded-md ring-1 ring-border/80 shadow-xs" />
         <span className="font-display text-2xs font-semibold tracking-tight text-fg">
           Nexus
         </span>
