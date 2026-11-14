@@ -306,7 +306,7 @@ export function SettingsModal() {
               {/* Accent Themes */}
               <Section
                 title="Accent Palette"
-                hint={`Active for ${THEMES[settings.theme].name} mode. Nexus remembers accent colors per mode.`}
+                hint={`Active for ${THEMES[settings.theme].name} mode. Eva remembers accent colors per mode.`}
               >
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {CURATED_PALETTES.map((p) => {
@@ -432,7 +432,7 @@ export function SettingsModal() {
               </Section>
 
               {/* Live Design System Preview Card */}
-              <Section title="Live Preview" hint="How your current combination renders in Nexus.">
+              <Section title="Live Preview" hint="How your current combination renders in Eva.">
                 <div className="rounded-2xl border border-border/80 material p-4 space-y-3">
                   <div className="flex items-center gap-3">
                     <AppLogo className="size-10 shadow-md ring-1 ring-border/80" />
@@ -444,7 +444,7 @@ export function SettingsModal() {
                         </span>
                       </div>
                       <p className="text-2xs text-muted">
-                        Nexus balances a 60% neutral foundation with 30% structured typography and 10%
+                        Eva balances a 60% neutral foundation with 30% structured typography and 10%
                         accent highlights.
                       </p>
                     </div>

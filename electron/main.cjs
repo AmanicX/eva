@@ -36,7 +36,7 @@ function createWindow() {
     minHeight: 600,
     transparent: false,
     backgroundColor: '#09090b',
-    title: 'Nexus',
+    title: 'Eva - Advanced AI chatbot app',
     icon: windowIcon,
     show: false,
     frame: false,

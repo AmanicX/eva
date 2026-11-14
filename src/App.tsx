@@ -119,7 +119,7 @@ function App() {
                     <AppLogo className="size-7 rounded-lg ring-1 ring-border/80 shadow-xs shrink-0" />
                     <div className="flex items-center gap-1.5 min-w-0">
                       <span className="font-display text-sm font-semibold tracking-tight text-fg">
-                        Nexus
+                        Eva
                       </span>
                       {isAndroid && (
                         <>

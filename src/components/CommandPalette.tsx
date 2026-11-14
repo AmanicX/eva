@@ -115,6 +115,18 @@ export function CommandPalette() {
       },
     })
 
+    list.push({
+      id: 'action-generate-character',
+      category: 'Actions',
+      title: 'Generate Character with AI',
+      subtitle: 'Describe in natural language and let AI craft a complete profile',
+      icon: <Sparkles size={16} />,
+      action: () => {
+        close()
+        setUI({ characterModal: { tab: 'generate' } })
+      },
+    })
+
     if (settings.theme === 'world' || worlds.length > 0) {
       list.push({
         id: 'action-new-world',
@@ -511,7 +523,7 @@ export function CommandPalette() {
           </div>
           <div className="flex items-center gap-1.5">
             <AppLogo alt="" className="size-3.5 rounded object-cover ring-1 ring-border/80" />
-            <span>Nexus Command Palette</span>
+            <span>Eva Command Palette</span>
           </div>
         </div>
       </div>

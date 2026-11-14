@@ -10,6 +10,7 @@ import {
   Upload,
   UserRound,
   Users,
+  Wand2,
   X,
 } from 'lucide-react'
 import { MIN_AGE, useStore } from '@/store/useStore'
@@ -18,6 +19,8 @@ import { Modal } from './Modal'
 import { Avatar } from './Avatar'
 import { cn, imageFileToResizedDataURL } from '@/lib/utils'
 import type { CharacterMeta } from '@/types'
+import { CharacterGenerator } from './CharacterGenerator'
+import { formatFullCharacterPrompt, type GeneratedCharacterProfile } from '@/lib/characterGenerator'
 
 const EMOJIS = [
   '✦','❀','☾','🌙','⚔️','🔥','❄️','⚡','🌸','🖤','🐉','🦊','👑','🎭','🕊️','🐺',
@@ -178,23 +181,82 @@ export function CharacterModal() {
     }
   }
 
+  const handleGeneratedApply = (genProfile: GeneratedCharacterProfile) => {
+    setForm({
+      name: genProfile.name.trim(),
+      avatar: genProfile.avatar,
+      avatarColor: genProfile.avatarColor,
+      tagline: genProfile.tagline,
+      description: formatFullCharacterPrompt(genProfile),
+      gender: genProfile.gender,
+      age: genProfile.age,
+      tags: genProfile.tags,
+      greeting: genProfile.greeting,
+      canon: 'custom',
+      source: '',
+      overrides: '',
+      metadata: [
+        { id: 'app', key: 'Appearance', value: genProfile.appearance.slice(0, 150) },
+        { id: 'spk', key: 'Speaking Style', value: genProfile.speakingStyle.slice(0, 150) },
+        { id: 'scn', key: 'Scenario', value: genProfile.scenario.slice(0, 150) },
+      ].filter((m) => m.value.trim()),
+    })
+    setUI({ characterModal: { tab: 'create' } })
+  }
+
+  const handleGeneratedCreate = (genProfile: GeneratedCharacterProfile, startChat: boolean) => {
+    const c = createCharacter({
+      name: genProfile.name.trim() || 'Unnamed Character',
+      avatar: genProfile.avatar,
+      avatarColor: genProfile.avatarColor,
+      tagline: genProfile.tagline,
+      description: formatFullCharacterPrompt(genProfile),
+      gender: genProfile.gender,
+      age: genProfile.age,
+      tags: genProfile.tags,
+      greeting: genProfile.greeting,
+      canon: 'custom',
+      source: '',
+      overrides: '',
+      theme,
+      worldId: theme === 'world' ? activeWorldId ?? undefined : undefined,
+      metadata: [
+        { id: 'app', key: 'Appearance', value: genProfile.appearance.slice(0, 150) },
+        { id: 'spk', key: 'Speaking Style', value: genProfile.speakingStyle.slice(0, 150) },
+        { id: 'scn', key: 'Scenario', value: genProfile.scenario.slice(0, 150) },
+      ].filter((m) => m.value.trim()),
+    })
+    if (startChat) focus(c.id)
+    close()
+  }
+
   const isCanon = form.canon === 'canon'
 
   return (
     <Modal
       open={open}
       onClose={close}
-      title={editing ? `Edit ${editing.name}` : theme === 'anime' ? 'Anime cast' : 'Characters'}
-      subtitle={
-        editing
-          ? isCanon
-            ? 'Your edits layer on top — the canon stays intact.'
-            : 'Shape this character however you like.'
-          : theme === 'anime'
-            ? 'Summon a canon character, or build your own.'
-            : 'Invent a character from scratch.'
+      title={
+        tab === 'generate'
+          ? 'AI Character Generator'
+          : editing
+            ? `Edit ${editing.name}`
+            : theme === 'anime'
+              ? 'Anime cast'
+              : 'Characters'
       }
-      icon={<UserRound size={18} />}
+      subtitle={
+        tab === 'generate'
+          ? 'Describe your character in ordinary language and let AI design the complete profile.'
+          : editing
+            ? isCanon
+              ? 'Your edits layer on top — the canon stays intact.'
+              : 'Shape this character however you like.'
+            : theme === 'anime'
+              ? 'Summon a canon character, or build your own.'
+              : 'Invent a character from scratch.'
+      }
+      icon={tab === 'generate' ? <Wand2 size={18} /> : <UserRound size={18} />}
       size="lg"
       bodyClassName="p-0"
       footer={
@@ -236,13 +298,47 @@ export function CharacterModal() {
         <TabButton active={tab === 'create'} onClick={() => setUI({ characterModal: { tab: 'create', editId } })}>
           <Brush size={15} /> {editing ? 'Edit' : 'Create'}
         </TabButton>
+        <TabButton active={tab === 'generate'} onClick={() => setUI({ characterModal: { tab: 'generate', editId } })}>
+          <Sparkles size={15} /> Generate with AI
+        </TabButton>
         <TabButton active={tab === 'browse'} onClick={() => setUI({ characterModal: { tab: 'browse' } })}>
           <Users size={15} /> Browse
         </TabButton>
       </div>
 
-      {tab === 'create' ? (
+      {tab === 'generate' ? (
+        <CharacterGenerator
+          onApplyToForm={handleGeneratedApply}
+          onCreateAndChat={(p) => handleGeneratedCreate(p, true)}
+          onSaveOnly={(p) => handleGeneratedCreate(p, false)}
+          onCancel={close}
+        />
+      ) : tab === 'create' ? (
         <div className="space-y-5 p-5">
+          {!editing && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-accent/40 bg-accent/10 p-3.5 shadow-2xs">
+              <div className="flex items-center gap-2.5">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-fg shadow-xs">
+                  <Wand2 size={16} />
+                </span>
+                <div>
+                  <p className="text-xs font-semibold text-fg">Design with AI</p>
+                  <p className="text-2xs text-muted">
+                    Describe your character in ordinary language and let AI build a complete profile.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setUI({ characterModal: { tab: 'generate' } })}
+                className="btn btn-accent text-xs py-1.5 px-3 self-start sm:self-center shrink-0 flex items-center gap-1.5"
+              >
+                <Sparkles size={13} />
+                <span>Generate with AI</span>
+              </button>
+            </div>
+          )}
+
           {/* identity */}
           <div className="flex flex-col gap-4 sm:flex-row">
             <div className="flex flex-col items-center gap-2">

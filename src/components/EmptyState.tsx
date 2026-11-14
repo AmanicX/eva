@@ -90,6 +90,15 @@ export function EmptyState() {
                 : 'Create world'
               : 'Create character'}
           </button>
+          {theme !== 'world' && (
+            <button
+              onClick={() => setUI({ characterModal: { tab: 'generate' } })}
+              className="btn px-4 py-2.5 text-xs border-accent/30 hover:border-accent/60 text-fg"
+            >
+              <Sparkles size={15} className="text-accent" />
+              Generate with AI
+            </button>
+          )}
           {(themed.length > 0 || (theme === 'world' && worlds.length > 0)) && (
             <button onClick={openBrowse} className="btn px-4 py-2.5 text-xs">
               <Users size={15} />

@@ -93,7 +93,7 @@ export function Sidebar() {
             <AppLogo className="size-8 shadow-md ring-1 ring-border/80" />
             <div className="min-w-0">
               <h1 className="font-display text-sm leading-none font-bold tracking-tight text-fg">
-                Nexus
+                Eva
               </h1>
               <p className="mt-0.5 truncate text-2xs text-faint">{meta.name} Mode</p>
             </div>

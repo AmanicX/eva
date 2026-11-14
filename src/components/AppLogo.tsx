@@ -8,7 +8,7 @@ interface AppLogoProps {
   alt?: string
 }
 
-export function AppLogo({ className, alt = 'Nexus' }: AppLogoProps) {
+export function AppLogo({ className, alt = 'Eva' }: AppLogoProps) {
   const appearanceMode = useStore((s) => s.settings.appearanceMode)
   const isSystem = appearanceMode === 'system'
   const systemIsLight =

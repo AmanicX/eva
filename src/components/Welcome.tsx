@@ -29,10 +29,10 @@ import { cn } from '@/lib/utils'
 import { AppLogo } from '@/components/AppLogo'
 
 const STEPS = [
-  { label: 'Welcome', title: 'Welcome to Nexus', subtitle: 'A studio for characters, worlds and the model you choose.' },
-  { label: 'Connect', title: 'Connect a model', subtitle: 'Paste a Groq key, or point Nexus at any other provider.' },
+  { label: 'Welcome', title: 'Welcome to Eva', subtitle: 'A studio for characters, worlds and the model you choose.' },
+  { label: 'Connect', title: 'Connect a model', subtitle: 'Paste a Groq key, or point Eva at any other provider.' },
   { label: 'Model', title: 'Pick a model', subtitle: 'GPT-OSS 20B is the default — you can change it any time.' },
-  { label: 'Tour', title: 'How Nexus works', subtitle: 'Thirty seconds of orientation, then it is yours.' },
+  { label: 'Tour', title: 'How Eva works', subtitle: 'Thirty seconds of orientation, then it is yours.' },
 ] as const
 
 const TIPS = [
@@ -186,17 +186,17 @@ export function Welcome() {
           <div className="space-y-4">
             <div className="flex items-center gap-3.5 p-3 rounded-2xl border border-border/70 material">
               <AppLogo
-                alt="Nexus"
+                alt="Eva"
                 className="size-11 rounded-xl object-cover shadow-md ring-1 ring-border/80 shrink-0"
               />
               <div className="min-w-0">
-                <h3 className="font-display text-sm font-bold text-fg">Nexus Studio</h3>
+                <h3 className="font-display text-sm font-bold text-fg">Eva Studio</h3>
                 <p className="text-2xs text-muted">A dedicated studio for characters, worlds, and intelligence.</p>
               </div>
             </div>
             <p className="text-sm leading-relaxed text-muted">
-              Nexus is a free studio for writing AI characters and living inside their worlds.
-              You bring the model — hosted or running on your own machine — and Nexus keeps your
+              Eva is an advanced AI chatbot studio for writing characters and living inside their worlds.
+              You bring the model — hosted or running on your own machine — and Eva keeps your
               characters, worlds and conversations on this device.
             </p>
             <ul className="list">

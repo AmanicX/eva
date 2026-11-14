@@ -55,7 +55,7 @@ export function TitleBar() {
       >
         <AppLogo className="size-4.5 rounded-md ring-1 ring-border/80 shadow-xs" />
         <span className="font-display text-2xs font-semibold tracking-tight text-fg">
-          Nexus
+          Eva
         </span>
         <span className="text-3xs text-faint font-medium">·</span>
         <span className="text-3xs text-faint font-medium">{meta.name}</span>

@@ -197,7 +197,7 @@ export function RightPanel({
               onChange={(e) => setMemoryDraft(e.target.value)}
               onBlur={() => onMemoryChange(memoryDraft)}
               rows={8}
-              placeholder="Key facts this character remembers about you. Nexus updates this continuously — edit freely."
+              placeholder="Key facts this character remembers about you. Eva updates this continuously — edit freely."
               className="field scroll-thin resize-none text-xs leading-relaxed"
             />
             <p className="text-2xs text-faint leading-relaxed">
