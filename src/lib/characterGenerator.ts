@@ -145,7 +145,125 @@ const EMOJI_PALETTE = ['✦', '❀', '☾', '🌙', '⚔️', '🔥', '❄️', 
 const COLOR_PALETTE = ['#7c5cff', '#b45cff', '#ff6fae', '#ff5f9e', '#34d399', '#0ea5e9', '#37d7e8', '#ffa34d', '#ff8a5c', '#f472b6', '#a78bfa', '#66d0ff', '#e0466a', '#8fd8a8']
 
 /**
- * Robust JSON parser that handles code blocks, unescaped characters, and partial payloads.
+ * Repairs unclosed strings, literal unescaped newlines, trailing commas,
+ * and missing closing brackets in JSON text.
+ */
+function repairJsonStructure(jsonStr: string): string {
+  let inString = false
+  let escaped = false
+  const stack: string[] = []
+  let result = ''
+
+  for (let i = 0; i < jsonStr.length; i++) {
+    const ch = jsonStr[i]
+
+    if (inString) {
+      if (escaped) {
+        escaped = false
+        result += ch
+      } else if (ch === '\\') {
+        escaped = true
+        result += ch
+      } else if (ch === '"') {
+        inString = false
+        result += ch
+      } else if (ch === '\n') {
+        result += '\\n'
+      } else if (ch === '\r') {
+        // drop carriage return
+      } else {
+        result += ch
+      }
+    } else {
+      if (ch === '"') {
+        inString = true
+        result += ch
+      } else if (ch === '{' || ch === '[') {
+        stack.push(ch === '{' ? '}' : ']')
+        result += ch
+      } else if (ch === '}' || ch === ']') {
+        if (stack.length && stack[stack.length - 1] === ch) {
+          stack.pop()
+        }
+        result += ch
+      } else {
+        result += ch
+      }
+    }
+  }
+
+  // If input was cut off inside an open string (e.g. hitting token limit), close it
+  if (inString) {
+    if (escaped) {
+      result = result.slice(0, -1)
+    }
+    result += '"'
+  }
+
+  // Clean up any dangling trailing key, colon, or comma before closing
+  result = result
+    .replace(/,\s*"[^"]*"\s*:\s*$/g, '')
+    .replace(/:\s*$/g, ': null')
+    .replace(/,\s*$/g, '')
+    .replace(/,\s*([}\]])/g, '$1')
+
+  // Close any unclosed object/array levels
+  while (stack.length > 0) {
+    result += stack.pop()
+  }
+
+  return result
+}
+
+/**
+ * Regex-based emergency fallback extractor to salvage fields from malformed, unescaped,
+ * or token-boundary-truncated JSON responses.
+ */
+function fallbackExtractFields(raw: string): Record<string, any> {
+  const fields: Record<string, any> = {}
+  const keys = [
+    'name', 'tagline', 'gender', 'age', 'appearance', 'personality',
+    'backstory', 'speakingStyle', 'behavior', 'likesAndDislikes',
+    'strengthsAndWeaknesses', 'scenario', 'greeting', 'systemInstructions',
+    'tags', 'avatar', 'avatarColor',
+  ]
+  const allKeysPattern = keys.join('|')
+
+  for (const k of keys) {
+    if (k === 'tags') {
+      const match = raw.match(/"tags"\s*:\s*\[([\s\S]*?)\]/i)
+      if (match) {
+        fields.tags = match[1]
+          .split(',')
+          .map((t) => t.replace(/["\s[\]]/g, '').trim())
+          .filter(Boolean)
+      }
+      continue
+    }
+
+    // Match from "key"\s*:\s*" up until the next known key, closing brace, or end of text
+    const pattern = new RegExp(
+      `"${k}"\\s*:\\s*"([\\s\\S]*?)(?="?\\s*,?\\s*\\n?\\s*"(?:${allKeysPattern})"\\s*:|\\s*"\\s*\\}\\s*$|\\s*"\\s*,?\\s*$|$)`,
+      'i',
+    )
+    const match = raw.match(pattern)
+    if (match?.[1]) {
+      let val = match[1].trim()
+      // Remove trailing quotes, commas, or colons if sliced at boundary
+      val = val.replace(/["\s,]+$/, '')
+      fields[k] = val
+        .replace(/\\n/g, '\n')
+        .replace(/\\"/g, '"')
+        .trim()
+    }
+  }
+
+  return fields
+}
+
+/**
+ * Robust JSON parser that handles code blocks, unescaped characters, partial payloads,
+ * and token-boundary truncations without crashing.
  */
 function extractAndParseJSON(raw: string): any {
   let cleaned = raw.trim()
@@ -159,17 +277,44 @@ function extractAndParseJSON(raw: string): any {
   // Find first { and last }
   const firstBrace = cleaned.indexOf('{')
   const lastBrace = cleaned.lastIndexOf('}')
-  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-    cleaned = cleaned.slice(firstBrace, lastBrace + 1)
+  if (firstBrace !== -1) {
+    if (lastBrace !== -1 && lastBrace > firstBrace) {
+      cleaned = cleaned.slice(firstBrace, lastBrace + 1)
+    } else {
+      cleaned = cleaned.slice(firstBrace)
+    }
   }
 
+  // 1. Direct parse attempt
   try {
     return JSON.parse(cleaned)
   } catch {
-    // Try cleaning trailing commas
+    /* proceed to repair */
+  }
+
+  // 2. Trailing commas & control character fix
+  try {
     const withoutTrailingCommas = cleaned.replace(/,\s*([}\]])/g, '$1')
     return JSON.parse(withoutTrailingCommas)
+  } catch {
+    /* proceed to repair */
   }
+
+  // 3. Structural repair (handles unclosed strings, raw newlines, truncated token boundaries)
+  try {
+    const repaired = repairJsonStructure(cleaned)
+    return JSON.parse(repaired)
+  } catch {
+    /* proceed to regex fallback */
+  }
+
+  // 4. Fallback field-by-field extraction (never throws)
+  const fallback = fallbackExtractFields(raw)
+  if (fallback.name || fallback.personality || fallback.appearance) {
+    return fallback
+  }
+
+  throw new Error('Unable to parse AI response into character fields. Please retry with a slightly shorter prompt.')
 }
 
 /**
@@ -302,6 +447,8 @@ Rules:
 2. Develop all missing dimensions organically so the character feels fully alive, coherent, and captivating.
 3. The character must be at least ${MIN_AGE} years of age.
 4. Output MUST be valid, parseable JSON only with NO markdown fences, NO preamble, and NO extra conversational commentary.
+5. JSON STRING SAFETY: All quotes inside dialogue or descriptions must use single quotes ('like this') or be escaped as \\"quotes\\". Never use unescaped double quotes inside property values.
+6. Write vivid, high-quality, atmospheric content without unnecessary verbosity to ensure complete, clean JSON generation.
 
 JSON Schema to output:
 {
@@ -347,7 +494,7 @@ Generate the complete JSON character profile now.`
       { role: 'user', content: userPrompt },
     ],
     temperature: 0.75,
-    maxTokens: 2500,
+    maxTokens: 4096,
     signal,
   })
 
@@ -431,6 +578,7 @@ CRITICAL INSTRUCTIONS:
 4. Output MUST be valid JSON with a single key "${sectionKey}".
    For text fields: { "${sectionKey}": "new regenerated content..." }
    For tags: { "${sectionKey}": ["tag1", "tag2", "tag3"] }
+   Use single quotes ('...') or escaped quotes (\\"...\\") for inner dialogue.
    No conversational filler, no markdown code block wrapper.`
 
   const userPrompt = `Established Character Context:
@@ -454,7 +602,7 @@ Please regenerate and enhance ONLY the "${sectionLabel}" section now. Return val
       { role: 'user', content: userPrompt },
     ],
     temperature: 0.8,
-    maxTokens: 1000,
+    maxTokens: 1500,
     signal,
   })
 
