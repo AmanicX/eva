@@ -230,7 +230,7 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
   return (
     <div className="flex h-full min-w-0 flex-1 flex-col">
       {/* Universal Header with Mode Nuances */}
-      <header className="hairline material pad-top flex items-center justify-between gap-2 px-3 py-2.5 sm:px-5">
+      <header className="hairline material-header pad-top flex items-center justify-between gap-2 px-3 py-2.5 sm:px-5">
         <div className="flex items-center gap-2.5 min-w-0">
           <button
             onClick={() => setUI({ sidebarOpen: true })}
@@ -417,7 +417,7 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
       </header>
 
       {/* Main Chat Area */}
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 material-workspace">
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="scroll-thin flex-1 overflow-y-auto px-3 py-6 sm:px-6">
             <div className="mx-auto flex max-w-3xl flex-col gap-5">

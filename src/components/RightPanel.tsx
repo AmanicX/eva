@@ -48,7 +48,7 @@ export function RightPanel({
         onClick={onClose}
         aria-label="Close panel overlay"
       />
-      <aside className="pad-top safe-right fixed inset-y-0 right-0 z-40 flex w-[88%] max-w-sm flex-col border-l border-border/80 material lg:static lg:z-auto lg:w-80">
+      <aside className="pad-top safe-right fixed inset-y-0 right-0 z-40 flex w-[88%] max-w-sm flex-col border-l border-border/80 panel-glass lg:static lg:z-auto lg:w-80">
         {/* Header */}
         <div className="hairline flex items-center justify-between px-4 py-3">
           <h3 className="flex items-center gap-2 font-display text-sm font-semibold text-fg">

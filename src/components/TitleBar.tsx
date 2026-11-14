@@ -41,7 +41,7 @@ export function TitleBar() {
 
   return (
     <header
-      className="titlebar-drag relative z-50 flex h-8.5 w-full select-none items-center justify-between border-b border-border/60 material px-3 text-xs text-muted"
+      className="titlebar-drag relative z-50 flex h-8.5 w-full select-none items-center justify-between border-b border-border/60 material-header px-3 text-xs text-muted"
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
       {/* Left: Brand Identity */}

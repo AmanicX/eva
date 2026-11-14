@@ -108,6 +108,8 @@ export const DEFAULT_SETTINGS: Settings = {
   appearanceMode: 'dark',
   accentPalette: 'cobalt',
   frostedGlass: true,
+  wallpaper: 'midnight-mountain',
+  wallpaperDarkness: 0.55,
   customAccentColor: '#0a84ff',
   customContrastColor: '#38bdf8',
   themeAccents: {
@@ -475,6 +477,8 @@ export const useStore = create<State>()(
           if (!persisted.settings.appearanceMode) persisted.settings.appearanceMode = 'dark'
           if (!persisted.settings.accentPalette) persisted.settings.accentPalette = 'cobalt'
           if (persisted.settings.frostedGlass === undefined) persisted.settings.frostedGlass = true
+          if (!persisted.settings.wallpaper) persisted.settings.wallpaper = 'midnight-mountain'
+          if (persisted.settings.wallpaperDarkness === undefined) persisted.settings.wallpaperDarkness = 0.55
           if (!persisted.settings.customAccentColor) persisted.settings.customAccentColor = '#0a84ff'
           if (!persisted.settings.customContrastColor) persisted.settings.customContrastColor = '#38bdf8'
           if (!persisted.settings.themeAccents) {

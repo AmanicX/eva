@@ -410,7 +410,7 @@ export function CommandPalette() {
         role="dialog"
         aria-modal="true"
         aria-label="Command Palette"
-        className="panel relative z-10 flex max-h-[80dvh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border/80 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+        className="modal-glass relative z-10 flex max-h-[80dvh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border/80 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
       >
         {/* Search Input bar */}
         <div className="flex items-center gap-3 border-b border-border px-4 py-3 sm:px-5">

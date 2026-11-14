@@ -84,7 +84,7 @@ export function Sidebar() {
       )}
       <aside
         className={cn(
-          'safe-left fixed inset-y-0 left-0 z-40 flex w-[86%] max-w-xs flex-col border-r border-border/80 material transition-transform duration-250 lg:static lg:z-auto lg:w-72 lg:translate-x-0',
+          'safe-left fixed inset-y-0 left-0 z-40 flex w-[86%] max-w-xs flex-col border-r border-border/70 material-sidebar transition-transform duration-250 lg:static lg:z-auto lg:w-72 lg:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >

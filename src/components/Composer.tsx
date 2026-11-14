@@ -63,7 +63,7 @@ export function Composer({
   }
 
   return (
-    <div className="hairline-top material pad-bottom px-3 pt-2.5 pb-3 sm:px-5 sm:pb-4 transition-colors">
+    <div className="hairline-top material-composer pad-bottom px-3 pt-2.5 pb-3 sm:px-5 sm:pb-4 transition-colors">
       <div className="mx-auto max-w-3xl">
         {/* Command Quick Chips */}
         <div className="scrollbar-none mb-2 -mx-3 flex items-center gap-1.5 overflow-x-auto px-3 sm:mx-0 sm:flex-wrap sm:px-0">

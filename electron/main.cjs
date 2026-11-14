@@ -7,6 +7,11 @@ const devServerUrl = process.env.VITE_DEV_SERVER_URL
 const iconFile = path.join(__dirname, '..', 'build', 'icon.png')
 const windowIcon = fs.existsSync(iconFile) ? iconFile : undefined
 
+// Enable hardware accelerated transparency on Linux compositors (Wayland/X11)
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('enable-transparent-visuals')
+}
+
 function applyCsp() {
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
@@ -21,30 +26,46 @@ function applyCsp() {
 }
 
 function createWindow() {
+  const isMac = process.platform === 'darwin'
+  const isWin = process.platform === 'win32'
+
   const win = new BrowserWindow({
     width: 1280,
     height: 860,
     minWidth: 880,
     minHeight: 600,
-    backgroundColor: '#09090b',
+    transparent: true,
+    backgroundColor: '#00000000',
     title: 'Nexus',
     icon: windowIcon,
     show: false,
     frame: false,
+    hasShadow: true,
+    roundedCorners: true,
     titleBarStyle: 'hidden',
     autoHideMenuBar: true,
+    ...(isMac ? { vibrancy: 'under-window', visualEffectState: 'active' } : {}),
+    ...(isWin ? { backgroundMaterial: 'acrylic' } : {}),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
+      sandbox: true,
     },
   })
 
   win.once('ready-to-show', () => win.show())
 
   win.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url)
+    // Only open safe external http/https links
+    try {
+      const parsed = new URL(url)
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        shell.openExternal(url)
+      }
+    } catch {
+      // invalid url
+    }
     return { action: 'deny' }
   })
 
@@ -55,14 +76,20 @@ function createWindow() {
   }
 }
 
-// IPC Handlers for frameless blended window controls
-ipcMain.on('window-minimize', (event) => {
+// IPC Handlers for frameless blended window controls with sender validation
+function getTargetWindow(event) {
   const win = BrowserWindow.fromWebContents(event.sender)
+  if (!win || win.isDestroyed()) return null
+  return win
+}
+
+ipcMain.on('window-minimize', (event) => {
+  const win = getTargetWindow(event)
   if (win) win.minimize()
 })
 
 ipcMain.on('window-maximize', (event) => {
-  const win = BrowserWindow.fromWebContents(event.sender)
+  const win = getTargetWindow(event)
   if (win) {
     if (win.isMaximized()) win.unmaximize()
     else win.maximize()
@@ -70,12 +97,12 @@ ipcMain.on('window-maximize', (event) => {
 })
 
 ipcMain.on('window-close', (event) => {
-  const win = BrowserWindow.fromWebContents(event.sender)
+  const win = getTargetWindow(event)
   if (win) win.close()
 })
 
 ipcMain.handle('window-is-maximized', (event) => {
-  const win = BrowserWindow.fromWebContents(event.sender)
+  const win = getTargetWindow(event)
   return win ? win.isMaximized() : false
 })
 

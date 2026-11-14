@@ -38,6 +38,9 @@ android {
             def hasPassword = System.getenv("KEYSTORE_PASSWORD") || project.findProperty("KEYSTORE_PASSWORD")
             if (keystoreFile.exists() && hasPassword) {
                 signingConfig signingConfigs.release
+            } else {
+                // When release secrets are missing in CI, fallback to debug signing so an installable APK is produced
+                signingConfig signingConfigs.debug
             }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
