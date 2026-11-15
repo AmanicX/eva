@@ -32,7 +32,7 @@ pkgbase = eva-bin
 	conflicts = eva
 	options = !strip
 	options = !debug
-	source = https://github.com/AmanicX/nexus-testing/releases/download/v2.0.0/eva_2.0.0_amd64.deb
-	sha256sums = SKIP
+	source = https://github.com/AmanicX/eva/releases/download/v2.0.0/eva_2.0.0_amd64.deb
+	sha256sums = 128ff9adb2a5b1b613ccf2ee1f68dbafc7b59b7fe304a4fe5b5613748758b40a
 
 pkgname = eva-bin
