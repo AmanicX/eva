@@ -48,8 +48,23 @@ Eva ships with three distinct visual modes, each hand-crafted with tailored typo
 
 ## Download & Installation
 
-### Arch Linux (AUR)
-Install the pre-compiled binary package using your preferred AUR helper:
+### Arch Linux
+
+#### Option 1: Direct native pacman install (Single command)
+Install the official release package directly using `pacman`:
+```bash
+sudo pacman -U https://github.com/AmanicX/eva/releases/download/v2.0.0/eva-2.0.0.pacman
+```
+
+#### Option 2: Build with `makepkg` from source repo
+```bash
+git clone https://github.com/AmanicX/eva.git
+cd eva/aur
+makepkg -si
+```
+
+#### Option 3: AUR (`eva-bin`)
+Once upstream AUR registrations reopen, install via:
 ```bash
 paru -S eva-bin
 # or
