@@ -1,4 +1,4 @@
-/* Nexus service worker.
+/* Eva service worker.
  *
  * Strategy:
  *   - navigations  -> network-first, fall back to the cached shell (offline works)
@@ -6,10 +6,10 @@
  *   - cross-origin -> untouched. Provider APIs (Groq / OpenRouter / Ollama / …)
  *     must never be served from, or written to, the cache.
  *
- * All paths are relative so the app works from any sub-path (e.g. /nexus/app/).
+ * All paths are relative so the app works from any sub-path.
  */
 
-const PREFIX = 'nexus-'
+const PREFIX = 'eva-'
 const CACHE = `${PREFIX}shell-v1`
 const CORE = [
   './',

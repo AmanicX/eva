@@ -14,21 +14,31 @@ export function ThemeSwitcher() {
   const setTheme = useStore((s) => s.setTheme)
 
   return (
-    <div className="seg grid w-full grid-cols-3">
+    <div
+      role="tablist"
+      aria-label="Application Mode"
+      className="seg grid w-full grid-cols-3 select-none"
+    >
       {THEME_ORDER.map((id) => {
         const t = THEMES[id]
         const active = id === theme
         return (
           <button
             key={id}
+            role="tab"
+            aria-selected={active}
             data-active={active}
             onClick={() => setTheme(id)}
-            className="flex items-center justify-center gap-1.5"
+            className="flex items-center justify-center gap-1.5 transition-all duration-200"
           >
-            <span className={active ? 'text-accent' : 'text-faint'}>
+            <span
+              className={`transition-colors duration-200 ${
+                active ? 'text-accent scale-105' : 'text-faint'
+              }`}
+            >
               {THEME_ICONS[id]}
             </span>
-            <span>{t.name}</span>
+            <span className="truncate">{t.name}</span>
           </button>
         )
       })}

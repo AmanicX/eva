@@ -10,7 +10,9 @@ import {
   Check,
   Compass,
   X,
-  Info,
+  Sparkles,
+  Sun,
+  Moon,
 } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { THEMES } from '@/data/themes'
@@ -22,6 +24,8 @@ import { AppLogo } from './AppLogo'
 
 export function Sidebar() {
   const theme = useStore((s) => s.settings.theme)
+  const appearanceMode = useStore((s) => s.settings.appearanceMode)
+  const updateSettings = useStore((s) => s.updateSettings)
   const conversations = useStore((s) => s.conversations)
   const characters = useStore((s) => s.characters)
   const worlds = useStore((s) => s.worlds)
@@ -40,6 +44,16 @@ export function Sidebar() {
   const [onlyPinned, setOnlyPinned] = useState(false)
   const [worldPicker, setWorldPicker] = useState(false)
   const ready = apiKey.trim() !== '' || !providerNeedsKey(baseUrl)
+
+  const isSystem = appearanceMode === 'system'
+  const systemIsLight =
+    typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: light)').matches
+  const isLight = isSystem ? systemIsLight : appearanceMode === 'light'
+
+  const toggleAppearance = () => {
+    const next = appearanceMode === 'dark' ? 'light' : appearanceMode === 'light' ? 'system' : 'dark'
+    updateSettings({ appearanceMode: next })
+  }
 
   const activeWorld = worlds.find((w) => w.id === activeWorldId)
   const meta = THEMES[theme]
@@ -112,15 +126,25 @@ export function Sidebar() {
           <ThemeSwitcher />
         </div>
 
-        {/* World selector + Create button */}
-        <div className="mt-3 flex items-center gap-2 px-3">
+        {/* Action Button: Create or Generate */}
+        <div className="mt-3 flex items-center gap-1.5 px-3">
           <button
             onClick={openAdd}
-            className="btn btn-accent flex-1 rounded-xl py-2 text-xs"
+            className="btn btn-accent flex-1 rounded-xl py-2 text-xs font-semibold shadow-xs"
           >
             <Plus size={15} />
-            {theme === 'world' ? 'Create world' : 'New character'}
+            {theme === 'world' ? (worlds.length ? 'New world' : 'Create world') : 'New character'}
           </button>
+          {theme !== 'world' && (
+            <button
+              onClick={() => setUI({ characterModal: { tab: 'generate' } })}
+              className="btn size-9 rounded-xl p-0 border border-accent/30 bg-accent/10 text-accent hover:bg-accent/20 transition shrink-0"
+              title="Generate character with AI"
+              aria-label="Generate character with AI"
+            >
+              <Sparkles size={15} />
+            </button>
+          )}
           {theme === 'world' && (
             <div className="relative">
               <button
@@ -190,8 +214,17 @@ export function Sidebar() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search conversations…"
-              className="field py-1 pl-8 text-xs h-8"
+              className="field py-1 pl-8 pr-7 text-xs h-8"
             />
+            {query && (
+              <button
+                onClick={() => setQuery('')}
+                className="absolute top-1/2 right-2 -translate-y-1/2 text-faint hover:text-fg p-0.5"
+                aria-label="Clear search"
+              >
+                <X size={12} />
+              </button>
+            )}
           </div>
           <button
             onClick={() => setOnlyPinned((v) => !v)}
@@ -249,6 +282,11 @@ export function Sidebar() {
                     <span className="truncate text-xs font-semibold text-fg">
                       {char?.name ?? c.title}
                     </span>
+                    {theme === 'anime' && char?.canon === 'canon' && (
+                      <span className="rounded bg-accent/15 px-1 py-0.2 text-3xs text-accent font-semibold border border-accent/25 shrink-0">
+                        Canon
+                      </span>
+                    )}
                   </div>
                   <p className="truncate text-2xs text-faint mt-0.5">
                     {last?.content?.replace(/[*_"<>[\]]/g, '').slice(0, 42) || 'No messages yet'}
@@ -290,7 +328,7 @@ export function Sidebar() {
         <div className="hairline pad-bottom flex items-center gap-1.5 px-3 py-2.5 border-t border-border bg-surface">
           <button
             onClick={() => setUI({ settingsOpen: true })}
-            className="btn flex-1 justify-start rounded-lg h-9 px-2.5 text-xs"
+            className="btn flex-1 justify-start rounded-lg h-9 px-2.5 text-xs font-medium"
           >
             <SettingsIcon size={14} className="text-muted" />
             <span className="truncate">Settings</span>
@@ -303,20 +341,24 @@ export function Sidebar() {
             />
           </button>
           <button
+            onClick={toggleAppearance}
+            className="btn size-9 shrink-0 rounded-lg p-0 text-muted hover:text-fg"
+            title={`Appearance: ${appearanceMode.toUpperCase()}`}
+            aria-label="Toggle appearance"
+          >
+            {isLight ? (
+              <Sun size={14} className="text-accent transition-transform hover:rotate-45" />
+            ) : (
+              <Moon size={14} className="text-accent transition-transform hover:-rotate-12" />
+            )}
+          </button>
+          <button
             onClick={() => setUI({ welcomeOpen: true })}
-            className="btn size-9 shrink-0 rounded-lg p-0"
+            className="btn size-9 shrink-0 rounded-lg p-0 text-muted hover:text-fg"
             title="Show the tour"
             aria-label="Show the tour"
           >
-            <Compass size={14} className="text-muted" />
-          </button>
-          <button
-            onClick={() => setUI({ settingsOpen: true, settingsTab: 'themes', rightPanel: 'none' })}
-            className="btn size-9 shrink-0 rounded-lg p-0"
-            title="About this theme"
-            aria-label="About this theme"
-          >
-            <Info size={14} className="text-muted" />
+            <Compass size={14} />
           </button>
         </div>
       </aside>

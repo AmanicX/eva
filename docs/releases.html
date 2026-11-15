@@ -1,355 +1,275 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="color-scheme" content="dark">
-<title>Releases | Eva</title>
-<meta name="description" content="Every Eva release in order: what changed, when it shipped, and where to download the Windows installer or the Linux packages.">
-<meta property="og:title" content="Releases | Eva">
-<meta property="og:description" content="What shipped, and when. Windows and Linux builds for every version of Eva.">
-<meta property="og:type" content="website">
-<meta name="theme-color" content="#0034eb">
-<link rel="icon" href="assets/icon.png">
-<link rel="stylesheet" href="assets/fonts/fonts.css">
-<link rel="stylesheet" href="styles.css">
-<link rel="stylesheet" href="releases.css">
-<script>document.documentElement.classList.add('js');</script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Releases & Changelog — Eva Studio</title>
+  <meta name="description" content="Every Eva release in order: features, security hardening, architecture updates, and direct download links.">
+  <meta property="og:title" content="Releases & Changelog — Eva Studio">
+  <meta property="og:description" content="Every version of Eva, in order, with what changed and where to download.">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#12100E">
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="apple-touch-icon" href="assets/icon.png">
+  <link rel="stylesheet" href="assets/fonts/fonts.css">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="releases.css">
+
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem('eva_website_theme') || 'system';
+        var isDark = theme === 'system' ? window.matchMedia('(prefers-color-scheme: dark)').matches : theme === 'dark';
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body>
 
-<header class="topbar">
-  <a class="brand" href="./">
-    <img class="brand-mark" src="assets/icon.png" alt="" width="18" height="18">
-    <span>Eva</span>
-  </a>
-  <nav class="topnav" aria-label="Primary">
-    <a class="toplink" href="./">Home</a>
-    <a class="toplink" href="https://github.com/AmanicX/eva">Source</a>
-    <a class="topbtn" href="#get">Download</a>
-  </nav>
-</header>
+  <!-- Sticky Top Navigation -->
+  <header class="header-sticky">
+    <div class="container nav-row">
+      <a href="./" class="brand">
+        <img class="brand-icon dynamic-logo" src="assets/icon-dark.png" alt="Eva logo" width="32" height="32">
+        <span>Eva</span>
+      </a>
 
-<main id="top">
+      <nav class="nav-links" aria-label="Primary Navigation">
+        <a href="./#overview" class="nav-link">Overview</a>
+        <a href="./#studios" class="nav-link">Studios</a>
+        <a href="./#features" class="nav-link">Features</a>
+        <a href="./#providers" class="nav-link">AI Providers</a>
+        <a href="./#download" class="nav-link">Download</a>
+        <a href="releases.html" class="nav-link" style="color:var(--c-accent); font-weight:700;">Releases</a>
+      </nav>
 
-  <section class="hero chapter grain" data-ground="cobalt" data-ink="light">
-    <h1 class="statement">
-      <span class="line line-pale" data-reveal>what shipped,</span>
-      <span class="line line-white" data-reveal data-delay="90">and when.</span>
-    </h1>
-    <svg class="hero-burst" viewBox="0 0 200 200" aria-hidden="true" focusable="false">
-      <g fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="100" cy="100" r="62"/>
-        <path d="M100 10 V190 M10 100 H190 M36 36 L164 164 M164 36 L36 164"/>
-      </g>
-    </svg>
-    <div class="hero-foot">
-      <p class="hero-note" data-reveal data-delay="200">Every version of Eva, in order, with what changed and where to get it. Each build is cut from the same source you can read.</p>
+      <div class="nav-actions">
+        <!-- Theme Switcher -->
+        <div class="theme-switch-group" role="group" aria-label="Theme mode switcher">
+          <button class="theme-switch-btn" data-mode="dark" onclick="setThemeMode('dark')" title="Dark Theme" aria-label="Dark Theme">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+          </button>
+          <button class="theme-switch-btn" data-mode="light" onclick="setThemeMode('light')" title="Light Theme" aria-label="Light Theme">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+          </button>
+          <button class="theme-switch-btn" data-mode="system" onclick="setThemeMode('system')" title="System Theme" aria-label="System Theme">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+          </button>
+        </div>
+
+        <!-- 8 Curated Accent Palette Switcher -->
+        <div class="palette-picker">
+          <button class="palette-btn" onclick="togglePaletteDropdown(event)" title="Accent Color Palette" aria-label="Accent Palette">
+            <span class="palette-swatch-dot"></span>
+            <span class="palette-btn-label">Astra Gold</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div id="paletteDropdown" class="palette-dropdown" role="menu">
+            <div style="font-size:0.7rem; font-weight:700; color:var(--c-faint); margin-bottom:0.5rem; text-transform:uppercase; letter-spacing:0.05em;">Curated Accents</div>
+            <div class="palette-grid">
+              <button class="palette-option active" data-palette="gold" onclick="setAccentPalette('gold')" title="Astra Gold">
+                <span class="palette-circle" style="background:#D4A359"></span>
+                <span>Gold</span>
+              </button>
+              <button class="palette-option" data-palette="azure" onclick="setAccentPalette('azure')" title="Azure">
+                <span class="palette-circle" style="background:#2563EB"></span>
+                <span>Azure</span>
+              </button>
+              <button class="palette-option" data-palette="iris" onclick="setAccentPalette('iris')" title="Iris">
+                <span class="palette-circle" style="background:#8B5CF6"></span>
+                <span>Iris</span>
+              </button>
+              <button class="palette-option" data-palette="verdant" onclick="setAccentPalette('verdant')" title="Verdant">
+                <span class="palette-circle" style="background:#10B981"></span>
+                <span>Verdant</span>
+              </button>
+              <button class="palette-option" data-palette="amber" onclick="setAccentPalette('amber')" title="Amber">
+                <span class="palette-circle" style="background:#F59E0B"></span>
+                <span>Amber</span>
+              </button>
+              <button class="palette-option" data-palette="terracotta" onclick="setAccentPalette('terracotta')" title="Terracotta">
+                <span class="palette-circle" style="background:#F97316"></span>
+                <span>Terra</span>
+              </button>
+              <button class="palette-option" data-palette="crimson" onclick="setAccentPalette('crimson')" title="Crimson">
+                <span class="palette-circle" style="background:#E11D48"></span>
+                <span>Crimson</span>
+              </button>
+              <button class="palette-option" data-palette="titanium" onclick="setAccentPalette('titanium')" title="Titanium">
+                <span class="palette-circle" style="background:#64748B"></span>
+                <span>Titanium</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <a href="./app/" class="btn btn-primary btn-sm">
+          <span>Open Eva</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </a>
+
+        <button class="mobile-nav-toggle" onclick="toggleMobileDrawer()" aria-label="Toggle Navigation Menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+        </button>
+      </div>
     </div>
-  </section>
+  </header>
 
-  <section class="chapter chapter--paper" id="index" data-ground="paper" data-ink="dark">
-    <h2 class="sr-only">All versions</h2>
-    <nav class="rel-index" aria-label="Releases">
-      <a href="#v120" data-reveal>
-        <span class="rel-v">1.2.0</span>
-        <span class="rel-w">Anywhere you are</span>
-        <span class="rel-fl">latest</span>
-      </a>
-      <a href="#v110" data-reveal data-delay="50">
-        <span class="rel-v">1.1.0</span>
-        <span class="rel-w">Bring your own provider</span>
-        <span class="rel-fl">providers</span>
-      </a>
-      <a href="#v100" data-reveal data-delay="70">
-        <span class="rel-v">1.0.0</span>
-        <span class="rel-w">The studio, opened</span>
-        <span class="rel-fl">first release</span>
-      </a>
+  <main>
+    <!-- Header -->
+    <section class="rel-header">
+      <div class="container container-narrow">
+        <h1 class="rel-header-title">What shipped, and when.</h1>
+        <p class="rel-header-subtitle">
+          Every version of Eva, in order, with full architectural improvements, security hardening notes, and download links.
+        </p>
+      </div>
+    </section>
+
+    <!-- Version Index -->
+    <nav class="container container-narrow rel-index-nav" aria-label="Releases Jump Navigation">
+      <a href="#v210" class="rel-index-chip latest">v2.1.0 (Latest)</a>
+      <a href="#v200" class="rel-index-chip">v2.0.0</a>
+      <a href="#v120" class="rel-index-chip">v1.2.0</a>
+      <a href="#v110" class="rel-index-chip">v1.1.0</a>
+      <a href="#v100" class="rel-index-chip">v1.0.0</a>
     </nav>
-  </section>
 
-  <section class="ticker" data-ground="surface" data-ink="light" aria-hidden="true">
-    <div class="ticker-track">
-      <span class="ticker-run">v1.2.0 · v1.1.0 · v1.0.0 · windows · linux · web · android · appimage · deb · rpm · pacman · free ·</span>
-      <span class="ticker-run">v1.2.0 · v1.1.0 · v1.0.0 · windows · linux · web · android · appimage · deb · rpm · pacman · free ·</span>
-    </div>
-  </section>
-
-  <figure class="band band--tall" data-ground="deep" data-ink="light">
-    <img src="assets/sky-mountain.jpg" alt="A starry night sky above the silhouette of a mountain." width="1600" height="900">
-  </figure>
-
-  <section class="chapter chapter--paper" id="v120" data-ground="paper" data-ink="dark">
-    <article class="rel">
-      <div class="rel-head">
-        <p class="rel-meta" data-reveal>Released on 17 October 2026 for Windows, Linux, the web and Android</p>
-        <p class="rel-num" data-reveal data-delay="60">1.2.0</p>
-        <h2 class="rel-title" data-reveal data-delay="120">Anywhere you are</h2>
-        <p class="rel-lede" data-reveal data-delay="160">Eva left the desktop. The same studio now opens in a browser, installs to a home screen, and ships with an Android project in the repository. It was built for a thumb, not a mouse.</p>
+    <!-- v2.1.0 Release -->
+    <article class="container container-narrow rel-article" id="v210">
+      <div class="rel-meta-bar">
+        <span class="rel-tag-version">2.1.0</span>
+        <span class="rel-badge-badge">Latest Release</span>
+        <span class="rel-date">November 2026 · Windows, Linux, Android, Web</span>
       </div>
+      <h2 class="rel-title-heading">Astra Redesign, Dynamic Theme-Aware Icons & Setup Guide</h2>
+      <p class="rel-intro">
+        A complete visual and architectural redesign. Rebuilt both the public product website and the web application from the ground up on the Astra 60-30-10 design system, introduced multi-platform dynamic theme-aware application icons, and created an interactive provider-aware onboarding experience.
+      </p>
 
-      <div class="rel-changes">
-        <div class="rel-item" data-reveal>
-          <h3>Built for a touch screen</h3>
-          <p>Rows, buttons and sliders are sized for a finger. Anything that used to appear on hover now stays where a thumb can reach it.</p>
+      <div class="rel-grid-changes">
+        <div class="rel-change-card">
+          <div class="rel-change-title">✦ Complete Website & App Redesign</div>
+          <div class="rel-change-desc">Recreated the public landing page with editorial product design, interactive studio switcher, live theme switcher, and 8 curated accent palettes. Upgraded the React web app across all three modes (Chatbot, Anime, World).</div>
         </div>
-        <div class="rel-item" data-reveal data-delay="60">
-          <h3>An app from a browser tab</h3>
-          <p>Open the web build once and add it to your home screen. It gets its own icon and opens full screen, with no store and no install file.</p>
+        <div class="rel-change-card">
+          <div class="rel-change-title">✦ Dynamic Theme-Aware App Icons</div>
+          <div class="rel-change-desc">Android VectorDrawable adaptive launcher icons switch automatically between dark and light mode, with Android 13+ Material You monochrome support. Desktop Electron dynamically switches window/dock icons at runtime without restart.</div>
         </div>
-        <div class="rel-item" data-reveal data-delay="120">
-          <h3>It keeps working offline</h3>
-          <p>The shell is stored on your device, so reopening Eva does not need a connection. Your characters, worlds and chats stay where you left them.</p>
+        <div class="rel-change-card">
+          <div class="rel-change-title">✦ Astra 60-30-10 Color System</div>
+          <div class="rel-change-desc">Astra Warm Dark (#12100E primary background, warm ivory text) and bright, pure minimal light (#FAFAFA pure neutral background, zero beige tint) with 8 independent curated palettes and WCAG AA contrast.</div>
         </div>
-        <div class="rel-item" data-reveal data-delay="180">
-          <h3>Nothing runs off the edge</h3>
-          <p>On a phone the app fills the screen edge to edge, clears the notch and the home bar, and never scrolls the wrong way or doubles up the page.</p>
-        </div>
-        <div class="rel-item" data-reveal data-delay="240">
-          <h3>A real Android project</h3>
-          <p>The repository carries a Capacitor project with its own launcher icons and splash, so the same build can become an Android app.</p>
-        </div>
-        <div class="rel-item" data-reveal data-delay="300">
-          <h3>A place for the history</h3>
-          <p>The site gained this page: every version in order, what changed, and a direct file for each platform instead of a search through the tags.</p>
+        <div class="rel-change-card">
+          <div class="rel-change-title">✦ Dynamic First-Launch Setup Guide</div>
+          <div class="rel-change-desc">Provider-aware dynamic onboarding with verified documentation, live endpoint connection tests, copyable terminal snippets, and error troubleshooting for Groq, OpenRouter, Ollama, LM Studio, and OpenAI.</div>
         </div>
       </div>
 
-      <div class="rel-get" data-reveal>
-        <a class="rel-dl" href="https://github.com/AmanicX/eva/releases/download/v1.2.0/Eva-Setup-1.2.0.exe">Windows installer</a>
-        <a class="rel-dl" href="https://github.com/AmanicX/eva/releases/download/v1.2.0/Eva-1.2.0.AppImage">Linux AppImage</a>
-        <a class="rel-dl" href="https://github.com/AmanicX/eva/releases/download/v1.2.0/eva_1.2.0_amd64.deb">Linux .deb</a>
-        <a class="rel-dl" href="https://github.com/AmanicX/eva/releases/download/v1.2.0/eva-1.2.0.x86_64.rpm">Linux .rpm</a>
-        <a class="rel-dl" href="https://github.com/AmanicX/eva/releases/download/v1.2.0/eva-1.2.0.pacman">Linux .pacman</a>
-        <a class="rel-dl" href="app/">Open the web app</a>
+      <div class="rel-downloads-bar">
+        <span class="rel-dl-label">Downloads:</span>
+        <a class="rel-dl-link" href="https://github.com/AmanicX/eva/releases/download/v2.1.0/Eva-Setup-2.1.0.exe">Windows Installer (.exe)</a>
+        <a class="rel-dl-link" href="https://github.com/AmanicX/eva/releases/download/v2.1.0/Eva-2.1.0.AppImage">Linux AppImage</a>
+        <a class="rel-dl-link" href="https://github.com/AmanicX/eva/releases/download/v2.1.0/eva_2.1.0_amd64.deb">Linux .deb</a>
+        <a class="rel-dl-link" href="https://github.com/AmanicX/eva/releases/download/v2.1.0/eva-2.1.0.x86_64.rpm">Linux .rpm</a>
+        <a class="rel-dl-link" href="https://github.com/AmanicX/eva/releases/download/v2.1.0/eva-2.1.0.apk">Android (.apk)</a>
+        <a class="rel-dl-link" href="./app/">Open Web App</a>
       </div>
     </article>
-  </section>
 
-  <figure class="band" data-ground="deep" data-ink="light">
-    <img src="assets/photo-ridge.jpg" alt="" width="2000" height="1125">
-  </figure>
+    <!-- v2.0.0 Release -->
+    <article class="container container-narrow rel-article" id="v200">
+      <div class="rel-meta-bar">
+        <span class="rel-tag-version">2.0.0</span>
+        <span class="rel-badge-badge">Major Architecture</span>
+        <span class="rel-date">November 2026 · Windows, Linux, Android, Web</span>
+      </div>
+      <h2 class="rel-title-heading">Rebrand to Eva, E2EE Cloud Sync & AI Generator</h2>
+      <p class="rel-intro">
+        Nexus rebranded to Eva. Introduced multi-provider engine, client-side AES-256-GCM zero-knowledge cloud backup to Google Drive and GitHub, AI character generation with single-section regeneration, and native Android production packaging.
+      </p>
 
-  <section class="chapter chapter--surface" id="v110" data-ground="surface" data-ink="light">
-    <article class="rel">
-      <div class="rel-head">
-        <p class="rel-meta" data-reveal>Released on 15 October 2026 for Windows, Linux and the web</p>
-        <p class="rel-num" data-reveal data-delay="60">1.1.0</p>
-        <h2 class="rel-title" data-reveal data-delay="120">Bring your own provider</h2>
-        <p class="rel-lede" data-reveal data-delay="160">Eva stopped being a client for one company. It now talks to anything that speaks the OpenAI chat format, hosted or running on your own machine, picked from a single list.</p>
+      <div class="rel-grid-changes">
+        <div class="rel-change-card">
+          <div class="rel-change-title">✦ Zero-Knowledge Encrypted Sync</div>
+          <div class="rel-change-desc">AES-256-GCM client-side encrypted backup with PBKDF2 (100k rounds) and 24-word BIP39 recovery phrases. Syncs to Google Drive appDataFolder and private GitHub repositories.</div>
+        </div>
+        <div class="rel-change-card">
+          <div class="rel-change-title">✦ Hardware Keystore Security</div>
+          <div class="rel-change-desc">Platform-specific credential management: Electron safeStorage (OS Keychain/libsecret/DPAPI) and Android native Keystore plugin with AES-256-GCM.</div>
+        </div>
+        <div class="rel-change-card">
+          <div class="rel-change-title">✦ AI Character Profile Generator</div>
+          <div class="rel-change-desc">Structured 12-dimension character creation from short natural language prompts, with section-by-section regeneration capabilities.</div>
+        </div>
+        <div class="rel-change-card">
+          <div class="rel-change-title">✦ 3-Way Conflict Merging</div>
+          <div class="rel-change-desc">Intelligent field-level merging for characters, worlds, and messages. Concurrent edits preserve branched conflict copies rather than overwriting history.</div>
+        </div>
       </div>
 
-      <div class="rel-changes">
-        <div class="rel-item" data-reveal>
-          <h3>Five providers, one screen</h3>
-          <p>Groq and OpenRouter if you want it hosted. Ollama and LM Studio if you want it local. A fifth option takes any base URL you type yourself.</p>
-        </div>
-        <div class="rel-item" data-reveal data-delay="60">
-          <h3>A live model list</h3>
-          <p>Instead of a hard-coded handful, Eva asks the provider what it serves and shows you all of it in a searchable list.</p>
-        </div>
-        <div class="rel-item" data-reveal data-delay="120">
-          <h3>Local models stay local</h3>
-          <p>Point Eva at a model on your own machine and no request leaves your network. No account, no key, nothing to pay.</p>
-        </div>
-        <div class="rel-item" data-reveal data-delay="180">
-          <h3>Your studio moves with you</h3>
-          <p>Characters, worlds and conversations are upgraded in place the first time the new version opens. Nothing to re-enter by hand.</p>
-        </div>
-      </div>
-
-      <div class="rel-get" data-reveal>
-        <a class="rel-dl" href="https://github.com/AmanicX/eva/releases/download/v1.1.0/Eva-Setup-1.1.0.exe">Windows installer</a>
-        <a class="rel-dl" href="https://github.com/AmanicX/eva/releases/download/v1.1.0/Eva-1.1.0.AppImage">Linux AppImage</a>
-        <a class="rel-dl" href="https://github.com/AmanicX/eva/releases/download/v1.1.0/eva_1.1.0_amd64.deb">Linux .deb</a>
-        <a class="rel-dl" href="https://github.com/AmanicX/eva/releases/download/v1.1.0/eva-1.1.0.x86_64.rpm">Linux .rpm</a>
-        <a class="rel-dl" href="https://github.com/AmanicX/eva/releases/download/v1.1.0/eva-1.1.0.pacman">Linux .pacman</a>
-        <a class="rel-dl" href="https://github.com/AmanicX/eva/releases/tag/v1.1.0">Everything in 1.1.0</a>
+      <div class="rel-downloads-bar">
+        <span class="rel-dl-label">Downloads:</span>
+        <a class="rel-dl-link" href="https://github.com/AmanicX/eva/releases/download/v2.0.0/Eva-Setup-2.0.0.exe">Windows (.exe)</a>
+        <a class="rel-dl-link" href="https://github.com/AmanicX/eva/releases/download/v2.0.0/Eva-2.0.0.AppImage">Linux AppImage</a>
+        <a class="rel-dl-link" href="https://github.com/AmanicX/eva/releases/download/v2.0.0/eva_2.0.0_amd64.deb">Linux .deb</a>
+        <a class="rel-dl-link" href="https://github.com/AmanicX/eva/releases/download/v2.0.0/eva-2.0.0.apk">Android (.apk)</a>
       </div>
     </article>
-  </section>
 
-  <figure class="band" data-ground="deep" data-ink="light">
-    <img src="assets/photo-ridge.jpg" alt="" width="2000" height="1125">
-  </figure>
-
-  <section class="chapter chapter--paper" id="v100" data-ground="paper" data-ink="dark">
-    <article class="rel">
-      <div class="rel-head">
-        <p class="rel-meta" data-reveal>Released on 15 October 2026 for Windows and Linux</p>
-        <p class="rel-num" data-reveal data-delay="60">1.0.0</p>
-        <h2 class="rel-title" data-reveal data-delay="120">The studio, opened</h2>
-        <p class="rel-lede" data-reveal data-delay="160">The first build put the whole thing in one window: write a character, put them somewhere, and talk to them with a model you choose.</p>
+    <!-- v1.2.0 Release -->
+    <article class="container container-narrow rel-article" id="v120">
+      <div class="rel-meta-bar">
+        <span class="rel-tag-version">1.2.0</span>
+        <span class="rel-date">October 2026 · Windows, Linux, Android, Web</span>
       </div>
-
-      <div class="rel-changes">
-        <div class="rel-item" data-reveal>
-          <h3>Characters</h3>
-          <p>A face, a voice, a persona, a greeting. Canon figures and your own, sitting in the same list.</p>
-        </div>
-        <div class="rel-item" data-reveal data-delay="60">
-          <h3>Worlds</h3>
-          <p>Places, factions and lore, plus reputation, events and notes that survive from one turn to the next.</p>
-        </div>
-        <div class="rel-item" data-reveal data-delay="120">
-          <h3>Six commands</h3>
-          <p>Mark a thought, mark an action, hand a line to someone else, force an event, and move the world itself.</p>
-        </div>
-        <div class="rel-item" data-reveal data-delay="180">
-          <h3>Three themes</h3>
-          <p>Chatbot, Anime and World, each with its own palette and its own mood.</p>
-        </div>
-        <div class="rel-item" data-reveal data-delay="240">
-          <h3>Memory</h3>
-          <p>A rolling summary per conversation, so a long scene keeps its shape instead of drifting.</p>
-        </div>
-        <div class="rel-item" data-reveal data-delay="300">
-          <h3>An installer, not a build</h3>
-          <p>A Windows setup file and Linux packages, ready to run. Nothing to compile first.</p>
-        </div>
-      </div>
-
-      <div class="rel-get" data-reveal>
-        <a class="rel-dl" href="https://github.com/AmanicX/eva/releases/download/v1.0.0/Eva-Setup-1.0.0.exe">Windows installer</a>
-        <a class="rel-dl" href="https://github.com/AmanicX/eva/releases/download/v1.0.0/Eva-1.0.0.AppImage">Linux AppImage</a>
-        <a class="rel-dl" href="https://github.com/AmanicX/eva/releases/download/v1.0.0/eva_1.0.0_amd64.deb">Linux .deb</a>
-        <a class="rel-dl" href="https://github.com/AmanicX/eva/releases/download/v1.0.0/eva-1.0.0.x86_64.rpm">Linux .rpm</a>
-        <a class="rel-dl" href="https://github.com/AmanicX/eva/releases/download/v1.0.0/eva-1.0.0.pacman">Linux .pacman</a>
-        <a class="rel-dl" href="https://github.com/AmanicX/eva/releases/tag/v1.0.0">Everything in 1.0.0</a>
+      <h2 class="rel-title-heading">Anywhere you are</h2>
+      <p class="rel-intro">
+        Eva left the desktop. The same studio now opens in a browser, installs to a home screen as a PWA, and ships with an Android project in the repository. Built for touch screens and mobile thumb-reachability.
+      </p>
+      <div class="rel-downloads-bar">
+        <span class="rel-dl-label">Downloads:</span>
+        <a class="rel-dl-link" href="https://github.com/AmanicX/eva/releases/download/v1.2.0/Eva-Setup-1.2.0.exe">Windows (.exe)</a>
+        <a class="rel-dl-link" href="https://github.com/AmanicX/eva/releases/download/v1.2.0/Eva-1.2.0.AppImage">Linux AppImage</a>
+        <a class="rel-dl-link" href="https://github.com/AmanicX/eva/releases/download/v1.2.0/eva_1.2.0_amd64.deb">Linux .deb</a>
       </div>
     </article>
-  </section>
 
-  <figure class="band" data-ground="deep" data-ink="light">
-    <img src="assets/sky-figure.jpg" alt="A lone figure standing on a dark ridge under a vast twilight sky." width="1600" height="900">
-  </figure>
-
-  <section class="chapter chapter--paper" id="get" data-ground="paper" data-ink="dark">
-    <div class="how">
-      <h2 class="how-title" data-reveal>Get it</h2>
-
-      <div class="rel-ways" data-reveal>
-        <article class="rel-way">
-          <h3>In a browser</h3>
-          <p>Eva also runs as a web app on this site. Open it, add it to your home screen, and it behaves like something you installed.</p>
-          <ul>
-            <li class="rel-soft">Works on phone and tablet</li>
-            <li class="rel-soft">Adds to a home screen on Android or iOS</li>
-            <li class="rel-soft">Nothing to download</li>
-          </ul>
-          <p><a class="rel-dl" href="app/">Open the web app</a></p>
-        </article>
-
-        <article class="rel-way">
-          <h3>On Windows</h3>
-          <p>The installer carries everything it needs. Save the file, run it, and Eva opens.</p>
-          <ul>
-            <li class="rel-soft">Windows 10 or later</li>
-            <li class="rel-soft">Choose your own install folder</li>
-          </ul>
-          <p><a class="rel-dl" href="https://github.com/AmanicX/eva/releases/latest">Download the latest .exe</a></p>
-        </article>
-
-        <article class="rel-way">
-          <h3>On Linux</h3>
-          <p>Four builds ship with every release, so you can match the one your system already uses.</p>
-          <ul>
-            <li class="rel-soft">AppImage, .deb, .rpm, .pacman</li>
-            <li class="rel-soft">64-bit desktop</li>
-          </ul>
-          <p><a class="rel-dl" href="https://github.com/AmanicX/eva/releases/latest">See the latest release</a></p>
-        </article>
+    <!-- v1.1.0 Release -->
+    <article class="container container-narrow rel-article" id="v110">
+      <div class="rel-meta-bar">
+        <span class="rel-tag-version">1.1.0</span>
+        <span class="rel-date">October 2026 · Windows, Linux</span>
       </div>
+      <h2 class="rel-title-heading">Bring your own provider</h2>
+      <p class="rel-intro">
+        Added multi-provider architecture: Groq, OpenRouter, Ollama, LM Studio, and generic OpenAI-compatible custom endpoints with dynamic model enumeration.
+      </p>
+    </article>
 
-      <div class="ex" data-reveal>
-        <p class="ex-lead">Or build it yourself.</p>
-        <div class="ex-call ex-call--code">
-<pre><code>git clone https://github.com/AmanicX/eva.git
-cd eva &amp;&amp; bash install.sh</code></pre>
-          <button class="copy" type="button" data-copy="git clone https://github.com/AmanicX/eva.git&#10;cd eva && bash install.sh">Copy</button>
-        </div>
+    <!-- v1.0.0 Release -->
+    <article class="container container-narrow rel-article" id="v100">
+      <div class="rel-meta-bar">
+        <span class="rel-tag-version">1.0.0</span>
+        <span class="rel-date">October 2026 · Windows, Linux</span>
+      </div>
+      <h2 class="rel-title-heading">The studio, opened</h2>
+      <p class="rel-intro">
+        Initial open-source release of the multi-theme character chat studio. Introduced Chatbot, Anime, and World modes with custom character profiles and command syntax.
+      </p>
+    </article>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <div>© 2026 Eva. All rights reserved. Zero telemetry collected.</div>
+        <div><a href="./" style="color:var(--c-accent); font-weight:600;">← Back to Home</a></div>
       </div>
     </div>
-  </section>
+  </footer>
 
-  <figure class="band" data-ground="deep" data-ink="light">
-    <img src="assets/photo-canopy.jpg" alt="" width="2000" height="1125">
-  </figure>
-
-  <section class="chapter chapter--surface" id="versions" data-ground="surface" data-ink="light">
-    <div class="faq">
-      <h2 class="faq-head" data-reveal>About versions</h2>
-      <div class="faq-grid">
-        <h3 class="faq-q" data-reveal>How do the numbers work?</h3>
-        <p class="faq-a" data-reveal>Three of them. The first goes up when something stops working the old way, the second for new features, and the third for fixes. 1.2.0 adds the web and Android builds on top of 1.1.0.</p>
-        <h3 class="faq-q" data-reveal>How do updates arrive?</h3>
-        <p class="faq-a" data-reveal>The desktop app can check for a newer version on launch and install it over the old one. The web app picks up a new build the next time you open it.</p>
-        <h3 class="faq-q" data-reveal>Do I lose anything by updating?</h3>
-        <p class="faq-a" data-reveal>No. Characters, worlds and conversations are upgraded in place the first time the new version starts.</p>
-        <h3 class="faq-q" data-reveal>Can I run it without installing?</h3>
-        <p class="faq-a" data-reveal>Yes. Open the web app in your browser, or clone the source and run it from there.</p>
-        <h3 class="faq-q" data-reveal>Where does a release come from?</h3>
-        <p class="faq-a" data-reveal>One tag on one commit. A build job compiles Windows and Linux from that exact source and attaches the results to the release.</p>
-        <h3 class="faq-q" data-reveal>Something is broken. Where do I report it?</h3>
-        <p class="faq-a" data-reveal>On the project's issue tracker, with your version number and what you were doing. That is the fastest route to a fix.</p>
-      </div>
-    </div>
-  </section>
-
-  <section class="chapter cta" id="download" data-ground="accent" data-ink="dark">
-    <a class="cta-band grain" href="https://github.com/AmanicX/eva/releases/latest">
-      <span class="cta-note">Windows installer, Linux packages, nothing to pay.</span>
-      <svg class="cta-arrow" viewBox="0 0 48 48" width="48" height="48" aria-hidden="true" focusable="false">
-        <path d="M12 36 L36 12 M18 12 H36 V30" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="square"/>
-      </svg>
-      <span class="cta-word" data-reveal>download</span>
-    </a>
-  </section>
-
-</main>
-
-<footer class="chapter footer" id="colophon" data-ground="deep" data-ink="light">
-  <div class="foot-mark-wrap">
-    <span class="foot-mark" data-reveal>Eva</span>
-  </div>
-
-  <div class="foot-row">
-    <ul class="foot-places" data-reveal>
-      <li><a href="app/">Web app</a></li>
-      <li><a href="https://github.com/AmanicX/eva/releases/latest">Windows installer</a></li>
-      <li><a href="https://github.com/AmanicX/eva/releases/latest">Linux .deb</a></li>
-      <li><a href="https://github.com/AmanicX/eva/releases/latest">Linux AppImage</a></li>
-      <li><a href="https://github.com/AmanicX/eva/releases/latest">Linux .rpm</a></li>
-      <li><a href="https://github.com/AmanicX/eva/releases/latest">Linux .pacman</a></li>
-    </ul>
-
-    <div class="foot-cols" data-reveal data-delay="90">
-      <ul>
-        <li><a href="https://github.com/AmanicX/eva">Source code</a></li>
-        <li><a href="https://github.com/AmanicX/eva/releases">All releases</a></li>
-        <li><a href="https://github.com/AmanicX/eva/issues">Report a problem</a></li>
-      </ul>
-      <ul>
-        <li><a href="#index">Versions</a></li>
-        <li><a href="#v120">1.2.0</a></li>
-        <li><a href="#v110">1.1.0</a></li>
-        <li><a href="#v100">1.0.0</a></li>
-      </ul>
-      <ul>
-        <li><a href="#get">Get it</a></li>
-        <li><a href="#versions">About versions</a></li>
-        <li><a href="./">Home</a></li>
-      </ul>
-    </div>
-  </div>
-
-  <div class="foot-legal">
-    <p class="foot-note">Eva is an independent project and is not affiliated with any AI provider.</p>
-    <a class="foot-up" href="#top">Back to the top</a>
-  </div>
-</footer>
-
-<script src="app.js" defer></script>
+  <script src="app.js"></script>
 </body>
 </html>

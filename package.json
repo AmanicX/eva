@@ -1,7 +1,7 @@
 {
   "name": "eva",
   "private": true,
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Eva - Advanced AI Chatbot — a privacy-first, memory-aware AI character and chat studio for any OpenAI-compatible provider (Groq, OpenRouter, Ollama, LM Studio).",
   "author": "Eva",
   "license": "MIT",
@@ -12,6 +12,7 @@
     "build": "tsc -b && vite build",
     "build:electron": "tsc -b && vite build --base=./",
     "build:web": "tsc -b && vite build --base=./",
+    "deploy:web": "npm run build:web && rm -rf docs/app/* && cp -r dist/* docs/app/",
     "electron:dev": "node scripts/dev-electron.mjs",
     "dist": "npm run build:electron && electron-builder",
     "pack:win": "npm run build:electron && electron-builder --win",

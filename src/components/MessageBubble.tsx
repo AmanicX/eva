@@ -101,7 +101,14 @@ export function MessageBubble({
           )}
         >
           {isEmptyStreaming ? (
-            <span className="caret text-muted text-xs">generating response</span>
+            <span className="inline-flex items-center gap-1.5 py-0.5 text-xs text-muted">
+              <span className="inline-flex items-center gap-1">
+                <span className="size-1.5 rounded-full bg-accent animate-pulse" />
+                <span className="size-1.5 rounded-full bg-accent animate-pulse delay-150" />
+                <span className="size-1.5 rounded-full bg-accent animate-pulse delay-300" />
+              </span>
+              <span className="text-2xs font-medium text-faint">Thinking…</span>
+            </span>
           ) : (
             <MarkdownText text={message.content} className={streaming ? 'caret' : undefined} />
           )}

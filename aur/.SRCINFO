@@ -1,6 +1,6 @@
 pkgbase = eva-bin
 	pkgdesc = Eva - Advanced AI Chatbot (pre-compiled binary)
-	pkgver = 2.0.0
+	pkgver = 2.1.0
 	pkgrel = 1
 	url = https://github.com/AmanicX/eva
 	arch = x86_64
@@ -32,7 +32,7 @@ pkgbase = eva-bin
 	conflicts = eva
 	options = !strip
 	options = !debug
-	source = https://github.com/AmanicX/eva/releases/download/v2.0.0/eva_2.0.0_amd64.deb
-	sha256sums = f85fa89895e1a7857b578fd7cfb7505785766dca9e413b56cfb9aab70ea1e677
+	source = https://github.com/AmanicX/eva/releases/download/v2.1.0/eva_2.1.0_amd64.deb
+	sha256sums = SKIP
 
 pkgname = eva-bin

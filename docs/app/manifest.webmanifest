@@ -1,7 +1,7 @@
 {
-  "name": "Nexus · Character Chat Studio",
-  "short_name": "Nexus",
-  "description": "A multi-theme, memory-aware AI character chat studio that talks to any OpenAI-compatible provider.",
+  "name": "Eva - Advanced AI Chatbot",
+  "short_name": "Eva",
+  "description": "Eva - Advanced AI Chatbot — a privacy-first, memory-aware AI character and chat studio for any OpenAI-compatible provider.",
   "id": "./",
   "start_url": "./",
   "scope": "./",
