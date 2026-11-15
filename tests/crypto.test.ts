@@ -134,8 +134,9 @@ describe('End-to-End Encryption (syncCrypto)', () => {
 
     const envelope = await encryptBackup(sampleData, key, salt, meta, 'device_test')
 
-    // Tamper with ciphertext by altering a base64 character
-    const tamperedCiphertext = envelope.ciphertext.slice(0, 10) + 'A' + envelope.ciphertext.slice(11)
+    // Tamper with ciphertext by altering a character deterministically
+    const firstChar = envelope.ciphertext[0]
+    const tamperedCiphertext = (firstChar === 'A' ? 'B' : 'A') + envelope.ciphertext.slice(1)
     const tamperedEnvelope = {
       ...envelope,
       ciphertext: tamperedCiphertext,
