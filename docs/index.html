@@ -282,15 +282,15 @@
         </div>
 
         <div class="features-grid">
-          <!-- Feature 1: Character Generator -->
+          <!-- Feature 1: Character & World Generator -->
           <div class="feature-box">
             <div class="feature-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v19"/><path d="M5 8h14"/><path d="M15 5h4v4"/><path d="M19 19H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2Z"/></svg>
             </div>
-            <h3 class="feature-title">AI Character Generator & Section Regeneration</h3>
-            <p class="feature-desc">Describe a character idea in plain English and Eva generates a structured profile covering personality, dialogue examples, likes/dislikes, physical appearance, and opening greetings. Like parts of the profile but want to refine the voice? Regenerate individual sections with one click without altering the rest.</p>
+            <h3 class="feature-title">AI Character & World Generator with Online Lookup</h3>
+            <p class="feature-desc">Describe a character or world idea in plain English and Eva generates a rich, structured profile covering psychological dimensions, lore bibles, dialogue examples, and opening greetings. Integrated Wikipedia and Fandom lookup grounds canon personas accurately, and single-section regeneration lets you fine-tune specific fields without losing the rest.</p>
             <div class="feature-snippet">
-              ✦ "Cyberpunk combat medic who retired to run an illegal underground clinic in Old Shibuya." → Generates 12 distinct profile fields in seconds.
+              ✦ "Cyberpunk combat medic running an underground clinic" → Generates 12 distinct persona fields in seconds with granular section regeneration.
             </div>
           </div>
 
@@ -306,7 +306,31 @@
             </div>
           </div>
 
-          <!-- Feature 3: Cloud Sync & Hardware Security -->
+          <!-- Feature 3: Scene Visuals & Image Generation -->
+          <div class="feature-box">
+            <div class="feature-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+            </div>
+            <h3 class="feature-title">Scene Visuals & Image Generation</h3>
+            <p class="feature-desc">Capture memorable conversation moments into striking scene illustrations using the Flux family (Flux Pro, Realism, Anime) via Pollinations or Imagen 3 via Google AI. Eva analyzes current chat context to offer 4–6 tailored visual scene suggestions, complete with strict safety pre-checks and persistent IndexedDB storage.</p>
+            <div class="feature-snippet">
+              Pollinations Flux (Free) · Google Imagen 3 · Context-aware scene prompt suggestions · IndexedDB gallery
+            </div>
+          </div>
+
+          <!-- Feature 4: Synthetic Speech & Dialogue-Only TTS -->
+          <div class="feature-box">
+            <div class="feature-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+            </div>
+            <h3 class="feature-title">Synthetic Speech & Dialogue-Only TTS</h3>
+            <p class="feature-desc">Listen to spoken character dialogue with natural, expressive voice synthesis from Google AI (Puck, Kore, Charon) and Pollinations (Alloy, Echo). Eva's smart dialogue filter automatically isolates spoken dialogue from stage directions and parenthetical thoughts, speaking only what the character says aloud.</p>
+            <div class="feature-snippet">
+              Dialogue filter (skips thoughts/actions) · Google AI voices (Puck) · Pollinations audio · Per-chat voice overrides
+            </div>
+          </div>
+
+          <!-- Feature 5: Cloud Sync & Hardware Security -->
           <div class="feature-box">
             <div class="feature-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/><path d="m12 13 3 3-3 3"/><path d="M9 16h6"/></svg>
@@ -318,7 +342,7 @@
             </div>
           </div>
 
-          <!-- Feature 4: Memory & Persistent State -->
+          <!-- Feature 6: Memory & Persistent State -->
           <div class="feature-box">
             <div class="feature-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-2.04Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-2.04Z"/></svg>
@@ -401,6 +425,36 @@
             </div>
             <p class="provider-desc">Connect official OpenAI API keys or any OpenAI-compatible custom endpoint (vLLM, aphrodite-engine, LocalAI, Mistral).</p>
             <div class="provider-models">GPT-4o, GPT-4.1 Mini, vLLM servers</div>
+          </div>
+
+          <!-- Google AI -->
+          <div class="provider-card">
+            <div class="provider-top">
+              <span class="provider-name">Google AI</span>
+              <span class="provider-badge rec">Multimodal</span>
+            </div>
+            <p class="provider-desc">Gemini models with ultra-large context, native multimodal reasoning, Imagen 3 image generation, and expressive voice synthesis.</p>
+            <div class="provider-models">Gemini 2.5 Flash, Gemini 2.0 Flash, Imagen 3, Google TTS (Puck)</div>
+          </div>
+
+          <!-- Pollinations.ai -->
+          <div class="provider-card">
+            <div class="provider-top">
+              <span class="provider-name">Pollinations.ai</span>
+              <span class="provider-badge offline">Free & Open</span>
+            </div>
+            <p class="provider-desc">Community-powered AI for free chat, rapid Flux family scene generation (Flux Pro, Realism, Anime, Turbo), and audio synthesis with zero keys.</p>
+            <div class="provider-models">OpenAI, Mistral, Flux 1.1 Pro, Flux Realism, Alloy TTS</div>
+          </div>
+
+          <!-- Cloudflare Workers AI -->
+          <div class="provider-card">
+            <div class="provider-top">
+              <span class="provider-name">Cloudflare Workers AI</span>
+              <span class="provider-badge">Serverless Edge</span>
+            </div>
+            <p class="provider-desc">Serverless GPU inference running on Cloudflare's global edge network using your Account ID and API token with low latency.</p>
+            <div class="provider-models">Llama 3.3 70B, Mistral 7B, Qwen 2.5, DeepSeek R1 Distill</div>
           </div>
         </div>
       </div>
