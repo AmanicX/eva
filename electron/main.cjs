@@ -8,7 +8,7 @@ const iconFile = path.join(__dirname, '..', 'build', 'icon.png')
 const windowIcon = fs.existsSync(iconFile) ? iconFile : undefined
 
 // Ensure consistent application name for window managers and desktop compositors
-app.setName('nexus')
+app.setName('Eva')
 
 // Enable auto ozone platform for modern Wayland/X11 compatibility on Linux
 if (process.platform === 'linux') {

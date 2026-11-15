@@ -49,7 +49,7 @@ export function EmptyState() {
           </button>
         )}
 
-        {/* Nexus Brand Hero & Mode Indicator */}
+        {/* Eva Brand Hero & Mode Indicator */}
         <div className="relative mx-auto mb-5 flex size-16 items-center justify-center">
           <AppLogo className="size-16 rounded-2xl shadow-2xl ring-1 ring-border/80" />
           <span className="absolute -bottom-1 -right-1 flex size-6.5 items-center justify-center rounded-lg bg-accent-grad text-xs text-accent-fg shadow-md ring-2 ring-bg">

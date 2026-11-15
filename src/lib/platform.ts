@@ -15,7 +15,7 @@ export function isAndroidPlatform(): boolean {
  */
 export function isDesktopPlatform(): boolean {
   if (typeof window === 'undefined') return false
-  return !!(window as any).nexusDesktop?.isElectron
+  return !!((window as any).evaDesktop?.isElectron || (window as any).nexusDesktop?.isElectron)
 }
 
 /**

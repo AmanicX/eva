@@ -7,6 +7,13 @@ import { isAndroidPlatform } from '@/lib/platform'
 
 declare global {
   interface Window {
+    evaDesktop?: {
+      isElectron: boolean
+      minimize: () => void
+      maximize: () => void
+      close: () => void
+      isMaximized: () => Promise<boolean>
+    }
     nexusDesktop?: {
       isElectron: boolean
       minimize: () => void
@@ -19,29 +26,33 @@ declare global {
 
 export function TitleBar() {
   const isAndroid = isAndroidPlatform()
-  const [isDesktop] = useState(() => typeof window !== 'undefined' && !!window.nexusDesktop?.isElectron)
+  const getDesktop = () =>
+    typeof window !== 'undefined' ? window.evaDesktop || window.nexusDesktop : undefined
+  const [isDesktop] = useState(() => !!getDesktop()?.isElectron)
   const [isMax, setIsMax] = useState(false)
   const theme = useStore((s) => s.settings.theme)
   const setUI = useStore((s) => s.setUI)
   const meta = THEMES[theme]
 
   useEffect(() => {
-    if (window.nexusDesktop?.isMaximized) {
-      window.nexusDesktop.isMaximized().then(setIsMax)
+    const d = getDesktop()
+    if (d?.isMaximized) {
+      d.isMaximized().then(setIsMax)
     }
   }, [])
 
   if (isAndroid) return null
 
-  const handleMinimize = () => window.nexusDesktop?.minimize()
+  const handleMinimize = () => getDesktop()?.minimize()
   const handleMaximize = async () => {
-    window.nexusDesktop?.maximize()
-    if (window.nexusDesktop?.isMaximized) {
-      const state = await window.nexusDesktop.isMaximized()
+    const d = getDesktop()
+    d?.maximize()
+    if (d?.isMaximized) {
+      const state = await d.isMaximized()
       setIsMax(state)
     }
   }
-  const handleClose = () => window.nexusDesktop?.close()
+  const handleClose = () => getDesktop()?.close()
 
   return (
     <header
