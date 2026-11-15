@@ -50,8 +50,8 @@
     },
   };
 
-  // State
-  let currentThemeMode = localStorage.getItem('eva_website_theme') || 'system';
+  // State (default to dark to match Eva's Astra dark aesthetic)
+  let currentThemeMode = localStorage.getItem('eva_website_theme') || 'dark';
   let currentPalette = localStorage.getItem('eva_website_accent') || 'gold';
 
   // Apply Theme & Accent to document
@@ -133,91 +133,6 @@
     if (currentThemeMode === 'system') applyTheme();
   });
 
-  // Hero Studio Switcher Content
-  const STUDIO_PREVIEWS = {
-    chatbot: {
-      title: 'Aria',
-      tagline: 'Empathetic AI Companion · Creative Sandbox',
-      avatar: 'A',
-      avatarColor: '#8B5CF6',
-      status: 'Groq · Llama 3.3 70B',
-      userMsg: '(glancing over the balcony at the sunset) What do you think lies beyond the horizon?',
-      botMsg:
-        '*Aria pauses for a brief moment, her eyes following yours toward the glowing skyline.* (a soft, reflective warmth in her voice) "Perhaps another world waiting to be written. But right now, standing here with you... this moment is plenty real enough."',
-      chips: ['( ) thought', '" " action', '< > god', '[ ] world'],
-      activeSidebarChat: 'Aria',
-    },
-    anime: {
-      title: 'Naruto Uzumaki',
-      tagline: 'Canon Cast · Naruto: Shippuden',
-      avatar: '🍥',
-      avatarColor: '#FFA34D',
-      status: 'Ollama · Llama 3.2 (Local Offline)',
-      userMsg: '"Are you ready for today\'s training?" (adjusts ninja gear and smiles)',
-      botMsg:
-        '*Naruto grins wide and tightens his forehead protector, thumbs pointed proudly at his chest.* "Heh! I was ready before sunrise, believe it! Today I\'m finally mastering that new Rasengan variation — don\'t blink or you\'ll miss it!"',
-      chips: ['( ) thought', '" " action', '(: Sasuke)', '"" : Sakura'],
-      activeSidebarChat: 'Naruto Uzumaki',
-    },
-    world: {
-      title: 'Neo-Veridia',
-      tagline: 'Living Cyberpunk Universe · Faction: Syndicate',
-      avatar: '❖',
-      avatarColor: '#10B981',
-      status: 'OpenRouter · Qwen 2.5 72B',
-      userMsg: '[Districts under blackout] "Ren enters the neon-drenched alley to meet the Netwatchers."',
-      botMsg:
-        '*Sparks shower from overhead holo-billboards as the sector goes pitch black.* [World Event: Grid Failure] "Careful, Ren," *a voice murmurs from the shadows.* (hand resting on an electromagnetic katana) "The corporate patrols don\'t know we\'re here yet. Your reputation with the Netwatchers just rose to +15."',
-      chips: ['[ ] world event', '< > god mode', 'Rep: +15 Friendly'],
-      activeSidebarChat: 'Neo-Veridia',
-    },
-  };
-
-  window.switchHeroStudio = function (studioKey) {
-    const data = STUDIO_PREVIEWS[studioKey];
-    if (!data) return;
-
-    // Tabs UI
-    document.querySelectorAll('.window-tab').forEach((tab) => {
-      if (tab.getAttribute('data-tab') === studioKey) {
-        tab.classList.add('active');
-      } else {
-        tab.classList.remove('active');
-      }
-    });
-
-    // Header info
-    const headerTitle = document.getElementById('mockHeaderTitle');
-    if (headerTitle) headerTitle.textContent = data.title;
-
-    const headerSub = document.getElementById('mockHeaderSub');
-    if (headerSub) headerSub.textContent = data.tagline;
-
-    const modelStatus = document.getElementById('mockModelStatus');
-    if (modelStatus) modelStatus.textContent = data.status;
-
-    // Avatar
-    const avatar = document.getElementById('mockAvatar');
-    if (avatar) {
-      avatar.textContent = data.avatar;
-      avatar.style.background = data.avatarColor;
-    }
-
-    // Messages
-    const userMsgEl = document.getElementById('mockUserMsg');
-    if (userMsgEl) userMsgEl.innerHTML = formatMockSyntax(data.userMsg);
-
-    const botMsgEl = document.getElementById('mockBotMsg');
-    if (botMsgEl) botMsgEl.innerHTML = formatMockSyntax(data.botMsg);
-  };
-
-  function formatMockSyntax(text) {
-    return text
-      .replace(/\*([^*]+)\*/g, '<span class="mock-action">$1</span>')
-      .replace(/\(([^)]+)\)/g, '<span class="mock-thought">($1)</span>')
-      .replace(/\[([^\]]+)\]/g, '<span style="color:var(--c-success);font-weight:600;">[$1]</span>');
-  }
-
   // Toggle Palette Popover
   window.togglePaletteDropdown = function (e) {
     e.stopPropagation();
@@ -242,7 +157,5 @@
   // Init on DOM ready
   document.addEventListener('DOMContentLoaded', () => {
     applyTheme();
-    // Default to chatbot preview
-    switchHeroStudio('chatbot');
   });
 })();

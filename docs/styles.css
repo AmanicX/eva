@@ -462,76 +462,73 @@ button {
   gap: 0.35rem;
 }
 
-/* Interactive Product Preview Frame */
+/* Real Product Preview Showcase Frame */
 .showcase-frame {
   margin-top: 3.5rem;
   border-radius: var(--radius-2xl);
-  background: var(--c-surface);
+  background: #12100E;
   border: 1px solid var(--c-border-strong);
-  box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 28px 75px -12px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.05);
   overflow: hidden;
   position: relative;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
 }
 
-.window-header {
+.showcase-frame:hover {
+  transform: translateY(-2px);
+  border-color: var(--c-accent);
+  box-shadow: 0 36px 90px -16px rgba(0, 0, 0, 0.65), 0 0 0 1px var(--c-accent);
+}
+
+.showcase-media-link {
+  display: block;
+  position: relative;
+  text-decoration: none;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.showcase-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  vertical-align: middle;
+  border-radius: calc(var(--radius-2xl) - 1px);
+}
+
+.showcase-badge-overlay {
+  position: absolute;
+  bottom: 1.25rem;
+  right: 1.25rem;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0.85rem 1.25rem;
-  background: var(--c-surface-2);
-  border-bottom: 1px solid var(--c-border);
-}
-
-.window-dots {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.window-dot {
-  width: 0.75rem;
-  height: 0.75rem;
+  gap: 0.75rem;
+  padding: 0.5rem 0.95rem;
   border-radius: var(--radius-full);
-}
-
-.dot-red { background: #FF5F56; }
-.dot-yellow { background: #FFBD2E; }
-.dot-green { background: #27C93F; }
-
-.window-tabs {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  background: var(--c-inset);
-  padding: 3px;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--c-border);
-}
-
-.window-tab {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.3rem 0.85rem;
-  border-radius: calc(var(--radius-lg) - 3px);
+  background: rgba(18, 16, 14, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #F5F3EF;
   font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--c-muted);
-  transition: all 0.15s ease;
+  font-weight: 500;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
 }
 
-.window-tab.active {
-  background: var(--c-surface);
-  color: var(--c-fg);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+.showcase-frame:hover .showcase-badge-overlay {
+  background: var(--c-accent);
+  color: var(--c-accent-fg);
+  border-color: var(--c-accent);
+  transform: scale(1.03);
 }
 
-.window-status {
+.showcase-badge-live {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.75rem;
-  color: var(--c-faint);
+  gap: 0.45rem;
+  color: #E6E4E2;
 }
 
 .status-dot-green {
@@ -539,169 +536,42 @@ button {
   height: 0.5rem;
   border-radius: var(--radius-full);
   background: var(--c-success);
+  box-shadow: 0 0 6px var(--c-success);
 }
 
-/* Mock App Workspace inside Frame */
-.mock-workspace {
-  display: grid;
-  grid-template-columns: 240px 1fr;
-  min-height: 480px;
-}
-
-@media (max-width: 768px) {
-  .mock-workspace {
-    grid-template-columns: 1fr;
-  }
-  .mock-sidebar {
-    display: none;
-  }
-}
-
-.mock-sidebar {
-  background: var(--c-bg-2);
-  border-right: 1px solid var(--c-border);
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.mock-chat-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.6rem 0.75rem;
-  border-radius: var(--radius-lg);
-  transition: background 0.15s ease;
-}
-
-.mock-chat-item.active {
-  background: var(--c-accent-surface);
-  border: 1px solid var(--c-accent-border);
-}
-
-.mock-avatar {
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 0.875rem;
-  color: #fff;
-  flex-shrink: 0;
-}
-
-.mock-chat-meta {
-  min-width: 0;
-  flex: 1;
-}
-
-.mock-chat-name {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--c-fg);
-  truncate: ellipsis;
-}
-
-.mock-chat-preview {
-  font-size: 0.7rem;
-  color: var(--c-faint);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.mock-main {
-  background: var(--c-bg);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 1.5rem;
-}
-
-.mock-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--c-border);
-}
-
-.mock-messages {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  padding: 1.5rem 0;
-}
-
-.mock-bubble-bot {
-  align-self: flex-start;
-  max-width: 80%;
-  background: var(--c-surface-2);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-xl);
-  border-top-left-radius: var(--radius-xs);
-  padding: 1rem 1.25rem;
-  font-size: 0.875rem;
-  line-height: 1.55;
-  color: var(--c-fg);
-}
-
-.mock-bubble-user {
-  align-self: flex-end;
-  max-width: 75%;
-  background: var(--c-accent);
+.showcase-frame:hover .showcase-badge-live {
   color: var(--c-accent-fg);
-  border-radius: var(--radius-xl);
-  border-bottom-right-radius: var(--radius-xs);
-  padding: 0.85rem 1.25rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  line-height: 1.5;
 }
 
-.mock-action {
-  color: var(--c-accent-contrast);
-  font-style: italic;
-  font-weight: 500;
-}
-
-.mock-thought {
-  color: var(--c-faint);
-  border-left: 2px solid var(--c-border-strong);
-  padding-left: 0.5rem;
-  margin: 0.35rem 0;
-  display: block;
-}
-
-.mock-composer {
-  background: var(--c-surface-2);
-  border: 1px solid var(--c-border-strong);
-  border-radius: var(--radius-xl);
-  padding: 0.75rem 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.mock-chips {
+.showcase-badge-action {
   display: flex;
   align-items: center;
   gap: 0.35rem;
+  color: var(--c-accent);
+  font-weight: 600;
+  border-left: 1px solid rgba(255, 255, 255, 0.18);
+  padding-left: 0.75rem;
 }
 
-.mock-chip {
-  padding: 0.2rem 0.5rem;
-  border-radius: var(--radius-sm);
-  background: var(--c-surface-3);
-  border: 1px solid var(--c-border);
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  color: var(--c-muted);
+.showcase-frame:hover .showcase-badge-action {
+  color: var(--c-accent-fg);
+  border-left-color: rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 640px) {
+  .showcase-badge-overlay {
+    bottom: 0.75rem;
+    right: 0.75rem;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.7rem;
+  }
+  .showcase-badge-live {
+    display: none;
+  }
+  .showcase-badge-action {
+    border-left: none;
+    padding-left: 0;
+  }
 }
 
 /* Sections */

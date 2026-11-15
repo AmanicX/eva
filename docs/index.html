@@ -188,100 +188,28 @@
           </div>
         </div>
 
-        <!-- Interactive Real Product Showcase Window -->
+        <!-- Real Product Showcase -->
         <div class="showcase-frame">
-          <div class="window-header">
-            <div class="window-dots">
-              <span class="window-dot dot-red"></span>
-              <span class="window-dot dot-yellow"></span>
-              <span class="window-dot dot-green"></span>
+          <a href="./app/" class="showcase-media-link" title="Launch Eva in your browser">
+            <img
+              src="assets/app-showcase.png"
+              alt="Eva Application - Real Chatbot Studio interface showing character archetypes, customizable personalities, and Astra design system"
+              class="showcase-image"
+              width="1916"
+              height="1025"
+              loading="eager"
+            />
+            <div class="showcase-badge-overlay">
+              <span class="showcase-badge-live">
+                <span class="status-dot-green"></span>
+                Actual Application Interface
+              </span>
+              <span class="showcase-badge-action">
+                Launch Live App
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              </span>
             </div>
-
-            <!-- Mode Switcher Tabs inside Window -->
-            <div class="window-tabs" role="tablist" aria-label="Interactive preview studio mode">
-              <button class="window-tab active" data-tab="chatbot" onclick="switchHeroStudio('chatbot')">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
-                <span>Chatbot</span>
-              </button>
-              <button class="window-tab" data-tab="anime" onclick="switchHeroStudio('anime')">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
-                <span>Anime</span>
-              </button>
-              <button class="window-tab" data-tab="world" onclick="switchHeroStudio('world')">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
-                <span>World</span>
-              </button>
-            </div>
-
-            <div class="window-status">
-              <span class="status-dot-green"></span>
-              <span id="mockModelStatus">Groq · Llama 3.3 70B</span>
-            </div>
-          </div>
-
-          <!-- Mock Interface -->
-          <div class="mock-workspace">
-            <div class="mock-sidebar">
-              <div style="font-size:0.75rem; font-weight:700; color:var(--c-faint); text-transform:uppercase; margin-bottom:0.5rem; letter-spacing:0.04em;">Conversations</div>
-              <div class="mock-chat-item active">
-                <div class="mock-avatar" id="mockAvatar" style="background:#8B5CF6;">A</div>
-                <div class="mock-chat-meta">
-                  <div class="mock-chat-name" id="mockHeaderTitle">Aria</div>
-                  <div class="mock-chat-preview">Active session · Connected</div>
-                </div>
-              </div>
-              <div class="mock-chat-item" style="opacity:0.6;">
-                <div class="mock-avatar" style="background:#FFA34D;">🍥</div>
-                <div class="mock-chat-meta">
-                  <div class="mock-chat-name">Naruto Uzumaki</div>
-                  <div class="mock-chat-preview">"Name's Naruto Uzumaki..."</div>
-                </div>
-              </div>
-              <div class="mock-chat-item" style="opacity:0.6;">
-                <div class="mock-avatar" style="background:#10B981;">❖</div>
-                <div class="mock-chat-meta">
-                  <div class="mock-chat-name">Neo-Veridia</div>
-                  <div class="mock-chat-preview">Faction: Syndicate · Rep: +15</div>
-                </div>
-              </div>
-            </div>
-
-            <div class="mock-main">
-              <div class="mock-header">
-                <div>
-                  <div style="font-size:0.95rem; font-weight:700; color:var(--c-fg);" id="mockHeaderTitle">Aria</div>
-                  <div style="font-size:0.75rem; color:var(--c-muted);" id="mockHeaderSub">Empathetic AI Companion · Creative Sandbox</div>
-                </div>
-                <div style="display:flex; gap:0.5rem;">
-                  <span style="font-size:0.75rem; background:var(--c-surface-2); border:1px solid var(--c-border); padding:0.25rem 0.6rem; border-radius:var(--radius-sm); color:var(--c-muted); font-family:var(--font-mono);">Memory HUD: Active</span>
-                </div>
-              </div>
-
-              <div class="mock-messages">
-                <div class="mock-bubble-user" id="mockUserMsg">
-                  (glancing over the balcony at the sunset) What do you think lies beyond the horizon?
-                </div>
-                <div class="mock-bubble-bot" id="mockBotMsg">
-                  <span class="mock-action">*Aria pauses for a brief moment, her eyes following yours toward the glowing skyline.*</span> <span class="mock-thought">(a soft, reflective warmth in her voice)</span> "Perhaps another world waiting to be written. But right now, standing here with you... this moment is plenty real enough."
-                </div>
-              </div>
-
-              <div class="mock-composer">
-                <div class="mock-chips">
-                  <span class="mock-chip">( ) thought</span>
-                  <span class="mock-chip">" " action</span>
-                  <span class="mock-chip">&lt; &gt; god</span>
-                  <span class="mock-chip">[ ] world</span>
-                </div>
-                <div style="display:flex; align-items:center; gap:0.5rem;">
-                  <span style="font-size:0.75rem; color:var(--c-faint);">Enter to send</span>
-                  <div style="width:1.75rem; height:1.75rem; border-radius:var(--radius-md); background:var(--c-accent); display:grid; place-items:center; color:var(--c-accent-fg);">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          </a>
         </div>
       </div>
     </section>
