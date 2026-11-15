@@ -844,12 +844,12 @@ export function SettingsModal() {
                 </div>
               </Section>
 
-              <Section title="Guided Tour" hint="Reopen the first-run orientation guide.">
+              <Section title="Setup Guide & Tour" hint="Reopen the interactive provider setup guide and orientation tour.">
                 <button
                   onClick={() => setUI({ settingsOpen: false, welcomeOpen: true })}
                   className="btn"
                 >
-                  <Sparkles size={15} /> Show orientation tour
+                  <Sparkles size={15} /> Open Setup Guide & Tour
                 </button>
               </Section>
 

@@ -2,14 +2,21 @@ import { useMemo, useState } from 'react'
 import {
   AlertCircle,
   Check,
+  ChevronDown,
+  ChevronUp,
+  Copy,
   Cpu,
+  ExternalLink,
   Eye,
   EyeOff,
   Globe2,
+  HelpCircle,
   KeyRound,
-  MessageSquarePlus,
   Palette,
   RefreshCw,
+  RotateCcw,
+  Server,
+  ShieldCheck,
   Sparkles,
   Terminal,
   Users,
@@ -17,54 +24,58 @@ import {
 } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import {
-  DEFAULT_BASE_URL,
-  GROQ_MODELS,
   PROVIDER_PRESETS,
   listGroqModels,
   providerNeedsKey,
   suggestionsFor,
 } from '@/lib/groq'
+import {
+  PROVIDER_GUIDES,
+  getGuideForBaseUrl,
+  type ProviderGuide,
+} from '@/lib/providerGuides'
 import { Modal } from './Modal'
 import { cn } from '@/lib/utils'
 import { AppLogo } from '@/components/AppLogo'
 
 const STEPS = [
-  { label: 'Welcome', title: 'Welcome to Eva', subtitle: 'A studio for characters, worlds and the model you choose.' },
-  { label: 'Connect', title: 'Connect a model', subtitle: 'Paste a Groq key, or point Eva at any other provider.' },
-  { label: 'Model', title: 'Pick a model', subtitle: 'GPT-OSS 20B is the default — you can change it any time.' },
-  { label: 'Tour', title: 'How Eva works', subtitle: 'Thirty seconds of orientation, then it is yours.' },
+  { label: 'Welcome', title: 'Welcome to Eva', subtitle: 'A private AI studio for characters, worlds, and intelligence.' },
+  { label: 'Provider', title: 'Choose AI Provider', subtitle: 'Pick a cloud provider or connect your own local server.' },
+  { label: 'Setup Guide', title: 'Connect & Verify', subtitle: 'Follow the step-by-step instructions for your selected provider.' },
+  { label: 'Model', title: 'Pick a Model', subtitle: 'Choose a recommended model or select from your provider’s catalog.' },
+  { label: 'Tour', title: 'How Eva Works', subtitle: 'A quick tour of universes, characters, and memory.' },
 ] as const
 
-const TIPS = [
-  {
-    icon: <MessageSquarePlus size={16} />,
-    title: 'Start talking',
-    body: 'Press “New character” in the sidebar to write someone, or open a ready-made one from the roster.',
-  },
-  {
-    icon: <Terminal size={16} />,
-    title: 'Direct the scene',
-    body: 'Type commands to shape a reply: thoughts, actions, and events. The Terminal button lists them all.',
-  },
+const ORIENTATION_TIPS = [
   {
     icon: <Palette size={16} />,
-    title: 'Three universes',
-    body: 'Chatbot, Anime and World are separate. Characters, chats and lore never mix between them.',
+    title: 'Three Separate Universes',
+    body: 'Chatbot, Anime, and World universes are completely isolated. Your characters, chats, and lore never bleed into each other.',
+  },
+  {
+    icon: <Users size={16} />,
+    title: 'Character Creation & Roster',
+    body: 'Write original personas from scratch or explore ready-made characters. Eva preserves deep backstories and voice mannerisms.',
   },
   {
     icon: <Globe2 size={16} />,
-    title: 'Worlds remember',
-    body: 'In the World theme, reputation, events and notes persist from one turn to the next.',
+    title: 'Living World Lore',
+    body: 'In the World theme, places, factions, reputation, and events persist across scenes, shaping how NPCs respond to you.',
+  },
+  {
+    icon: <Terminal size={16} />,
+    title: 'Direct the Scene',
+    body: 'Use in-chat commands to guide the narrative: specify hidden thoughts, stage events, or roll dice. Press the Terminal button anytime.',
   },
   {
     icon: <Sparkles size={16} />,
-    title: 'Memory keeps the thread',
-    body: 'Long chats are quietly summarised, so a scene keeps its shape instead of drifting.',
+    title: 'Long-Term Memory',
+    body: 'Conversations are automatically summarized and integrated so characters remember important events without losing context.',
   },
   {
-    icon: <Cpu size={16} />,
-    title: 'You own the model',
-    body: 'Hosted or local, one key or none. Nothing is sent anywhere but the provider you pick.',
+    icon: <ShieldCheck size={16} />,
+    title: 'Privacy & Cross-Device Sync',
+    body: 'Zero telemetry. Your data stays on your device, with optional zero-knowledge encrypted cloud sync via Google Drive or GitHub.',
   },
 ] as const
 
@@ -81,22 +92,54 @@ export function Welcome() {
   const [testing, setTesting] = useState(false)
   const [result, setResult] = useState<'idle' | 'ok' | 'fail'>('idle')
   const [message, setMessage] = useState('')
+  const [copiedSnippet, setCopiedSnippet] = useState<string | null>(null)
+  const [showErrors, setShowErrors] = useState(false)
+  const [completedSteps, setCompletedSteps] = useState<Record<string, Record<number, boolean>>>({})
+
+  // Determine active guide based on current baseUrl
+  const currentGuide: ProviderGuide = useMemo(() => {
+    return getGuideForBaseUrl(settings.baseUrl)
+  }, [settings.baseUrl])
 
   const needsKey = providerNeedsKey(settings.baseUrl)
-  const preset = PROVIDER_PRESETS.find((p) => p.baseUrl === settings.baseUrl.trim())
-  const current = STEPS[step]
+  const currentStepInfo = STEPS[step]
 
-  const models = useMemo(
-    () =>
-      Array.from(
-        new Set([
-          ...GROQ_MODELS.map((m) => m.id),
-          ...suggestionsFor(settings.baseUrl),
-          ...settings.cachedModels,
-        ]),
-      ).filter(Boolean),
-    [settings.baseUrl, settings.cachedModels],
-  )
+  // Models available for selection
+  const availableModels = useMemo(() => {
+    const list = new Set<string>()
+    // 1. Recommended models from guide
+    for (const m of currentGuide.recommendedModels) {
+      list.add(m.id)
+    }
+    // 2. Suggestions from groq.ts
+    for (const s of suggestionsFor(settings.baseUrl)) {
+      list.add(s)
+    }
+    // 3. Cached live models fetched from provider
+    for (const c of settings.cachedModels) {
+      list.add(c)
+    }
+    return Array.from(list).filter(Boolean)
+  }, [currentGuide, settings.baseUrl, settings.cachedModels])
+
+  const toggleStepCompleted = (providerId: string, stepNumber: number) => {
+    setCompletedSteps((prev) => {
+      const providerSteps = prev[providerId] || {}
+      return {
+        ...prev,
+        [providerId]: {
+          ...providerSteps,
+          [stepNumber]: !providerSteps[stepNumber],
+        },
+      }
+    })
+  }
+
+  const copyText = (text: string) => {
+    void navigator.clipboard.writeText(text)
+    setCopiedSnippet(text)
+    setTimeout(() => setCopiedSnippet(null), 2500)
+  }
 
   const close = () => {
     updateSettings({ onboarded: true })
@@ -106,278 +149,804 @@ export function Welcome() {
     setMessage('')
   }
 
+  const selectProviderPreset = (presetId: string) => {
+    const guide = PROVIDER_GUIDES[presetId] || PROVIDER_GUIDES.groq
+    updateSettings({
+      baseUrl: guide.defaultBaseUrl,
+      // If default model exists for this provider, set it
+      model: guide.recommendedModels[0]?.id || settings.model,
+    })
+    setResult('idle')
+    setMessage('')
+  }
+
   const testConnection = async () => {
     if (needsKey && !settings.apiKey.trim()) {
       setResult('fail')
-      setMessage('Paste your key first.')
+      setMessage('Please enter your API key first.')
       return
     }
+
     setTesting(true)
     setResult('idle')
     setMessage('')
+
     try {
       const list = await listGroqModels(settings.apiKey, settings.baseUrl)
       updateSettings({ cachedModels: list })
       setResult('ok')
-      setMessage(`Connected · ${list.length} models available`)
-    } catch (e) {
+      setMessage(`Connection verified! Found ${list.length} available models.`)
+      // If user hasn't selected a valid model yet or default changed, pick first available
+      if (list.length > 0 && (!settings.model || !list.includes(settings.model))) {
+        if (currentGuide.recommendedModels.length > 0) {
+          const match = currentGuide.recommendedModels.find((rm) => list.includes(rm.id))
+          if (match) updateSettings({ model: match.id })
+        }
+      }
+    } catch (e: any) {
       setResult('fail')
-      setMessage(e instanceof Error ? e.message : 'Connection failed')
+      const errMsg = e instanceof Error ? e.message : 'Connection failed.'
+      setMessage(errMsg)
     } finally {
       setTesting(false)
     }
   }
 
+  // Count how many guide steps user checked off for current provider
+  const completedCount = useMemo(() => {
+    const provSteps = completedSteps[currentGuide.id] || {}
+    return Object.values(provSteps).filter(Boolean).length
+  }, [completedSteps, currentGuide.id])
+
   return (
     <Modal
       open={open}
       onClose={close}
-      title={current.title}
-      subtitle={current.subtitle}
+      title={currentStepInfo.title}
+      subtitle={currentStepInfo.subtitle}
       icon={<Zap size={18} />}
       size="lg"
       bodyClassName="p-0"
       footer={
         <div className="flex w-full items-center gap-2">
-          <button onClick={close} className="btn btn-ghost mr-auto">
-            Skip
+          <button onClick={close} className="btn btn-ghost mr-auto text-xs sm:text-sm">
+            Skip setup
           </button>
           {step > 0 && (
-            <button onClick={() => setStep((s) => s - 1)} className="btn">
+            <button onClick={() => setStep((s) => s - 1)} className="btn text-xs sm:text-sm">
               Back
             </button>
           )}
           {step < STEPS.length - 1 ? (
-            <button onClick={() => setStep((s) => s + 1)} className="btn btn-accent">
+            <button onClick={() => setStep((s) => s + 1)} className="btn btn-accent text-xs sm:text-sm">
               Continue
             </button>
           ) : (
-            <button onClick={close} className="btn btn-accent">
+            <button onClick={close} className="btn btn-accent text-xs sm:text-sm">
               <Check size={16} />
-              Start
+              Start using Eva
             </button>
           )}
         </div>
       }
     >
-      <div className="flex items-center gap-1.5 border-b border-border px-5 py-2.5 sm:px-6">
+      {/* Step Progress Header */}
+      <div className="flex items-center gap-1.5 border-b border-border px-5 py-2.5 sm:px-6 bg-surface/50">
         {STEPS.map((s, i) => (
           <button
             key={s.label}
             onClick={() => setStep(i)}
             className={cn(
-              'flex flex-1 flex-col gap-1.5 text-left',
-              i <= step ? 'text-fg' : 'text-faint',
+              'flex flex-1 flex-col gap-1.5 text-left transition',
+              i <= step ? 'text-fg' : 'text-faint hover:text-muted',
             )}
           >
             <span
               className={cn(
-                'h-1 rounded-full transition',
-                i <= step ? 'bg-accent' : 'bg-border',
+                'h-1 rounded-full transition-all duration-300',
+                i === step ? 'bg-accent' : i < step ? 'bg-accent/60' : 'bg-border',
               )}
             />
-            <span className="text-2xs font-medium tracking-wide uppercase">{s.label}</span>
+            <span className="text-2xs font-semibold tracking-wide uppercase truncate hidden sm:inline">
+              {s.label}
+            </span>
           </button>
         ))}
       </div>
 
-      <div className="scroll-thin max-h-[58dvh] overflow-y-auto p-5 sm:p-6">
+      <div className="scroll-thin max-h-[62dvh] overflow-y-auto p-5 sm:p-6 space-y-5">
+        {/* ================================================================= */}
+        {/* STEP 0: WELCOME OVERVIEW                                         */}
+        {/* ================================================================= */}
         {step === 0 && (
           <div className="space-y-4">
-            <div className="flex items-center gap-3.5 p-3 rounded-2xl border border-border/70 material">
+            <div className="flex items-center gap-4 p-4 rounded-2xl border border-border/80 bg-surface-2/60 material">
               <AppLogo
                 alt="Eva"
-                className="size-11 rounded-xl object-cover shadow-md ring-1 ring-border/80 shrink-0"
+                className="size-12 rounded-xl object-cover shadow-md ring-1 ring-border shrink-0"
               />
-              <div className="min-w-0">
-                <h3 className="font-display text-sm font-bold text-fg">Eva Studio</h3>
-                <p className="text-2xs text-muted">A dedicated studio for characters, worlds, and intelligence.</p>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-display text-base font-bold text-fg">Eva AI Studio</h3>
+                  <span className="rounded-full bg-accent/15 px-2 py-0.5 text-2xs font-medium text-accent">
+                    v2.0
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs text-muted">
+                  A privacy-first, memory-aware character and story studio.
+                </p>
               </div>
             </div>
+
             <p className="text-sm leading-relaxed text-muted">
-              Eva is an advanced AI chatbot studio for writing characters and living inside their worlds.
-              You bring the model — hosted or running on your own machine — and Eva keeps your
-              characters, worlds and conversations on this device.
+              Eva is designed to give you complete creative freedom. Rather than locking you into
+              a proprietary subscription, Eva connects directly to whichever AI provider you choose:
+              fast cloud inference (Groq, OpenRouter, OpenAI) or 100% private models running locally
+              on your own computer (Ollama, LM Studio).
             </p>
-            <ul className="list">
-              <li className="list-row text-sm">
-                <Users size={16} className="shrink-0 text-accent" />
-                Write your own characters, or start from a roster and layer changes on top.
-              </li>
-              <li className="list-row text-sm">
-                <Globe2 size={16} className="shrink-0 text-accent" />
-                Build worlds with places, factions and lore that carry between scenes.
-              </li>
-              <li className="list-row text-sm">
-                <KeyRound size={16} className="shrink-0 text-accent" />
-                Nothing to pay and nothing to sign up for — you supply the model.
-              </li>
-            </ul>
+
+            <div className="grid gap-2.5 sm:grid-cols-3">
+              <div className="rounded-xl border border-border bg-surface p-3.5 space-y-1">
+                <div className="flex items-center gap-2 text-accent">
+                  <Cpu size={15} />
+                  <h4 className="text-xs font-semibold text-fg">You Bring The Model</h4>
+                </div>
+                <p className="text-2xs text-muted leading-relaxed">
+                  Connect Groq (free tier), OpenRouter, or run models offline via Ollama.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-border bg-surface p-3.5 space-y-1">
+                <div className="flex items-center gap-2 text-accent">
+                  <ShieldCheck size={15} />
+                  <h4 className="text-xs font-semibold text-fg">Private & Local First</h4>
+                </div>
+                <p className="text-2xs text-muted leading-relaxed">
+                  Characters, worlds, and chat transcripts stay on your device with hardware encryption.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-border bg-surface p-3.5 space-y-1">
+                <div className="flex items-center gap-2 text-accent">
+                  <Sparkles size={15} />
+                  <h4 className="text-xs font-semibold text-fg">Long-Term Memory</h4>
+                </div>
+                <p className="text-2xs text-muted leading-relaxed">
+                  Automatic summarization preserves story context without losing narrative shape.
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-accent/20 bg-accent/5 p-3.5 flex items-center justify-between gap-3">
+              <div className="text-xs text-muted">
+                <span className="font-semibold text-fg">First time setup takes 1–2 minutes.</span> Next, pick your AI provider.
+              </div>
+              <button
+                onClick={() => setStep(1)}
+                className="btn btn-accent text-xs shrink-0 py-1.5 px-3"
+              >
+                Choose Provider &rarr;
+              </button>
+            </div>
           </div>
         )}
 
+        {/* ================================================================= */}
+        {/* STEP 1: CHOOSE AI PROVIDER                                       */}
+        {/* ================================================================= */}
         {step === 1 && (
-          <div className="space-y-5">
-            <div className="rounded-2xl border border-accent/40 bg-surface-2 p-4">
-              <div className="flex items-center gap-2">
-                <KeyRound size={15} className="text-accent" />
-                <h3 className="text-sm font-semibold">Paste your Groq key</h3>
-                <span className="ml-auto rounded-full bg-accent/15 px-2 py-0.5 text-2xs font-medium text-accent">
-                  Recommended
-                </span>
-              </div>
-              <p className="mt-1.5 text-2xs text-faint">
-                Free to create, and it stays on this device. Groq answers only the requests you send.
-              </p>
-              <div className="mt-3 flex gap-2">
-                <div className="relative flex-1">
-                  <input
-                    type={showKey ? 'text' : 'password'}
-                    value={settings.apiKey}
-                    onChange={(e) => updateSettings({ apiKey: e.target.value })}
-                    placeholder="gsk_…"
-                    className="field pr-12 font-mono text-xs sm:pr-9"
-                    spellCheck={false}
-                  />
-                  <button
-                    onClick={() => setShowKey((v) => !v)}
-                    className="absolute top-1/2 right-0.5 grid size-11 -translate-y-1/2 place-items-center rounded-lg text-faint hover:text-fg sm:right-2 sm:size-8"
-                    aria-label={showKey ? 'Hide API key' : 'Show API key'}
-                  >
-                    {showKey ? <EyeOff size={15} /> : <Eye size={15} />}
-                  </button>
-                </div>
-                <button onClick={testConnection} className="btn shrink-0" disabled={testing}>
-                  <RefreshCw size={15} className={cn(testing && 'animate-spin')} />
-                  Test
-                </button>
-              </div>
-              {result !== 'idle' && (
-                <p
-                  className={cn(
-                    'mt-2 flex items-center gap-1.5 text-xs',
-                    result === 'ok' ? 'text-[#30d158]' : 'text-danger',
-                  )}
-                >
-                  {result === 'ok' ? <Check size={13} /> : <AlertCircle size={13} />}
-                  {message}
-                </p>
-              )}
-              <p className="mt-2 text-2xs text-faint">
-                Get a key at{' '}
-                <a
-                  href="https://console.groq.com/keys"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-accent underline underline-offset-2"
-                >
-                  console.groq.com/keys
-                </a>
-                .
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold text-fg">Select your preferred AI provider</h3>
+              <p className="mt-0.5 text-xs text-muted">
+                Select where you want your model to run. You can change this anytime from Settings.
               </p>
             </div>
 
-            <div>
-              <h3 className="text-xs font-semibold tracking-wide text-faint uppercase">
-                Or use another provider
-              </h3>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {PROVIDER_PRESETS.map((p) => (
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              {PROVIDER_PRESETS.map((p) => {
+                const guide = PROVIDER_GUIDES[p.id] || PROVIDER_GUIDES.custom
+                const isSelected = currentGuide.id === p.id
+
+                return (
                   <button
                     key={p.id}
-                    onClick={() => {
-                      updateSettings({ baseUrl: p.baseUrl })
-                      setResult('idle')
-                      setMessage('')
-                    }}
-                    className={cn('chip', settings.baseUrl.trim() === p.baseUrl && 'chip-active')}
+                    onClick={() => selectProviderPreset(p.id)}
+                    className={cn(
+                      'group relative flex flex-col justify-between rounded-xl border p-3.5 text-left transition',
+                      isSelected
+                        ? 'border-accent bg-accent/10 shadow-sm ring-1 ring-accent'
+                        : 'border-border bg-surface hover:border-accent/40 hover:bg-surface-2',
+                    )}
                   >
-                    {p.label}
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-semibold text-sm text-fg group-hover:text-accent transition">
+                          {p.label}
+                        </span>
+                        {guide.badge && (
+                          <span
+                            className={cn(
+                              'rounded-full px-2 py-0.5 text-2xs font-medium',
+                              guide.badgeVariant === 'accent'
+                                ? 'bg-accent/20 text-accent font-semibold'
+                                : guide.badgeVariant === 'success'
+                                  ? 'bg-[#30d158]/15 text-[#30d158] font-semibold'
+                                  : 'bg-surface-3 text-muted',
+                            )}
+                          >
+                            {guide.badge}
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1 text-2xs text-muted leading-relaxed">
+                        {guide.tagline}
+                      </p>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between text-2xs text-faint">
+                      <span>{guide.isLocal ? 'Offline server' : 'Cloud API'}</span>
+                      {isSelected ? (
+                        <span className="flex items-center gap-1 font-semibold text-accent">
+                          <Check size={13} /> Selected
+                        </span>
+                      ) : (
+                        <span className="text-muted group-hover:text-fg">Click to select</span>
+                      )}
+                    </div>
                   </button>
-                ))}
-              </div>
-              <input
-                type="text"
-                value={settings.baseUrl}
-                onChange={(e) => updateSettings({ baseUrl: e.target.value })}
-                placeholder={DEFAULT_BASE_URL}
-                className="field mt-2 font-mono text-xs"
-                spellCheck={false}
-              />
-              <p className="mt-2 text-2xs text-faint">
-                {preset?.keyUrl
-                  ? `Paste that provider's key above too — ${preset.label} needs one.`
-                  : needsKey
-                    ? 'Any OpenAI-compatible endpoint works. Paste its key above.'
-                    : 'This one runs on your own machine, so no key is needed. Press ↻ to list its models.'}
-              </p>
+                )
+              })}
+
+              {/* Custom Provider Card */}
+              <button
+                onClick={() => selectProviderPreset('custom')}
+                className={cn(
+                  'group relative flex flex-col justify-between rounded-xl border p-3.5 text-left transition',
+                  currentGuide.id === 'custom'
+                    ? 'border-accent bg-accent/10 shadow-sm ring-1 ring-accent'
+                    : 'border-border bg-surface hover:border-accent/40 hover:bg-surface-2',
+                )}
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-sm text-fg group-hover:text-accent transition">
+                      Custom OpenAI Endpoint
+                    </span>
+                    <span className="rounded-full bg-surface-3 px-2 py-0.5 text-2xs text-muted">
+                      Custom
+                    </span>
+                  </div>
+                  <p className="mt-1 text-2xs text-muted leading-relaxed">
+                    Connect any self-hosted or compatible API (DeepSeek, Mistral, vLLM, text-generation-webui).
+                  </p>
+                </div>
+                <div className="mt-3 flex items-center justify-between text-2xs text-faint">
+                  <span>Custom URL</span>
+                  {currentGuide.id === 'custom' ? (
+                    <span className="flex items-center gap-1 font-semibold text-accent">
+                      <Check size={13} /> Selected
+                    </span>
+                  ) : (
+                    <span className="text-muted group-hover:text-fg">Click to select</span>
+                  )}
+                </div>
+              </button>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => setStep(2)}
+                className="btn btn-accent text-xs sm:text-sm"
+              >
+                Continue to {currentGuide.name} Setup &rarr;
+              </button>
             </div>
           </div>
         )}
 
+        {/* ================================================================= */}
+        {/* STEP 2: DYNAMIC PROVIDER-SPECIFIC SETUP GUIDE                    */}
+        {/* ================================================================= */}
         {step === 2 && (
-          <div className="space-y-3">
-            <div className="scroll-thin max-h-64 overflow-y-auto rounded-xl border border-border">
-              {models.map((m) => {
-                const meta = GROQ_MODELS.find((g) => g.id === m)
+          <div className="space-y-5">
+            {/* Active Provider Header Banner */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-accent/40 bg-accent/5 p-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-fg">{currentGuide.name} Setup Guide</h3>
+                  {currentGuide.badge && (
+                    <span className="rounded-full bg-accent/15 px-2 py-0.5 text-2xs font-semibold text-accent">
+                      {currentGuide.badge}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 text-2xs text-muted">{currentGuide.tagline}</p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-2xs text-muted">
+                  Progress: {completedCount} / {currentGuide.steps.length} steps
+                </span>
+                <div className="h-2 w-16 rounded-full bg-border overflow-hidden">
+                  <div
+                    className="h-full bg-accent transition-all duration-300"
+                    style={{
+                      width: `${(completedCount / currentGuide.steps.length) * 100}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Provider Requirements */}
+            {currentGuide.requirements.length > 0 && (
+              <div className="rounded-xl border border-border/80 bg-surface p-3.5">
+                <h4 className="text-2xs font-semibold uppercase tracking-wider text-faint">
+                  What you will need
+                </h4>
+                <ul className="mt-1.5 space-y-1">
+                  {currentGuide.requirements.map((req) => (
+                    <li key={req} className="flex items-center gap-2 text-xs text-muted">
+                      <span className="size-1.5 rounded-full bg-accent shrink-0" />
+                      {req}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Step-by-Step Instructions */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-semibold text-fg">Step-by-Step Instructions</h4>
+
+              {currentGuide.steps.map((st) => {
+                const isStepChecked = !!(completedSteps[currentGuide.id]?.[st.number])
+
+                return (
+                  <div
+                    key={st.number}
+                    className={cn(
+                      'rounded-xl border p-3.5 transition',
+                      isStepChecked
+                        ? 'border-border/60 bg-surface/40'
+                        : 'border-border bg-surface',
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <button
+                          onClick={() => toggleStepCompleted(currentGuide.id, st.number)}
+                          className={cn(
+                            'mt-0.5 size-5 shrink-0 rounded-md border flex items-center justify-center transition',
+                            isStepChecked
+                              ? 'border-accent bg-accent text-accent-fg'
+                              : 'border-border hover:border-accent text-transparent',
+                          )}
+                          title="Mark step completed"
+                        >
+                          <Check size={13} className={cn(!isStepChecked && 'opacity-0')} />
+                        </button>
+
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-xs text-fg">
+                              Step {st.number}: {st.title}
+                            </span>
+                          </div>
+                          <p className="text-xs leading-relaxed text-muted">{st.instruction}</p>
+
+                          {st.tip && (
+                            <p className="text-2xs text-faint italic bg-surface-2/60 p-2 rounded-lg border border-border/50">
+                              Tip: {st.tip}
+                            </p>
+                          )}
+
+                          {/* Copy snippet for terminal commands (e.g. Ollama) */}
+                          {st.copySnippet && (
+                            <div className="mt-2 flex items-center gap-2 rounded-lg bg-surface-2 p-2 border border-border">
+                              <code className="font-mono text-2xs text-fg truncate flex-1">
+                                {st.copySnippet}
+                              </code>
+                              <button
+                                onClick={() => copyText(st.copySnippet!)}
+                                className="btn btn-ghost py-1 px-2 text-2xs shrink-0 flex items-center gap-1"
+                              >
+                                {copiedSnippet === st.copySnippet ? (
+                                  <>
+                                    <Check size={12} className="text-[#30d158]" /> Copied
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy size={12} /> Copy
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* External Action Link */}
+                      {st.actionUrl && (
+                        <div className="flex flex-col gap-1 shrink-0">
+                          <a
+                            href={st.actionUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="btn btn-accent py-1.5 px-3 text-2xs inline-flex items-center gap-1.5"
+                          >
+                            <span>{st.actionLabel || 'Open Link'}</span>
+                            <ExternalLink size={12} />
+                          </a>
+                          <button
+                            onClick={() => copyText(st.actionUrl!)}
+                            className="btn btn-ghost py-1 px-2 text-2xs flex items-center gap-1 text-faint hover:text-fg"
+                            title="Copy URL"
+                          >
+                            {copiedSnippet === st.actionUrl ? (
+                              <span className="text-[#30d158]">Copied link</span>
+                            ) : (
+                              <>
+                                <Copy size={11} /> Copy link
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Credential & Connection Configuration Card */}
+            <div className="rounded-2xl border border-border bg-surface-2 p-4 space-y-4">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-fg">
+                  <KeyRound size={16} className="text-accent" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider">
+                    {needsKey ? `${currentGuide.name} API Key` : 'Local Server Settings'}
+                  </h4>
+                </div>
+                {needsKey && (
+                  <span className="text-2xs text-faint">
+                    Keys are hardware-encrypted & never transmitted elsewhere.
+                  </span>
+                )}
+              </div>
+
+              {needsKey ? (
+                <div className="space-y-2">
+                  <div className="relative">
+                    <input
+                      type={showKey ? 'text' : 'password'}
+                      value={settings.apiKey}
+                      onChange={(e) => updateSettings({ apiKey: e.target.value })}
+                      placeholder={currentGuide.keyPlaceholder}
+                      className="field pr-20 font-mono text-xs"
+                      spellCheck={false}
+                    />
+                    <div className="absolute top-1/2 right-1.5 -translate-y-1/2 flex items-center gap-1">
+                      <button
+                        onClick={async () => {
+                          try {
+                            const text = await navigator.clipboard.readText()
+                            if (text) updateSettings({ apiKey: text.trim() })
+                          } catch {
+                            // clipboard read denied
+                          }
+                        }}
+                        className="btn btn-ghost py-1 px-2 text-2xs text-faint hover:text-fg"
+                        title="Paste from clipboard"
+                      >
+                        Paste
+                      </button>
+                      <button
+                        onClick={() => setShowKey((v) => !v)}
+                        className="grid size-8 place-items-center rounded-lg text-faint hover:text-fg"
+                        aria-label={showKey ? 'Hide API key' : 'Show API key'}
+                      >
+                        {showKey ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {currentGuide.keyManagementUrl && (
+                    <p className="text-2xs text-faint">
+                      Get or manage your API keys at{' '}
+                      <a
+                        href={currentGuide.keyManagementUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-accent underline underline-offset-2"
+                      >
+                        {currentGuide.keyManagementUrl.replace('https://', '')}
+                      </a>
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-border bg-surface p-3 text-xs text-muted flex items-center gap-2">
+                  <Server size={16} className="text-[#30d158] shrink-0" />
+                  <span>
+                    No API key is required. Eva communicates directly with your local server endpoint on your machine.
+                  </span>
+                </div>
+              )}
+
+              {/* Base URL configuration */}
+              <div className="space-y-1.5 pt-2 border-t border-border">
+                <div className="flex items-center justify-between text-2xs text-faint">
+                  <label htmlFor="base-url-input" className="font-semibold">Endpoint Base URL</label>
+                  {settings.baseUrl !== currentGuide.defaultBaseUrl && (
+                    <button
+                      onClick={() => updateSettings({ baseUrl: currentGuide.defaultBaseUrl })}
+                      className="text-accent hover:underline flex items-center gap-1"
+                    >
+                      <RotateCcw size={10} /> Reset to default
+                    </button>
+                  )}
+                </div>
+                <input
+                  id="base-url-input"
+                  type="text"
+                  value={settings.baseUrl}
+                  onChange={(e) => updateSettings({ baseUrl: e.target.value })}
+                  placeholder={currentGuide.defaultBaseUrl}
+                  className="field font-mono text-xs"
+                  spellCheck={false}
+                />
+              </div>
+
+              {/* Test Connection Button & Result Banner */}
+              <div className="pt-2 flex flex-col gap-2">
+                <button
+                  onClick={testConnection}
+                  disabled={testing}
+                  className="btn btn-accent w-full flex items-center justify-center gap-2 py-2.5 text-xs font-semibold"
+                >
+                  <RefreshCw size={15} className={cn(testing && 'animate-spin')} />
+                  {testing ? 'Testing connection with provider...' : 'Test Connection'}
+                </button>
+
+                {result !== 'idle' && (
+                  <div
+                    className={cn(
+                      'rounded-xl border p-3 flex items-start gap-2.5 text-xs transition',
+                      result === 'ok'
+                        ? 'border-[#30d158]/40 bg-[#30d158]/10 text-fg'
+                        : 'border-danger/40 bg-danger/10 text-fg',
+                    )}
+                  >
+                    {result === 'ok' ? (
+                      <Check size={16} className="text-[#30d158] shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertCircle size={16} className="text-danger shrink-0 mt-0.5" />
+                    )}
+                    <div className="space-y-1 flex-1">
+                      <p className="font-semibold">{result === 'ok' ? 'Connected successfully!' : 'Connection test failed'}</p>
+                      <p className="text-2xs text-muted leading-relaxed">{message}</p>
+                      {result === 'ok' && (
+                        <p className="text-2xs text-accent font-semibold pt-1">
+                          You are ready! Click "Continue to Pick a Model" below.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Troubleshooting & Common Errors Accordion */}
+            {currentGuide.commonErrors.length > 0 && (
+              <div className="rounded-xl border border-border bg-surface overflow-hidden">
+                <button
+                  onClick={() => setShowErrors((v) => !v)}
+                  className="w-full flex items-center justify-between p-3.5 text-left text-xs font-semibold text-fg hover:bg-surface-2 transition"
+                >
+                  <span className="flex items-center gap-2">
+                    <HelpCircle size={15} className="text-accent" />
+                    Common Issues & Troubleshooting ({currentGuide.name})
+                  </span>
+                  {showErrors ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                </button>
+
+                {showErrors && (
+                  <div className="border-t border-border p-3.5 space-y-3 bg-surface-2/40">
+                    {currentGuide.commonErrors.map((err) => (
+                      <div key={err.code} className="space-y-1 text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="rounded bg-surface-3 px-1.5 py-0.5 font-mono text-2xs text-faint">
+                            {err.code}
+                          </span>
+                          <span className="font-semibold text-fg">{err.title}</span>
+                        </div>
+                        <p className="text-2xs text-muted pl-7">
+                          <span className="text-faint">Cause:</span> {err.cause}
+                        </p>
+                        <p className="text-2xs text-fg pl-7 font-medium">
+                          <span className="text-accent">Fix:</span> {err.resolution}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-between items-center pt-2">
+              <button
+                onClick={() => setStep(1)}
+                className="btn text-xs sm:text-sm"
+              >
+                &larr; Change Provider
+              </button>
+              <button
+                onClick={() => setStep(3)}
+                className="btn btn-accent text-xs sm:text-sm"
+              >
+                Continue to Pick Model &rarr;
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ================================================================= */}
+        {/* STEP 3: PICK A MODEL                                             */}
+        {/* ================================================================= */}
+        {step === 3 && (
+          <div className="space-y-4">
+            <div>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-fg">
+                  Choose a model for {currentGuide.name}
+                </h3>
+                <button
+                  onClick={testConnection}
+                  disabled={testing}
+                  className="btn btn-ghost text-2xs flex items-center gap-1"
+                  title="Refresh models from provider"
+                >
+                  <RefreshCw size={12} className={cn(testing && 'animate-spin')} />
+                  Fetch live models
+                </button>
+              </div>
+              <p className="mt-0.5 text-xs text-muted">
+                Select from recommended starting models or pick any model ID supported by your endpoint.
+              </p>
+            </div>
+
+            {/* Model list */}
+            <div className="scroll-thin max-h-64 overflow-y-auto rounded-xl border border-border divide-y divide-border/60 bg-surface">
+              {availableModels.map((m) => {
+                const guideModel = currentGuide.recommendedModels.find((rm) => rm.id === m)
+                const isSelected = settings.model === m
+
                 return (
                   <button
                     key={m}
                     onClick={() => updateSettings({ model: m })}
                     className={cn(
-                      'flex w-full items-start gap-3 border-b border-border/60 px-3 py-3 text-left transition last:border-0 hover:bg-surface-2',
-                      settings.model === m && 'bg-surface-2',
+                      'flex w-full items-start justify-between gap-3 p-3 text-left transition hover:bg-surface-2',
+                      isSelected && 'bg-surface-2 ring-1 ring-inset ring-accent/30',
                     )}
                   >
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-center gap-2">
-                        <span className="truncate font-mono text-xs">{m}</span>
-                        {meta && (
-                          <span className="shrink-0 text-2xs text-faint">{meta.label}</span>
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-semibold text-fg truncate">{m}</span>
+                        {guideModel?.badge && (
+                          <span className="rounded-full bg-accent/15 px-2 py-0.2 text-2xs font-semibold text-accent">
+                            {guideModel.badge}
+                          </span>
                         )}
-                      </span>
-                      {meta && <span className="mt-0.5 block text-2xs text-faint">{meta.note}</span>}
-                    </span>
-                    {settings.model === m && <Check size={14} className="mt-0.5 shrink-0 text-accent" />}
+                      </div>
+                      {guideModel ? (
+                        <p className="text-2xs text-muted leading-relaxed">{guideModel.description}</p>
+                      ) : (
+                        <p className="text-2xs text-faint">Available from {currentGuide.name}</p>
+                      )}
+                    </div>
+
+                    {isSelected && (
+                      <Check size={16} className="text-accent shrink-0 mt-0.5" />
+                    )}
                   </button>
                 )
               })}
-              {models.length === 0 && (
-                <p className="px-3 py-4 text-2xs text-faint">
-                  No models listed yet. Add a key, then press ↻ to fetch them from your provider.
-                </p>
+
+              {availableModels.length === 0 && (
+                <div className="p-4 text-center space-y-2">
+                  <p className="text-xs text-muted">No models detected yet.</p>
+                  <button
+                    onClick={testConnection}
+                    disabled={testing}
+                    className="btn btn-accent text-2xs py-1.5 px-3"
+                  >
+                    <RefreshCw size={12} className={cn(testing && 'animate-spin')} />
+                    Connect & Fetch Models
+                  </button>
+                </div>
               )}
             </div>
 
-            <div className="flex gap-2">
-              <input
-                value={settings.model}
-                onChange={(e) => updateSettings({ model: e.target.value })}
-                placeholder="or type any model id"
-                className="field font-mono text-xs"
-                spellCheck={false}
-              />
-              <button onClick={testConnection} className="btn shrink-0" disabled={testing}>
-                <RefreshCw size={15} className={cn(testing && 'animate-spin')} />
+            {/* Custom model input */}
+            <div className="space-y-1.5 pt-2">
+              <label htmlFor="custom-model-id-input" className="text-2xs font-semibold text-faint">
+                Or type any specific model identifier
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id="custom-model-id-input"
+                  value={settings.model}
+                  onChange={(e) => updateSettings({ model: e.target.value })}
+                  placeholder="e.g. openai/gpt-oss-20b or llama3.2:3b"
+                  className="field font-mono text-xs flex-1"
+                  spellCheck={false}
+                />
+                <button
+                  onClick={testConnection}
+                  className="btn shrink-0"
+                  disabled={testing}
+                  title="Test model connection"
+                >
+                  <RefreshCw size={15} className={cn(testing && 'animate-spin')} />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center pt-2">
+              <button
+                onClick={() => setStep(2)}
+                className="btn text-xs sm:text-sm"
+              >
+                &larr; Back to Setup
+              </button>
+              <button
+                onClick={() => setStep(4)}
+                className="btn btn-accent text-xs sm:text-sm"
+              >
+                Orientation Tour &rarr;
               </button>
             </div>
-            <p className="text-2xs text-faint">
-              {message || 'Providers cap tokens per minute. On a rate-limit error, wait a few seconds and retry.'}
-            </p>
           </div>
         )}
 
-        {step === 3 && (
-          <div className="grid gap-2.5 sm:grid-cols-2">
-            {TIPS.map((t) => (
-              <div key={t.title} className="rounded-2xl border border-border bg-surface p-3.5">
-                <div className="flex items-center gap-2 text-accent">
-                  {t.icon}
-                  <h3 className="text-sm font-semibold text-fg">{t.title}</h3>
+        {/* ================================================================= */}
+        {/* STEP 4: ORIENTATION TOUR                                         */}
+        {/* ================================================================= */}
+        {step === 4 && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold text-fg">How Eva Works</h3>
+              <p className="mt-0.5 text-xs text-muted">
+                Here are the core features you can explore right now.
+              </p>
+            </div>
+
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              {ORIENTATION_TIPS.map((t) => (
+                <div key={t.title} className="rounded-xl border border-border bg-surface p-3.5 space-y-1">
+                  <div className="flex items-center gap-2 text-accent">
+                    {t.icon}
+                    <h4 className="text-xs font-semibold text-fg">{t.title}</h4>
+                  </div>
+                  <p className="text-2xs leading-relaxed text-muted">{t.body}</p>
                 </div>
-                <p className="mt-1.5 text-xs leading-relaxed text-muted">{t.body}</p>
+              ))}
+            </div>
+
+            <div className="rounded-xl border border-border/80 bg-surface-2 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="text-xs text-muted">
+                <span className="font-semibold text-fg">All set!</span> Your model is configured and ready.
               </div>
-            ))}
+              <button
+                onClick={close}
+                className="btn btn-accent text-xs sm:text-sm py-2 px-4 flex items-center justify-center gap-1.5"
+              >
+                <Check size={16} /> Start Chatting
+              </button>
+            </div>
           </div>
         )}
       </div>
