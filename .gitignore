@@ -15,7 +15,7 @@ release
 !.env.example
 *.keystore
 *.jks
-!android/nexus-release.keystore
+*.p12
 
 # Logs
 logs

@@ -27,6 +27,7 @@ export interface Character {
   worldId?: string // only for world-theme NPCs
   metadata: CharacterMeta[]
   createdAt: number
+  updatedAt?: number
 }
 
 export interface World {
@@ -45,6 +46,7 @@ export interface World {
   lore: string
   color: string
   createdAt: number
+  updatedAt?: number
 }
 
 export type CommandType =

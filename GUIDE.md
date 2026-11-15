@@ -1,6 +1,6 @@
-# Nexus — Step-by-Step Guide
+# Eva — Step-by-Step Guide
 
-Everything you need: how to install Nexus, how the website works, how to
+Everything you need: how to install Eva, how the website works, how to
 rebuild and redeploy it, how to publish a new desktop release, and how to
 build the Android APK.
 
@@ -28,7 +28,7 @@ You have two copies of the project. They have different jobs — don't mix them 
 | Folder | What it is | Is it a git repo? |
 | ------ | ---------- | ----------------- |
 | `D:\OpenWorm\GoodPerfectChatbot` | The **working/build folder**. Where you run `npm run pack:win`, keep `release/`, etc. | **No** |
-| `D:\OpenWorm\GoodPerfectChatbot-github` | A **clone of `github.com/AmanicX/nexus`**. Everything that gets published lives here. | **Yes** |
+| `D:\OpenWorm\GoodPerfectChatbot-github` | A **clone of `github.com/AmanicX/eva`**. Everything that gets published lives here. | **Yes** |
 
 **Rule of thumb:** edit code in the clone, and when you want a packaged
 `.exe` for your own testing, that can live in the working folder. Anything you
@@ -54,15 +54,15 @@ install.sh            Linux installer
 
 ## 2. Install & use
 
-Nobody needs Node.js or npm to **use** Nexus.
+Nobody needs Node.js or npm to **use** Eva.
 
 ### Windows
 
-1. Open <https://github.com/AmanicX/nexus/releases/latest>
-2. Download **`Nexus-Setup-<version>.exe`**.
+1. Open <https://github.com/AmanicX/eva/releases/latest>
+2. Download **`Eva-Setup-<version>.exe`**.
 3. Run it. If SmartScreen says *"Windows protected your PC"* →
    **More info → Run anyway** (the app isn't code-signed yet).
-4. Finish the installer. Nexus appears in the Start menu, with an uninstaller.
+4. Finish the installer. Eva appears in the Start menu, with an uninstaller.
 
 ### Linux
 
@@ -70,8 +70,8 @@ One script does everything — it detects your distro, downloads the right
 package from the latest release and installs it:
 
 ```bash
-git clone https://github.com/AmanicX/nexus.git
-cd nexus
+git clone https://github.com/AmanicX/eva.git
+cd eva
 bash install.sh
 ```
 
@@ -87,11 +87,11 @@ Prefer to do it by hand? Grab a file from the Releases page:
 
 | Distro family | Do this |
 | ------------- | ------- |
-| Debian/Ubuntu/Mint | `sudo apt install ./nexus_<version>_amd64.deb` |
-| Fedora/RHEL/Rocky | `sudo dnf install ./nexus-<version>.x86_64.rpm` |
-| openSUSE | `sudo zypper install ./nexus-<version>.x86_64.rpm` |
-| Arch/Manjaro | `sudo pacman -U ./nexus-<version>.pacman` |
-| any, no install | `chmod +x Nexus-<version>.AppImage && ./Nexus-<version>.AppImage` |
+| Debian/Ubuntu/Mint | `sudo apt install ./eva_<version>_amd64.deb` |
+| Fedora/RHEL/Rocky | `sudo dnf install ./eva-<version>.x86_64.rpm` |
+| openSUSE | `sudo zypper install ./eva-<version>.x86_64.rpm` |
+| Arch/Manjaro | `sudo pacman -U ./eva-<version>.pacman` |
+| any, no install | `chmod +x Eva-<version>.AppImage && ./Eva-<version>.AppImage` |
 
 AppImages need FUSE. If one won't start:
 `sudo apt install libfuse2` (Debian), `sudo dnf install fuse fuse-libs` (Fedora),
@@ -99,7 +99,7 @@ AppImages need FUSE. If one won't start:
 
 ### Browser, phone, tablet
 
-Open **<https://amanicx.github.io/nexus/app/>** — this is the same app, served
+Open **<https://amanicx.github.io/eva/app/>** — this is the same app, served
 from the website. Then install it so it opens full-screen like a native app:
 
 - **Android / Chrome** — menu (⋮) → **Add to Home screen** → **Install**
@@ -120,7 +120,7 @@ it (enable *Install unknown apps* for your file manager first).
 
 ### First run: the welcome tour
 
-The first time Nexus opens it walks you through four short steps — what the studio is, connecting a model, picking one, and a quick tour of how it works. You can skip it, and reopen it any time from the **compass button** at the bottom of the sidebar (or **Settings → Data → Show the tutorial again**).
+The first time Eva opens it walks you through four short steps — what the studio is, connecting a model, picking one, and a quick tour of how it works. You can skip it, and reopen it any time from the **compass button** at the bottom of the sidebar (or **Settings → Data → Show the tutorial again**).
 
 The default model is **GPT-OSS 20B** on Groq, which is free. Paste a Groq key when asked, or choose any other provider.
 
@@ -139,7 +139,7 @@ For a fully local, uncensored setup:
 ollama pull qwen2.5
 ```
 
-…then in Nexus pick **Provider = Ollama** and press **↻**.
+…then in Eva pick **Provider = Ollama** and press **↻**.
 
 ---
 
@@ -150,9 +150,9 @@ The site is published from the `docs/` folder of the repo via GitHub Pages
 
 | Page | URL | What it is |
 | ---- | --- | ---------- |
-| Home | <https://amanicx.github.io/nexus/> | Landing page — what Nexus is, features, screenshots, links |
-| Releases | <https://amanicx.github.io/nexus/releases.html> | Version history with download links, install steps, FAQ |
-| Web app | <https://amanicx.github.io/nexus/app/> | The actual installable app |
+| Home | <https://amanicx.github.io/eva/> | Landing page — what Eva is, features, screenshots, links |
+| Releases | <https://amanicx.github.io/eva/releases.html> | Version history with download links, install steps, FAQ |
+| Web app | <https://amanicx.github.io/eva/app/> | The actual installable app |
 
 To change text on the home page, edit `docs/index.html`. To change the release
 history, edit `docs/releases.html`. Styling is in `docs/styles.css` (home) and
@@ -188,7 +188,7 @@ git push origin main
 GitHub Pages rebuilds automatically (about 20–60 seconds). Check progress with:
 
 ```bash
-gh run list --repo AmanicX/nexus --limit 3
+gh run list --repo AmanicX/eva --limit 3
 ```
 
 or open the **Actions** tab. When the *pages build and deployment* run is
@@ -216,19 +216,19 @@ git commit -m "v1.2.1: <what changed>"
 git push origin main
 
 # 3. create and push the tag — this is what triggers the build
-git tag -a v1.2.1 -m "Nexus v1.2.1"
+git tag -a v1.2.1 -m "Eva v1.2.1"
 git push origin v1.2.1
 ```
 
 Then:
 
 ```bash
-gh run list --repo AmanicX/nexus --limit 3          # watch it
-gh release view v1.2.1 --repo AmanicX/nexus         # when done, list assets
+gh run list --repo AmanicX/eva --limit 3          # watch it
+gh release view v1.2.1 --repo AmanicX/eva         # when done, list assets
 ```
 
-The release ends up with `Nexus-Setup-<v>.exe`, `Nexus-<v>.AppImage`,
-`nexus_<v>_amd64.deb`, `nexus-<v>.x86_64.rpm`, `nexus-<v>.pacman` and the
+The release ends up with `Eva-Setup-<v>.exe`, `Eva-<v>.AppImage`,
+`eva_<v>_amd64.deb`, `eva-<v>.x86_64.rpm`, `eva-<v>.pacman` and the
 `latest*.yml` updater files. `install.sh` picks them up automatically, and
 `/releases/latest` starts pointing at the new version.
 
@@ -241,7 +241,7 @@ The release ends up with `Nexus-Setup-<v>.exe`, `Nexus-<v>.AppImage`,
 ### Manual / local packaging (optional)
 
 ```powershell
-npm run pack:win        # -> release\Nexus Setup <version>.exe   (on Windows)
+npm run pack:win        # -> release\Eva Setup <version>.exe   (on Windows)
 npm run pack:linux      # -> release\*.AppImage, *.deb, *.rpm, *.pacman (on Linux)
 ```
 
@@ -253,7 +253,7 @@ won't cross-build them from Windows.
 ## 6. Build the Android APK
 
 The repo contains a complete **Capacitor** Android project in `android/`
-(app id `com.nexus.chatstudio`, app name **Nexus**). It wraps the same web build
+(app id `com.nexus.chatstudio`, app name **Eva**). It wraps the same web build
 that the browser version uses — there is no separate Android codebase to
 maintain.
 
@@ -337,7 +337,7 @@ adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 1. Create a keystore once:
 
    ```bash
-   keytool -genkey -v -keystore nexus-release.jks -keyalg RSA -keysize 2048 \
+   keytool -genkey -v -keystore eva-release.jks -keyalg RSA -keysize 2048 \
      -validity 10000 -alias nexus
    ```
 
@@ -381,8 +381,8 @@ If you ever replace `build/icon.png`, regenerate both sets and re-run `cap:sync`
 ## 7. Develop the app locally
 
 ```bash
-git clone https://github.com/AmanicX/nexus.git
-cd nexus
+git clone https://github.com/AmanicX/eva.git
+cd eva
 npm install
 
 npm run electron:dev   # desktop app, hot-reloaded
@@ -412,7 +412,7 @@ npm run build:web      # expect no errors
 | `gradlew` fails: *"SDK location not found"* | Create `android/local.properties` with `sdk.dir=...` (Part 6a). |
 | `gradlew` fails: *"Unsupported class file major version"* | Wrong JDK. Install JDK 17 and point `JAVA_HOME` at it. |
 | APK builds but shows a blank screen | You forgot `npm run cap:sync` after changing app code — the bundled web assets are stale. |
-| `install.sh`: *"Could not detect the GitHub repo"* | Run it inside the cloned folder, or `NEXUS_REPO=owner/repo bash install.sh`. |
+| `install.sh`: *"Could not detect the GitHub repo"* | Run it inside the cloned folder, or `EVA_REPO=owner/repo bash install.sh`. |
 | AppImage: *"error loading libfuse.so.2"* | `sudo apt install libfuse2` (or the distro equivalent), or run with `--appimage-extract-and-run`. |
 | Replies show *401 / invalid key* | Re-check the key **and** Base URL in **Settings → Connection**. |
 | Local model: *"Failed to fetch"* | Ollama/LM Studio isn't running, or the port in the Base URL is wrong (`11434` / `1234`). |
@@ -430,7 +430,7 @@ git add -A && git commit -m "..." && git push origin main
 # desktop release (CI does the packaging)
 npm version 1.2.1 --no-git-tag-version
 git add -A && git commit -m "v1.2.1: ..." && git push origin main
-git tag -a v1.2.1 -m "Nexus v1.2.1" && git push origin v1.2.1
+git tag -a v1.2.1 -m "Eva v1.2.1" && git push origin v1.2.1
 
 # android
 npm run cap:sync                      # build web + copy into android/

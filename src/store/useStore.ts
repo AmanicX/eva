@@ -13,6 +13,8 @@ import { DEFAULT_GLOBAL_PROMPT, DEFAULT_USER_PERSONA, PREVIOUS_DEFAULT_GLOBAL_PR
 import { DEFAULT_BASE_URL } from '@/lib/groq'
 import { uid } from '@/lib/utils'
 import { DEFAULT_THEME_PALETTES } from '@/data/palettes'
+import { getApiKey, setApiKey } from '@/lib/credentials'
+import { recordTombstone } from '@/lib/sync/syncMerge'
 
 export const MIN_AGE = 18
 
@@ -27,7 +29,7 @@ export function normalizeAge(raw: string | undefined | null): string {
 
 export interface UIState {
   settingsOpen: boolean
-  settingsTab: 'connection' | 'appearance' | 'persona' | 'themes' | 'commands' | 'data' | 'about'
+  settingsTab: 'connection' | 'appearance' | 'persona' | 'themes' | 'commands' | 'data' | 'sync' | 'about'
   characterModal: null | { tab: 'create' | 'browse' | 'generate'; editId?: string }
   worldModal: null | { tab: 'world' | 'cast'; editId?: string }
   sidebarOpen: boolean
@@ -148,8 +150,12 @@ export const useStore = create<State>()(
       activeWorldId: null,
       ui: defaultUI,
 
-      updateSettings: (patch) =>
-        set((s) => ({ settings: { ...s.settings, ...patch } })),
+      updateSettings: (patch) => {
+        if (patch.apiKey !== undefined) {
+          void setApiKey(patch.apiKey)
+        }
+        set((s) => ({ settings: { ...s.settings, ...patch } }))
+      },
 
       setTheme: (theme) =>
         set((s) => {
@@ -209,7 +215,8 @@ export const useStore = create<State>()(
           ),
         })),
 
-      deleteCharacter: (id) =>
+      deleteCharacter: (id) => {
+        recordTombstone('characters', id)
         set((s) => ({
           characters: s.characters.filter((c) => c.id !== id),
           conversations: s.conversations.filter((c) => c.characterId !== id),
@@ -218,7 +225,8 @@ export const useStore = create<State>()(
               ?.characterId === id
               ? null
               : s.activeConversationId,
-        })),
+        }))
+      },
 
       duplicateCharacter: (id) => {
         const src = get().characters.find((c) => c.id === id)
@@ -260,7 +268,8 @@ export const useStore = create<State>()(
           worlds: s.worlds.map((w) => (w.id === id ? { ...w, ...patch } : w)),
         })),
 
-      deleteWorld: (id) =>
+      deleteWorld: (id) => {
+        recordTombstone('worlds', id)
         set((s) => ({
           worlds: s.worlds.filter((w) => w.id !== id),
           characters: s.characters.filter((c) => c.worldId !== id),
@@ -271,7 +280,8 @@ export const useStore = create<State>()(
               ?.worldId === id
               ? null
               : s.activeConversationId,
-        })),
+        }))
+      },
 
       setActiveWorld: (id) =>
         set((s) => ({
@@ -357,12 +367,14 @@ export const useStore = create<State>()(
           ),
         })),
 
-      deleteConversation: (id) =>
+      deleteConversation: (id) => {
+        recordTombstone('conversations', id)
         set((s) => ({
           conversations: s.conversations.filter((c) => c.id !== id),
           activeConversationId:
             s.activeConversationId === id ? null : s.activeConversationId,
-        })),
+        }))
+      },
 
       clearConversation: (id) =>
         set((s) => ({
@@ -418,7 +430,8 @@ export const useStore = create<State>()(
           ),
         })),
 
-      removeMessage: (conversationId, messageId) =>
+      removeMessage: (conversationId, messageId) => {
+        recordTombstone('messages', messageId)
         set((s) => ({
           conversations: s.conversations.map((c) =>
             c.id === conversationId
@@ -428,7 +441,8 @@ export const useStore = create<State>()(
                 }
               : c,
           ),
-        })),
+        }))
+      },
 
       setMemory: (conversationId, memory) =>
         set((s) => ({
@@ -455,17 +469,26 @@ export const useStore = create<State>()(
       setUI: (patch) => set((s) => ({ ui: { ...s.ui, ...patch } })),
 
       replaceAll: (data) =>
-        set((s) => ({
-          settings: { ...s.settings, ...(data.settings ?? {}) },
-          characters: data.characters
-            ? data.characters.map((c: Character) => ({
-                ...c,
-                age: normalizeAge(c.age),
-              }))
-            : s.characters,
-          worlds: data.worlds ?? s.worlds,
-          conversations: data.conversations ?? s.conversations,
-        })),
+        set((s) => {
+          const nextSettings = { ...s.settings, ...(data.settings ?? {}) }
+          // Guard: Never silently overwrite a valid active API key with an empty imported value
+          if (data.settings && (data.settings.apiKey === '' || data.settings.apiKey === undefined)) {
+            nextSettings.apiKey = s.settings.apiKey
+          } else if (data.settings?.apiKey) {
+            void setApiKey(data.settings.apiKey)
+          }
+          return {
+            settings: nextSettings,
+            characters: data.characters
+              ? data.characters.map((c: Character) => ({
+                  ...c,
+                  age: normalizeAge(c.age),
+                }))
+              : s.characters,
+            worlds: data.worlds ?? s.worlds,
+            conversations: data.conversations ?? s.conversations,
+          }
+        }),
     }),
     {
       name: 'nexus-chat-store',
@@ -508,7 +531,11 @@ export const useStore = create<State>()(
             (persisted.conversations?.length ?? 0) > 0 ||
             !!(persisted.settings.apiKey ?? '').trim()
         }
-        if (persisted?.settings) persisted.settings.apiKey = ''
+        // Migrate legacy unencrypted API key from local storage to secure credential storage
+        if (persisted?.settings?.apiKey) {
+          void setApiKey(persisted.settings.apiKey)
+          persisted.settings.apiKey = ''
+        }
         // Characters are adults only (18+). Clamp anything saved as a minor.
         if (Array.isArray(persisted?.characters)) {
           persisted.characters = persisted.characters.map((c: Character) =>
@@ -518,13 +545,25 @@ export const useStore = create<State>()(
         return persisted
       },
       partialize: (s) => ({
-        settings: s.settings,
+        settings: {
+          ...s.settings,
+          apiKey: '', // Never persist API keys in plaintext local storage
+        },
         characters: s.characters,
         worlds: s.worlds,
         conversations: s.conversations,
         activeConversationId: s.activeConversationId,
         activeWorldId: s.activeWorldId,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          void getApiKey().then((storedKey) => {
+            if (storedKey && !state.settings.apiKey) {
+              state.updateSettings({ apiKey: storedKey })
+            }
+          })
+        }
+      },
     },
   ),
 )

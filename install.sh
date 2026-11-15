@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Nexus — one-shot Linux installer.
+# Eva — one-shot Linux installer.
 #
 # Downloads the latest published release from GitHub and installs it for you.
 # No Node.js, no npm, no building required.
@@ -9,16 +9,16 @@
 #   bash install.sh              # auto-detect distro and install the native package
 #   bash install.sh --appimage   # portable AppImage into ~/.local (no sudo / no root)
 #   bash install.sh --package    # force the native package (deb/rpm/pacman)
-#   NEXUS_REPO=owner/repo bash install.sh
+#   EVA_REPO=owner/repo bash install.sh
 #
 # Supported: Debian/Ubuntu/Mint (deb), Fedora/RHEL/Rocky (rpm),
 #            openSUSE/SLES (rpm), Arch/Manjaro (pacman), AppImage everywhere else.
 #
 set -euo pipefail
 
-APP_NAME="Nexus"
-BIN_NAME="nexus"
-REPO="${NEXUS_REPO:-}"
+APP_NAME="Eva"
+BIN_NAME="eva"
+REPO="${EVA_REPO:-${NEXUS_REPO:-}}"
 MODE="auto" # auto | package | appimage
 
 for arg in "$@"; do
@@ -42,7 +42,7 @@ if [[ -z "$REPO" ]]; then
   fi
 fi
 [[ -n "$REPO" && "$REPO" == */* ]] || \
-  die "Could not detect the GitHub repo. Run this inside the cloned repo, or set NEXUS_REPO=owner/repo"
+  die "Could not detect the GitHub repo. Run this inside the cloned repo, or set EVA_REPO=owner/repo"
 say "Repository: $REPO"
 
 # --- Architecture -----------------------------------------------------------

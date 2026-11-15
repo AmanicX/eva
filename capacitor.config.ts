@@ -5,8 +5,10 @@ const config: CapacitorConfig = {
   appName: 'Eva',
   webDir: 'dist',
   android: {
-    // Local models (Ollama, LM Studio) are reached over plain http on the LAN,
-    // which the WebView would otherwise block from an https page.
+    // Mixed content is permitted strictly to allow the WebView (served over https://localhost)
+    // to connect to local-network LLM inference servers (Ollama, LM Studio, LocalAI).
+    // Remote endpoints (Groq, OpenAI, Google Drive, GitHub) are strictly enforced to use HTTPS
+    // via network_security_config.xml.
     allowMixedContent: true,
   },
   server: {

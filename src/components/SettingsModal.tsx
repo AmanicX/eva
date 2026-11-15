@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import {
   AlertCircle,
   Check,
+  Cloud,
   Cpu,
   Database,
   Download,
@@ -43,6 +44,7 @@ import {
 } from '@/data/palettes'
 import { Modal } from './Modal'
 import { CommandCheatsheet } from './CommandCheatsheet'
+import { SyncSettings } from './SyncSettings'
 import { cn, clamp, download } from '@/lib/utils'
 import type { AppearanceMode } from '@/types'
 import type { UIState } from '@/store/useStore'
@@ -54,6 +56,7 @@ const TABS: { id: UIState['settingsTab']; label: string; icon: React.ReactNode }
   { id: 'themes', label: 'Modes', icon: <Sparkles size={16} /> },
   { id: 'commands', label: 'Commands', icon: <Terminal size={16} /> },
   { id: 'data', label: 'Data', icon: <Database size={16} /> },
+  { id: 'sync', label: 'Cloud Sync', icon: <Cloud size={16} /> },
   { id: 'about', label: 'About & Legal', icon: <ShieldCheck size={16} /> },
 ]
 
@@ -116,7 +119,7 @@ export function SettingsModal() {
     // SECURITY: Strip sensitive credentials before exporting backups
     const sanitizedSettings = { ...settings, apiKey: '' }
     download(
-      `nexus-backup-${new Date().toISOString().slice(0, 10)}.json`,
+      `eva-backup-${new Date().toISOString().slice(0, 10)}.json`,
       JSON.stringify({ settings: sanitizedSettings, characters, worlds, conversations }, null, 2),
     )
   }
@@ -891,6 +894,11 @@ export function SettingsModal() {
               </Section>
             </div>
           )}
+
+          {/* ============================================================== */}
+          {/* CLOUD SYNC TAB */}
+          {/* ============================================================== */}
+          {tab === 'sync' && <SyncSettings />}
 
           {tab === 'about' && (
             <div className="space-y-6">

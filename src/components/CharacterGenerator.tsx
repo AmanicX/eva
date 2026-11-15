@@ -1,4 +1,4 @@
-import { useState, useRef, useTransition } from 'react'
+import { useState, useEffect, useRef, useTransition } from 'react'
 import {
   Sparkles,
   RefreshCw,
@@ -83,6 +83,25 @@ export function CharacterGenerator({
   // Abort controller refs
   const abortRef = useRef<AbortController | null>(null)
   const [, startTransition] = useTransition()
+
+  // Clean up and abort any in-flight requests if component unmounts
+  useEffect(() => {
+    return () => {
+      if (abortRef.current) {
+        abortRef.current.abort()
+        abortRef.current = null
+      }
+    }
+  }, [])
+
+  const handleCancelGeneration = () => {
+    if (abortRef.current) {
+      abortRef.current.abort()
+      abortRef.current = null
+    }
+    setIsGenerating(false)
+    setActiveRegeneratingSection(null)
+  }
 
   const needsKey = providerNeedsKey(settings.baseUrl) && !settings.apiKey.trim()
 
@@ -415,14 +434,24 @@ export function CharacterGenerator({
 
         {/* Action button */}
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/80">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={isGenerating}
-            className="btn"
-          >
-            Cancel
-          </button>
+          {isGenerating ? (
+            <button
+              type="button"
+              onClick={handleCancelGeneration}
+              className="btn border-danger/40 text-danger hover:bg-danger/10 flex items-center gap-1.5"
+            >
+              <X size={15} />
+              <span>Cancel</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="btn"
+            >
+              Cancel
+            </button>
+          )}
           <button
             type="button"
             onClick={handleFullGenerate}

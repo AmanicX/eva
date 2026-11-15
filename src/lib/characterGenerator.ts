@@ -148,7 +148,7 @@ const COLOR_PALETTE = ['#7c5cff', '#b45cff', '#ff6fae', '#ff5f9e', '#34d399', '#
  * Repairs unclosed strings, literal unescaped newlines, trailing commas,
  * and missing closing brackets in JSON text.
  */
-function repairJsonStructure(jsonStr: string): string {
+export function repairJsonStructure(jsonStr: string): string {
   let inString = false
   let escaped = false
   const stack: string[] = []
@@ -265,7 +265,7 @@ function fallbackExtractFields(raw: string): Record<string, any> {
  * Robust JSON parser that handles code blocks, unescaped characters, partial payloads,
  * and token-boundary truncations without crashing.
  */
-function extractAndParseJSON(raw: string): any {
+export function extractAndParseJSON(raw: string): any {
   let cleaned = raw.trim()
 
   // Remove markdown code fences if present
@@ -563,35 +563,55 @@ export async function regenerateCharacterSection(opts: {
   const sectionMeta = CHARACTER_SECTIONS.find((s) => s.key === sectionKey)
   const sectionLabel = sectionMeta?.label ?? sectionKey
 
+  const fullProfileContext = `
+Full Established Character Profile:
+- Name: ${currentProfile.name}
+- Tagline: ${currentProfile.tagline || 'None'}
+- Gender: ${currentProfile.gender}
+- Age: ${currentProfile.age}
+- Appearance: ${currentProfile.appearance || 'None'}
+- Personality & Psychology: ${currentProfile.personality || 'None'}
+- Backstory & Lore: ${currentProfile.backstory || 'None'}
+- Speaking Style & Cadence: ${currentProfile.speakingStyle || 'None'}
+- Behavior & Mannerisms: ${currentProfile.behavior || 'None'}
+- Likes & Dislikes: ${currentProfile.likesAndDislikes || 'None'}
+- Strengths & Flaws: ${currentProfile.strengthsAndWeaknesses || 'None'}
+- Scenario & Setting: ${currentProfile.scenario || 'None'}
+- Opening Greeting: ${currentProfile.greeting || 'None'}
+- Directives / System Instructions: ${currentProfile.systemInstructions || 'None'}
+- Tags: ${(currentProfile.tags || []).join(', ')}
+`.trim()
+
   const systemPrompt = `You are a master character designer and narrative editor.
 You are regenerating ONLY the "${sectionLabel}" section of an established character profile.
 
 CRITICAL INSTRUCTIONS:
-1. Maintain total narrative and psychological consistency with the character's established identity:
-   - Name: ${currentProfile.name}
-   - Tagline: ${currentProfile.tagline}
-   - Gender: ${currentProfile.gender}, Age: ${currentProfile.age}
-   - Core Personality: ${currentProfile.personality.slice(0, 300)}...
-   - Backstory context: ${currentProfile.backstory.slice(0, 300)}...
-2. Do NOT change, contradict, or invalidate any other established traits.
-3. Follow the user's specific directive for this section if provided.
+1. You MUST preserve strict continuity and psychological consistency with all other established sections of this character:
+${fullProfileContext}
+
+2. Do NOT change, contradict, or invalidate any other established traits or sections.
+3. Maintain the character's core voice, tone, backstory, and personality.
 4. Output MUST be valid JSON with a single key "${sectionKey}".
    For text fields: { "${sectionKey}": "new regenerated content..." }
    For tags: { "${sectionKey}": ["tag1", "tag2", "tag3"] }
-   Use single quotes ('...') or escaped quotes (\\"...\\") for inner dialogue.
-   No conversational filler, no markdown code block wrapper.`
+   Use single quotes ('...') or escaped quotes (\\"quotes\\") for inner dialogue.
+   Do not include conversational filler, preamble, or commentary.`
 
-  const userPrompt = `Established Character Context:
-- Name: ${currentProfile.name}
-- Age & Gender: ${currentProfile.age}, ${currentProfile.gender}
-- Core Concept: ${originalDescription}
-- Current "${sectionLabel}":
+  const userPrompt = `Section to Regenerate: "${sectionLabel}" (property name: "${sectionKey}")
+Current Content of "${sectionLabel}":
 """
-${Array.isArray(currentProfile[sectionKey]) ? (currentProfile[sectionKey] as string[]).join(', ') : currentProfile[sectionKey]}
+${Array.isArray(currentProfile[sectionKey]) ? (currentProfile[sectionKey] as string[]).join(', ') : currentProfile[sectionKey] || '(empty)'}
 """
 
-${customInstruction?.trim() ? `User's Specific Refinement Instruction for this section:\n"""\n${customInstruction.trim()}\n"""\n` : ''}
-Please regenerate and enhance ONLY the "${sectionLabel}" section now. Return valid JSON: { "${sectionKey}": ... }`
+Original Concept / Pitch:
+"""
+${originalDescription}
+"""
+
+${customInstruction?.trim() ? `Specific User Directive for this section:\n"""\n${customInstruction.trim()}\n"""\n` : ''}
+
+Generate the updated, enriched content for "${sectionLabel}" now, ensuring it seamlessly harmonizes with the rest of the profile.
+Return JSON: { "${sectionKey}": ... }`
 
   const rawOutput = await chatGroq({
     apiKey: provider.apiKey,
