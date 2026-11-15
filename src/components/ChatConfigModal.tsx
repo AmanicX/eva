@@ -208,9 +208,9 @@ export function ChatConfigModal({ open, onClose }: ChatConfigModalProps) {
               >
                 <option value="inherit">Inherit Global Default</option>
                 <option value="pollinations">Pollinations.ai (Flux)</option>
-                {settings.keyedProviders.includes('google') && (
-                  <option value="google">Google AI Studio (Imagen)</option>
-                )}
+                <option value="google">
+                  Google AI Studio (Imagen 3){!settings.keyedProviders.includes('google') ? ' — Requires API key' : ''}
+                </option>
               </select>
             </div>
 
@@ -262,10 +262,10 @@ export function ChatConfigModal({ open, onClose }: ChatConfigModalProps) {
                 className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-xs text-fg outline-none focus:border-accent"
               >
                 <option value="inherit">Inherit Global Default</option>
-                <option value="pollinations">Pollinations.ai TTS</option>
-                {settings.keyedProviders.includes('google') && (
-                  <option value="google">Google AI TTS</option>
-                )}
+                <option value="pollinations">Pollinations.ai TTS (Alloy, etc.)</option>
+                <option value="google">
+                  Google AI TTS (Puck, Kore, etc.){!settings.keyedProviders.includes('google') ? ' — Requires API key' : ''}
+                </option>
               </select>
             </div>
 

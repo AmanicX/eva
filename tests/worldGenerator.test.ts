@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
   extractWorldJson,
-  type GeneratedWorldProfile,
 } from '../src/lib/worldGenerator'
 import { buildMediaWikiSearchUrl, formatWikiSummary } from '../src/lib/lookup'
 

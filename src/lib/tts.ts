@@ -109,7 +109,12 @@ export async function generateSpeechAudio(
     }
   }
 
-  for (const candidate of providerCandidates) {
+  const availableCandidates = providerCandidates.filter((c) => {
+    const isEnabled = settings?.providerCapabilities?.[c.providerId]?.tts !== false
+    return isEnabled
+  })
+
+  for (const candidate of availableCandidates) {
     if (signal?.aborted) {
       throw new DOMException('Speech synthesis aborted', 'AbortError')
     }

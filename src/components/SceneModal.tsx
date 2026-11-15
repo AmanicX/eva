@@ -212,10 +212,15 @@ export function SceneModal({ open, onClose }: SceneModalProps) {
               className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-xs text-fg outline-none focus:border-accent"
             >
               <option value="pollinations">Pollinations.ai (Free Flux Family)</option>
-              {settings.keyedProviders.includes('google') && (
-                <option value="google">Google AI Studio (Imagen 3)</option>
-              )}
+              <option value="google">
+                Google AI Studio (Imagen 3){!settings.keyedProviders.includes('google') ? ' — Requires API key' : ''}
+              </option>
             </select>
+            {!settings.keyedProviders.includes('google') && providerId === 'google' && (
+              <p className="text-3xs text-amber-500/90 mt-1">
+                API key required: Add your Google AI Studio key in Settings to generate with Imagen 3.
+              </p>
+            )}
           </div>
 
           <div>

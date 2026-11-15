@@ -60,4 +60,41 @@ describe('fallbackEngine', () => {
     const hasGoogle = chain.some((c) => c.providerId === 'google')
     expect(hasGoogle).toBe(false)
   })
+
+  it('excludes unkeyed default providers and unkeyed fallback models from candidate chain', () => {
+    const settings = {
+      ...DEFAULT_SETTINGS,
+      keyedProviders: ['groq'], // Google is NOT keyed
+      chatDefault: { providerId: 'google', model: 'gemini-2.5-flash' },
+      fallbackModel: { providerId: 'google', model: 'gemini-2.0-flash' },
+      chatProviderOrder: ['pollinations', 'groq'],
+    }
+
+    const chain = buildFallbackChain('chat', null, settings)
+
+    // Google should not be in chain since it has no API key
+    const hasGoogle = chain.some((c) => c.providerId === 'google')
+    expect(hasGoogle).toBe(false)
+
+    // Keyed provider (groq) and keyless (pollinations) should be present
+    expect(chain.some((c) => c.providerId === 'groq')).toBe(true)
+    expect(chain.some((c) => c.providerId === 'pollinations')).toBe(true)
+  })
+
+  it('includes default provider and fallback model once valid key is added', () => {
+    const settings = {
+      ...DEFAULT_SETTINGS,
+      keyedProviders: ['groq', 'google'], // Google IS keyed
+      chatDefault: { providerId: 'google', model: 'gemini-2.5-flash' },
+      fallbackModel: { providerId: 'google', model: 'gemini-2.0-flash' },
+      chatProviderOrder: ['groq'],
+    }
+
+    const chain = buildFallbackChain('chat', null, settings)
+
+    const googleCandidates = chain.filter((c) => c.providerId === 'google')
+    expect(googleCandidates.length).toBeGreaterThanOrEqual(1)
+    expect(chain[0].providerId).toBe('google')
+    expect(chain[0].model).toBe('gemini-2.5-flash')
+  })
 })

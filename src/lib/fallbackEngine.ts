@@ -157,8 +157,15 @@ export function buildFallbackChain(
         : settings.ttsDefault
 
   if (capDefault?.providerId) {
+    const isKeyed =
+      settings.keyedProviders.includes(capDefault.providerId) ||
+      capDefault.providerId === 'ollama' ||
+      capDefault.providerId === 'lmstudio' ||
+      capDefault.providerId === 'pollinations'
+    const isEnabled = settings.providerCapabilities[capDefault.providerId]?.[capability] !== false
+
     const defaultModel = 'model' in capDefault ? capDefault.model : capDefault.voice
-    if (defaultModel) {
+    if (defaultModel && isKeyed && isEnabled) {
       addCandidate(capDefault.providerId, defaultModel)
     }
   }
@@ -194,7 +201,16 @@ export function buildFallbackChain(
 
   // 4. Last resort: Fallback model
   if (capability === 'chat' && settings.fallbackModel?.providerId && settings.fallbackModel?.model) {
-    addCandidate(settings.fallbackModel.providerId, settings.fallbackModel.model)
+    const isKeyed =
+      settings.keyedProviders.includes(settings.fallbackModel.providerId) ||
+      settings.fallbackModel.providerId === 'ollama' ||
+      settings.fallbackModel.providerId === 'lmstudio' ||
+      settings.fallbackModel.providerId === 'pollinations'
+    const isEnabled = settings.providerCapabilities[settings.fallbackModel.providerId]?.[capability] !== false
+
+    if (isKeyed && isEnabled) {
+      addCandidate(settings.fallbackModel.providerId, settings.fallbackModel.model)
+    }
   }
 
   return candidates

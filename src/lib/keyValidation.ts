@@ -65,7 +65,7 @@ export const PROVIDER_KEY_RULES: Record<string, ProviderValidationRule> = {
       if (!apiToken) {
         return { valid: false, error: 'API token is required.' }
       }
-      if (!/^[A-Za-z0-9_\-]{20,}$/.test(apiToken)) {
+      if (!/^[A-Za-z0-9_-]{20,}$/.test(apiToken)) {
         return { valid: false, error: 'API token must be a valid URL-safe string.' }
       }
       return { valid: true }

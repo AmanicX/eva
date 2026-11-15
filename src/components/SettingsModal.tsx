@@ -102,6 +102,7 @@ export function SettingsModal() {
   const activePreset = PROVIDER_PRESETS.find((p) => p.baseUrl === settings.baseUrl.trim())
   const presetId = presetIdFor(settings.baseUrl)
   const curated = GROQ_MODELS.find((m) => m.id === settings.model)
+  const hasGoogleKey = settings.keyedProviders.includes('google')
 
   useEffect(() => {
     if (!open) return
@@ -853,10 +854,10 @@ export function SettingsModal() {
                 >
                   <div className="space-y-3">
                     <div className="rounded-xl border border-border/80 bg-surface/50 p-3 space-y-2">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between py-0.5">
                         <span className="text-xs font-semibold text-fg">Chat Generation</span>
-                        <Toggle
-                          label=""
+                        <CompactSwitch
+                          label="Toggle chat generation capability"
                           checked={settings.providerCapabilities[activePreset.id]?.chat !== false}
                           onChange={(val) => {
                             const prev = settings.providerCapabilities[activePreset.id] || { chat: true, image: true, tts: true }
@@ -896,10 +897,10 @@ export function SettingsModal() {
                     </div>
 
                     <div className="rounded-xl border border-border/80 bg-surface/50 p-3 space-y-2">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between py-0.5">
                         <span className="text-xs font-semibold text-fg">Image Generation</span>
-                        <Toggle
-                          label=""
+                        <CompactSwitch
+                          label="Toggle image generation capability"
                           checked={settings.providerCapabilities[activePreset.id]?.image !== false}
                           onChange={(val) => {
                             const prev = settings.providerCapabilities[activePreset.id] || { chat: true, image: true, tts: true }
@@ -939,10 +940,10 @@ export function SettingsModal() {
                     </div>
 
                     <div className="rounded-xl border border-border/80 bg-surface/50 p-3 space-y-2">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between py-0.5">
                         <span className="text-xs font-semibold text-fg">Text-to-Speech (TTS)</span>
-                        <Toggle
-                          label=""
+                        <CompactSwitch
+                          label="Toggle text-to-speech capability"
                           checked={settings.providerCapabilities[activePreset.id]?.tts !== false}
                           onChange={(val) => {
                             const prev = settings.providerCapabilities[activePreset.id] || { chat: true, image: true, tts: true }
@@ -987,120 +988,174 @@ export function SettingsModal() {
               {/* Defaults & Fallback Sequence */}
               <Section
                 title="Capability Defaults & Fallback Sequence"
-                hint="Configure preferred defaults and automatic failover handling."
+                hint="Configure preferred defaults for each capability and automatic failover handling."
               >
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="text-2xs font-semibold uppercase text-muted block mb-1">
-                        Default Chat Provider
-                      </label>
-                      <select
-                        value={settings.chatDefault?.providerId || 'groq'}
-                        onChange={(e) => {
-                          const pid = e.target.value
-                          const firstModel = MODEL_SUGGESTIONS[pid]?.[0] || ''
-                          updateSettings({ chatDefault: { providerId: pid, model: firstModel } })
-                        }}
-                        className="field text-xs py-1"
-                      >
-                        {PROVIDER_PRESETS.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.label}
+                <div className="space-y-5">
+                  {/* Provider Defaults (Desktop 3-column / Mobile responsive) */}
+                  <div>
+                    <div className="text-xs font-semibold text-fg mb-2.5">
+                      Provider Defaults
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {/* Default Chat Provider */}
+                      <div className="flex flex-col gap-1.5 min-w-0">
+                        <label htmlFor="default-chat-provider" className="text-2xs font-medium text-muted truncate">
+                          Default Chat Provider
+                        </label>
+                        <select
+                          id="default-chat-provider"
+                          value={settings.chatDefault?.providerId || 'groq'}
+                          onChange={(e) => {
+                            const pid = e.target.value
+                            const firstModel = MODEL_SUGGESTIONS[pid]?.[0] || ''
+                            updateSettings({ chatDefault: { providerId: pid, model: firstModel } })
+                          }}
+                          className="field text-xs h-9 w-full"
+                        >
+                          {PROVIDER_PRESETS.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Default Image Provider */}
+                      <div className="flex flex-col gap-1.5 min-w-0">
+                        <label htmlFor="default-image-provider" className="text-2xs font-medium text-muted truncate">
+                          Default Image Provider
+                        </label>
+                        <select
+                          id="default-image-provider"
+                          value={settings.imageDefault?.providerId || 'pollinations'}
+                          onChange={(e) => {
+                            const pid = e.target.value
+                            const currentModel = settings.imageDefault?.model
+                            const newModel =
+                              pid === 'google'
+                                ? (GOOGLE_IMAGE_MODELS.some((m) => m.id === currentModel) ? currentModel : 'imagen-3.0-generate-002')
+                                : (POLLINATIONS_IMAGE_MODELS.some((m) => m.id === currentModel) ? currentModel : 'flux')
+                            updateSettings({
+                              imageDefault: {
+                                providerId: pid,
+                                model: newModel,
+                              },
+                            })
+                          }}
+                          className="field text-xs h-9 w-full"
+                        >
+                          <option value="pollinations">Pollinations.ai (Flux)</option>
+                          <option value="google">
+                            Google AI (Imagen 3){!hasGoogleKey ? ' — Requires API key' : ''}
                           </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="text-2xs font-semibold uppercase text-muted block mb-1">
-                        Default Image Provider
-                      </label>
-                      <select
-                        value={settings.imageDefault?.providerId || 'pollinations'}
-                        onChange={(e) => {
-                          const pid = e.target.value
-                          updateSettings({
-                            imageDefault: {
-                              providerId: pid,
-                              model: pid === 'google' ? 'imagen-3.0-generate-002' : 'flux',
-                            },
-                          })
-                        }}
-                        className="field text-xs py-1"
-                      >
-                        <option value="pollinations">Pollinations.ai (Flux)</option>
-                        {settings.keyedProviders.includes('google') && (
-                          <option value="google">Google AI (Imagen 3)</option>
+                        </select>
+                        {!hasGoogleKey && settings.imageDefault?.providerId === 'google' && (
+                          <p className="text-3xs text-amber-500/90 mt-1 leading-tight">
+                            API key required in Google provider setup
+                          </p>
                         )}
-                      </select>
-                    </div>
+                      </div>
 
-                    <div>
-                      <label className="text-2xs font-semibold uppercase text-muted block mb-1">
-                        Default Voice Provider
-                      </label>
-                      <select
-                        value={settings.ttsDefault?.providerId || 'pollinations'}
-                        onChange={(e) => {
-                          const pid = e.target.value
-                          updateSettings({
-                            ttsDefault: {
-                              providerId: pid,
-                              voice: pid === 'google' ? 'Puck' : 'alloy',
-                            },
-                          })
-                        }}
-                        className="field text-xs py-1"
-                      >
-                        <option value="pollinations">Pollinations.ai (Alloy)</option>
-                        {settings.keyedProviders.includes('google') && (
-                          <option value="google">Google AI (Puck)</option>
+                      {/* Default Voice Provider */}
+                      <div className="flex flex-col gap-1.5 min-w-0 sm:col-span-2 lg:col-span-1">
+                        <label htmlFor="default-voice-provider" className="text-2xs font-medium text-muted truncate">
+                          Default Voice Provider
+                        </label>
+                        <select
+                          id="default-voice-provider"
+                          value={settings.ttsDefault?.providerId || 'pollinations'}
+                          onChange={(e) => {
+                            const pid = e.target.value
+                            const currentVoice = settings.ttsDefault?.voice
+                            const newVoice =
+                              pid === 'google'
+                                ? (GOOGLE_TTS_VOICES.some((v) => v.id === currentVoice) ? currentVoice : 'Puck')
+                                : (POLLINATIONS_TTS_VOICES.some((v) => v.id === currentVoice) ? currentVoice : 'alloy')
+                            updateSettings({
+                              ttsDefault: {
+                                providerId: pid,
+                                voice: newVoice,
+                              },
+                            })
+                          }}
+                          className="field text-xs h-9 w-full"
+                        >
+                          <option value="pollinations">Pollinations.ai (Alloy)</option>
+                          <option value="google">
+                            Google AI (Puck){!hasGoogleKey ? ' — Requires API key' : ''}
+                          </option>
+                        </select>
+                        {!hasGoogleKey && settings.ttsDefault?.providerId === 'google' && (
+                          <p className="text-3xs text-amber-500/90 mt-1 leading-tight">
+                            API key required in Google provider setup
+                          </p>
                         )}
-                      </select>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Fallback Model */}
-                  <div>
-                    <label className="text-2xs font-semibold uppercase text-muted block mb-1">
-                      Fallback Model (Last Resort)
-                    </label>
-                    <div className="flex gap-2">
-                      <select
-                        value={settings.fallbackModel?.providerId || 'groq'}
-                        onChange={(e) => {
-                          const pid = e.target.value
-                          updateSettings({
-                            fallbackModel: {
-                              providerId: pid,
-                              model: MODEL_SUGGESTIONS[pid]?.[0] || '',
-                            },
-                          })
-                        }}
-                        className="field text-xs py-1 flex-1"
-                      >
-                        {PROVIDER_PRESETS.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.label}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        value={settings.fallbackModel?.model || ''}
-                        onChange={(e) => {
-                          updateSettings({
-                            fallbackModel: {
-                              providerId: settings.fallbackModel?.providerId || 'groq',
-                              model: e.target.value,
-                            },
-                          })
-                        }}
-                        placeholder="Model identifier (e.g. llama-3.3-70b-versatile)"
-                        className="field text-xs py-1 flex-1 font-mono"
-                      />
+                  {/* Subtle Divider */}
+                  <div className="border-t border-border/60" />
+
+                  {/* Fallback Model Subsection */}
+                  <div className="space-y-2.5">
+                    <div>
+                      <div className="text-xs font-semibold text-fg">Fallback Model</div>
+                      <div className="text-2xs text-faint mt-0.5">
+                        Secondary endpoint used as a safety net when the primary model fails.
+                      </div>
                     </div>
-                    <p className="text-3xs text-faint mt-1">
+
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
+                      <div className="sm:col-span-5 min-w-0">
+                        <label htmlFor="fallback-provider-select" className="sr-only">
+                          Fallback Provider
+                        </label>
+                        <select
+                          id="fallback-provider-select"
+                          value={settings.fallbackModel?.providerId || 'groq'}
+                          onChange={(e) => {
+                            const pid = e.target.value
+                            updateSettings({
+                              fallbackModel: {
+                                providerId: pid,
+                                model: MODEL_SUGGESTIONS[pid]?.[0] || '',
+                              },
+                            })
+                          }}
+                          className="field text-xs h-9 w-full"
+                        >
+                          {PROVIDER_PRESETS.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="sm:col-span-7 min-w-0">
+                        <label htmlFor="fallback-model-input" className="sr-only">
+                          Fallback Model Identifier
+                        </label>
+                        <input
+                          id="fallback-model-input"
+                          type="text"
+                          value={settings.fallbackModel?.model || ''}
+                          onChange={(e) => {
+                            updateSettings({
+                              fallbackModel: {
+                                providerId: settings.fallbackModel?.providerId || 'groq',
+                                model: e.target.value,
+                              },
+                            })
+                          }}
+                          placeholder="Model identifier (e.g. llama-3.3-70b-versatile)"
+                          className="field text-xs h-9 w-full font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <p className="text-3xs text-faint leading-relaxed">
                       Queried automatically if primary provider encounters 401/403, 429 rate limit, 5xx outages, or model refusal.
                     </p>
                   </div>
@@ -1495,25 +1550,68 @@ function Slider({
   )
 }
 
+function CompactSwitch({
+  checked,
+  onChange,
+  label,
+  id,
+}: {
+  checked: boolean
+  onChange: (v: boolean) => void
+  label: string
+  id?: string
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      id={id}
+      onClick={() => onChange(!checked)}
+      className="inline-flex shrink-0 items-center justify-center p-0.5 rounded-full transition focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+    >
+      <span className="switch" data-on={checked}>
+        <span />
+      </span>
+    </button>
+  )
+}
+
 function Toggle({
   label,
   desc,
   checked,
   onChange,
+  compact = false,
 }: {
   label: string
   desc?: string
   checked: boolean
   onChange: (v: boolean) => void
+  compact?: boolean
 }) {
+  if (compact || !label) {
+    return (
+      <CompactSwitch
+        label={label || desc || 'Toggle setting'}
+        checked={checked}
+        onChange={onChange}
+      />
+    )
+  }
+
   return (
     <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
       onClick={() => onChange(!checked)}
       className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface px-3.5 py-3 text-left transition hover:border-border-strong"
     >
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium text-fg">{label}</div>
-        <div className="text-2xs text-faint mt-0.5 leading-relaxed">{desc}</div>
+        {desc && <div className="text-2xs text-faint mt-0.5 leading-relaxed">{desc}</div>}
       </div>
       <span className="switch" data-on={checked}>
         <span />

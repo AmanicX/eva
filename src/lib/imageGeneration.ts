@@ -84,8 +84,10 @@ export async function generateImage(
     }
   }
 
-  // Filter candidates to only keyed / available providers
+  // Filter candidates to only keyed / available providers and enabled image capability
   const availableCandidates = candidates.filter((c) => {
+    const isEnabled = settings.providerCapabilities?.[c.providerId]?.image !== false
+    if (!isEnabled) return false
     if (c.providerId === 'pollinations') return true
     if (c.providerId === 'google') return settings.keyedProviders.includes('google')
     return false

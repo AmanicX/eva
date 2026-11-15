@@ -1057,19 +1057,24 @@ export function Welcome() {
                         value={settings.ttsDefault?.providerId || 'pollinations'}
                         onChange={(e) => {
                           const pid = e.target.value
+                          const currentVoice = settings.ttsDefault?.voice
+                          const newVoice =
+                            pid === 'google'
+                              ? (GOOGLE_TTS_VOICES.some((v) => v.id === currentVoice) ? currentVoice : 'Puck')
+                              : (POLLINATIONS_TTS_VOICES.some((v) => v.id === currentVoice) ? currentVoice : 'alloy')
                           updateSettings({
                             ttsDefault: {
                               providerId: pid,
-                              voice: pid === 'google' ? 'Puck' : 'alloy',
+                              voice: newVoice,
                             },
                           })
                         }}
                         className="field text-xs py-1.5"
                       >
                         <option value="pollinations">Pollinations.ai (Free Voice Engine)</option>
-                        {settings.keyedProviders.includes('google') && (
-                          <option value="google">Google AI Studio (Puck, Kore, etc.)</option>
-                        )}
+                        <option value="google">
+                          Google AI Studio (Puck, Kore, etc.){!settings.keyedProviders.includes('google') ? ' — Requires API key' : ''}
+                        </option>
                       </select>
                     </div>
 
@@ -1159,19 +1164,24 @@ export function Welcome() {
                     value={settings.imageDefault?.providerId || 'pollinations'}
                     onChange={(e) => {
                       const pid = e.target.value
+                      const currentModel = settings.imageDefault?.model
+                      const newModel =
+                        pid === 'google'
+                          ? (GOOGLE_IMAGE_MODELS.some((m) => m.id === currentModel) ? currentModel : 'imagen-3.0-generate-002')
+                          : (POLLINATIONS_IMAGE_MODELS.some((m) => m.id === currentModel) ? currentModel : 'flux')
                       updateSettings({
                         imageDefault: {
                           providerId: pid,
-                          model: pid === 'google' ? 'imagen-3.0-generate-002' : 'flux',
+                          model: newModel,
                         },
                       })
                     }}
                     className="field text-xs py-1.5"
                   >
                     <option value="pollinations">Pollinations.ai (Flux Family - Free)</option>
-                    {settings.keyedProviders.includes('google') && (
-                      <option value="google">Google AI Studio (Imagen 3)</option>
-                    )}
+                    <option value="google">
+                      Google AI Studio (Imagen 3){!settings.keyedProviders.includes('google') ? ' — Requires API key' : ''}
+                    </option>
                   </select>
                 </div>
 
