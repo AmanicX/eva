@@ -77,7 +77,7 @@ function applyCsp() {
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
-          "default-src 'self'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; font-src 'self' data:; media-src 'self'",
+          "default-src 'self'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; font-src 'self' data:; media-src 'self' blob: data: https:;",
         ],
       },
     })
@@ -266,6 +266,41 @@ ipcMain.handle('oauth-google-start', async (event, authUrl, port = 54321) => {
   })
 })
 
+// Helper to dynamically update Linux desktop / launcher icons matching current theme
+function updateLinuxDesktopIcon(theme) {
+  if (process.platform !== 'linux') return
+  try {
+    const home = process.env.HOME || app.getPath('home')
+    const suffix = theme === 'light' ? 'light' : 'dark'
+    const sizes = ['16x16', '32x32', '48x48', '64x64', '128x128', '256x256', '512x512']
+
+    for (const size of sizes) {
+      const dir = path.join(home, '.local', 'share', 'icons', 'hicolor', size, 'apps')
+      const target = path.join(dir, `eva-${suffix}.png`)
+      const dest = path.join(dir, 'eva.png')
+      if (fs.existsSync(target)) {
+        try { fs.copyFileSync(target, dest) } catch {}
+      }
+    }
+
+    const scalableDir = path.join(home, '.local', 'share', 'icons', 'hicolor', 'scalable', 'apps')
+    const scalableTarget = path.join(scalableDir, `eva-${suffix}.svg`)
+    const scalableDest = path.join(scalableDir, 'eva.svg')
+    if (fs.existsSync(scalableTarget)) {
+      try { fs.copyFileSync(scalableTarget, scalableDest) } catch {}
+    }
+
+    const pixmapsDir = path.join(home, '.local', 'share', 'pixmaps')
+    const pixmapsTarget = path.join(pixmapsDir, `eva-${suffix}.png`)
+    const pixmapsDest = path.join(pixmapsDir, 'eva.png')
+    if (fs.existsSync(pixmapsTarget)) {
+      try { fs.copyFileSync(pixmapsTarget, pixmapsDest) } catch {}
+    }
+  } catch {
+    // Non-fatal
+  }
+}
+
 // Dynamic Theme Icon Switching: updates window taskbar/titlebar and dock icons
 ipcMain.on('theme-icon-change', (event, theme) => {
   validateIpcSender(event)
@@ -277,6 +312,7 @@ ipcMain.on('theme-icon-change', (event, theme) => {
   if (process.platform === 'darwin' && app.dock && icon) {
     try { app.dock.setIcon(icon) } catch {}
   }
+  updateLinuxDesktopIcon(theme)
 })
 
 // Listen to OS theme change and synchronize windows
@@ -293,10 +329,13 @@ nativeTheme.on('updated', () => {
       try { app.dock.setIcon(icon) } catch {}
     }
   }
+  updateLinuxDesktopIcon(currentTheme)
 })
 
 app.whenReady().then(() => {
   migrateLegacyUserDataIfNeeded()
+  const initialTheme = nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
+  updateLinuxDesktopIcon(initialTheme)
   if (!devServerUrl) applyCsp()
   createWindow()
   app.on('activate', () => {

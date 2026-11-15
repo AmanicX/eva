@@ -7,6 +7,7 @@ import {
   Eraser,
   Globe2,
   Heart,
+  ImageIcon,
   Menu,
   MoreVertical,
   Pencil,
@@ -16,13 +17,17 @@ import {
 import { useStore } from '@/store/useStore'
 import { parseInput } from '@/lib/commands'
 import { buildRequestMessages } from '@/lib/prompt'
-import { streamGroq, chatGroq, providerNeedsKey } from '@/lib/groq'
+import { providerNeedsKey } from '@/lib/groq'
+import { executeChatWithFallback } from '@/lib/fallbackEngine'
+import { generateSpeechAudio, ttsPlayer } from '@/lib/tts'
 import { updateMemory } from '@/lib/memory'
 import { extractState } from '@/lib/state'
 import { Avatar } from './Avatar'
 import { Composer } from './Composer'
 import { MessageBubble } from './MessageBubble'
 import { RightPanel } from './RightPanel'
+import { SceneModal } from './SceneModal'
+import { ChatConfigModal } from './ChatConfigModal'
 import { cn, download, uid } from '@/lib/utils'
 import type { Message } from '@/types'
 
@@ -49,6 +54,8 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
   const [streaming, setStreaming] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [renaming, setRenaming] = useState(false)
+  const [sceneModalOpen, setSceneModalOpen] = useState(false)
+  const [configModalOpen, setConfigModalOpen] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const streamRef = useRef(false)
@@ -86,7 +93,11 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
     const char = state.characters.find((c) => c.id === conv.characterId)
     const wld = state.worlds.find((w) => w.id === conv.worldId)
 
-    if (providerNeedsKey(state.settings.baseUrl) && !state.settings.apiKey.trim()) {
+    if (
+      providerNeedsKey(state.settings.baseUrl) &&
+      !state.settings.apiKey.trim() &&
+      state.settings.keyedProviders.length === 0
+    ) {
       addMessage(convId, {
         id: uid('msg'),
         role: 'assistant',
@@ -110,7 +121,6 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
       timestamp: Date.now(),
     })
 
-    let acc = ''
     try {
       const messages = buildRequestMessages({
         settings: state.settings,
@@ -118,35 +128,42 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
         world: wld,
         conversation: conv,
       })
-      if (state.settings.streaming) {
-        for await (const delta of streamGroq({
-          apiKey: state.settings.apiKey,
-          baseUrl: state.settings.baseUrl,
-          model: state.settings.model,
-          messages,
-          temperature: state.settings.temperature,
-          maxTokens: state.settings.maxTokens,
-          topP: state.settings.topP,
-          signal: controller.signal,
-        })) {
-          acc += delta
-          const { clean } = extractState(acc)
-          updateMessage(convId, assistantId, { content: clean })
-        }
-      } else {
-        acc = await chatGroq({
-          apiKey: state.settings.apiKey,
-          baseUrl: state.settings.baseUrl,
-          model: state.settings.model,
-          messages,
-          temperature: state.settings.temperature,
-          maxTokens: state.settings.maxTokens,
-          signal: controller.signal,
-        })
-      }
-      const { clean, update } = extractState(acc)
+
+      const preferred = conv.chatConfig?.providerId
+        ? {
+            providerId: conv.chatConfig.providerId,
+            model: conv.chatConfig.model,
+          }
+        : null
+
+      const result = await executeChatWithFallback({
+        messages,
+        preferredCandidate: preferred,
+        settings: state.settings,
+        temperature: state.settings.temperature,
+        maxTokens: state.settings.maxTokens,
+        signal: controller.signal,
+      })
+
+      const { clean, update } = extractState(result.content)
       updateMessage(convId, assistantId, { content: clean.trim() || '…' })
       if (update && wld) applyState(convId, update)
+
+      // Auto-TTS if enabled
+      if (state.settings.ttsAutoRead && state.settings.ttsEnabled) {
+        try {
+          const ttsPref = conv.ttsConfig?.providerId
+            ? {
+                providerId: conv.ttsConfig.providerId,
+                voice: conv.ttsConfig.voice || 'alloy',
+              }
+            : null
+          const { audioUrl } = await generateSpeechAudio(clean, ttsPref, state.settings)
+          ttsPlayer.play(assistantId, audioUrl)
+        } catch {
+          /* auto-tts is best effort */
+        }
+      }
 
       const latest = useStore.getState().conversations.find((c) => c.id === convId)
       if (latest) {
@@ -160,7 +177,7 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
     } catch (err) {
       const aborted = err instanceof DOMException && err.name === 'AbortError'
       const text = aborted
-        ? acc.trim() || '_Stopped._'
+        ? '_Stopped._'
         : `⚠ ${err instanceof Error ? err.message : 'Request failed.'}`
       updateMessage(convId, assistantId, { content: text, error: !aborted })
     } finally {
@@ -304,12 +321,14 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
         <div className="flex items-center gap-1 shrink-0">
           {/* Quick Model Badge */}
           <button
-            onClick={() => setUI({ settingsOpen: true, settingsTab: 'connection' })}
+            onClick={() => setConfigModalOpen(true)}
             className="hidden md:flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1 text-2xs text-muted hover:bg-surface-2 hover:text-fg transition"
-            title="Active Model (Click to change)"
+            title="Conversation Model & Settings (Click to configure)"
           >
             <Cpu size={12} className="text-accent" />
-            <span className="font-mono truncate max-w-[140px]">{model}</span>
+            <span className="font-mono truncate max-w-[140px]">
+              {conversation.chatConfig?.model || model}
+            </span>
           </button>
 
           {/* Memory toggle */}
@@ -364,6 +383,24 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
                     }}
                   >
                     Rename conversation
+                  </MenuItem>
+                  <MenuItem
+                    icon={<ImageIcon size={14} />}
+                    onClick={() => {
+                      setSceneModalOpen(true)
+                      setMenuOpen(false)
+                    }}
+                  >
+                    Generate Scene Image
+                  </MenuItem>
+                  <MenuItem
+                    icon={<Cpu size={14} />}
+                    onClick={() => {
+                      setConfigModalOpen(true)
+                      setMenuOpen(false)
+                    }}
+                  >
+                    Chat & Voice Settings
                   </MenuItem>
                   <MenuItem
                     icon={<Sparkles size={14} />}
@@ -513,6 +550,7 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
                     m.id === messages[messages.length - 1]?.id &&
                     m.role === 'assistant'
                   }
+                  conversationTtsConfig={conversation?.ttsConfig}
                   canRegenerate={m.id === lastAssistantId && !streaming}
                   onRegenerate={handleRegenerate}
                   onDelete={() => removeMessage(conversation.id, m.id)}
@@ -529,6 +567,7 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
             onSend={handleSend}
             onStop={handleStop}
             onShowHelp={onShowCommands}
+            onOpenScene={() => setSceneModalOpen(true)}
             streaming={streaming}
             characterName={character?.name}
           />
@@ -545,6 +584,9 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
           />
         )}
       </div>
+
+      <SceneModal open={sceneModalOpen} onClose={() => setSceneModalOpen(false)} />
+      <ChatConfigModal open={configModalOpen} onClose={() => setConfigModalOpen(false)} />
     </div>
   )
 }

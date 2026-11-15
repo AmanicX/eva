@@ -643,7 +643,7 @@ export function SyncSettings() {
 
       {/* GitHub Authorization Modal */}
       {showGitHubModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="w-full max-w-md p-6 rounded-2xl bg-surface-elevated border border-border shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold text-fg">Connect GitHub Cloud Backup</h3>
@@ -796,7 +796,7 @@ export function SyncSettings() {
 
       {/* Google Authorization Modal */}
       {showGoogleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="w-full max-w-md p-6 rounded-2xl bg-surface-elevated border border-border shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold text-fg">Connect Google Drive</h3>
@@ -889,7 +889,7 @@ export function SyncSettings() {
 
       {/* Passphrase Modal */}
       {showPassphraseModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="w-full max-w-md p-6 rounded-2xl bg-surface-elevated border border-border shadow-2xl space-y-4">
             <h3 className="text-base font-semibold text-fg">Configure Encryption Passphrase</h3>
             <p className="text-xs text-muted leading-relaxed">
@@ -955,7 +955,7 @@ export function SyncSettings() {
 
       {/* Restore Preview Modal */}
       {showRestoreModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="w-full max-w-lg p-6 rounded-2xl bg-surface-elevated border border-border shadow-2xl space-y-4">
             <h3 className="text-base font-semibold text-fg">Restore from Cloud Backup</h3>
 

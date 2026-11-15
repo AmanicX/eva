@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { ArrowUp, HelpCircle, Square, Zap } from 'lucide-react'
+import { ArrowUp, HelpCircle, Sparkles, Square, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -8,6 +8,7 @@ interface Props {
   onSend: () => void
   onStop: () => void
   onShowHelp: () => void
+  onOpenScene?: () => void
   streaming: boolean
   disabled?: boolean
   characterName?: string
@@ -28,6 +29,7 @@ export function Composer({
   onSend,
   onStop,
   onShowHelp,
+  onOpenScene,
   streaming,
   disabled,
   characterName,
@@ -77,6 +79,15 @@ export function Composer({
               {s.label}
             </button>
           ))}
+          {onOpenScene && (
+            <button
+              onClick={onOpenScene}
+              title="Generate Scene Image"
+              className="chip shrink-0 gap-1 text-2xs py-1 text-accent border-accent/30 hover:border-accent"
+            >
+              <Sparkles size={12} /> Scene
+            </button>
+          )}
           <button
             onClick={onShowHelp}
             title="Command reference"

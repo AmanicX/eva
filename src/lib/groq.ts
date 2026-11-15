@@ -55,6 +55,27 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     keyHint: 'sk-…',
     keyUrl: 'https://platform.openai.com/api-keys',
   },
+  {
+    id: 'google',
+    label: 'Google AI',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+    keyHint: 'AIza…',
+    keyUrl: 'https://aistudio.google.com/app/apikey',
+  },
+  {
+    id: 'pollinations',
+    label: 'Pollinations.ai',
+    baseUrl: 'https://text.pollinations.ai/openai',
+    keyHint: 'optional token',
+    keyUrl: 'https://pollinations.ai',
+  },
+  {
+    id: 'cloudflare',
+    label: 'Cloudflare',
+    baseUrl: 'https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/v1',
+    keyHint: 'Account ID & API Token',
+    keyUrl: 'https://dash.cloudflare.com/',
+  },
 ]
 
 export interface ChatMessage {
@@ -126,6 +147,27 @@ export const MODEL_SUGGESTIONS: Record<string, string[]> = {
   ],
   lmstudio: [],
   openai: ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1', 'gpt-4.1-mini'],
+  google: [
+    'gemini-2.5-flash',
+    'gemini-2.5-pro',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash',
+    'gemini-1.5-pro',
+  ],
+  pollinations: [
+    'openai',
+    'qwen',
+    'mistral',
+    'deepseek',
+    'llama',
+  ],
+  cloudflare: [
+    '@cf/meta/llama-3.3-70b-instruct',
+    '@cf/meta/llama-3.1-8b-instruct',
+    '@cf/mistral/mistral-7b-instruct-v0.2',
+    '@cf/deepseek-ai/deepseek-r1-distill-qwen-32b',
+    '@cf/qwen/qwen1.5-14b-chat-awq',
+  ],
 }
 
 export function presetIdFor(baseUrl?: string): string | null {
@@ -140,8 +182,11 @@ export function suggestionsFor(baseUrl?: string): string[] {
 
 const NON_CHAT = /whisper|tts|orpheus|prompt-guard|guard|embed|rerank|vision/i
 
-export function resolveBaseUrl(baseUrl?: string): string {
-  const base = (baseUrl ?? '').trim() || DEFAULT_BASE_URL
+export function resolveBaseUrl(baseUrl?: string, accountId?: string): string {
+  let base = (baseUrl ?? '').trim() || DEFAULT_BASE_URL
+  if (accountId && base.includes('{account_id}')) {
+    base = base.replace('{account_id}', accountId.trim())
+  }
   return base.replace(/\/+$/, '')
 }
 
@@ -150,9 +195,16 @@ export function providerNeedsKey(baseUrl?: string): boolean {
   return !/localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]/i.test(resolveBaseUrl(baseUrl))
 }
 
-function headers(apiKey: string): Record<string, string> {
+function headers(apiKey: string, baseUrl?: string): Record<string, string> {
   const h: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (apiKey.trim()) h.Authorization = `Bearer ${apiKey.trim()}`
+  const cleanKey = apiKey.trim()
+  if (cleanKey) {
+    h.Authorization = `Bearer ${cleanKey}`
+    // Google AI Studio requires x-goog-api-key header
+    if (baseUrl && /googleapis\.com/i.test(baseUrl)) {
+      h['x-goog-api-key'] = cleanKey
+    }
+  }
   return h
 }
 
@@ -180,9 +232,10 @@ function errorFrom(body: string, status: number) {
 }
 
 export async function* streamGroq(opts: GroqChatOptions): AsyncGenerator<string> {
-  const res = await fetch(`${resolveBaseUrl(opts.baseUrl)}/chat/completions`, {
+  const resolved = resolveBaseUrl(opts.baseUrl)
+  const res = await fetch(`${resolved}/chat/completions`, {
     method: 'POST',
-    headers: headers(opts.apiKey),
+    headers: headers(opts.apiKey, resolved),
     body: JSON.stringify({
       model: opts.model,
       messages: opts.messages,
@@ -225,9 +278,10 @@ export async function* streamGroq(opts: GroqChatOptions): AsyncGenerator<string>
 }
 
 export async function chatGroq(opts: GroqChatOptions): Promise<string> {
-  const res = await fetch(`${resolveBaseUrl(opts.baseUrl)}/chat/completions`, {
+  const resolved = resolveBaseUrl(opts.baseUrl)
+  const res = await fetch(`${resolved}/chat/completions`, {
     method: 'POST',
-    headers: headers(opts.apiKey),
+    headers: headers(opts.apiKey, resolved),
     body: JSON.stringify({
       model: opts.model,
       messages: opts.messages,
@@ -242,19 +296,51 @@ export async function chatGroq(opts: GroqChatOptions): Promise<string> {
   return json?.choices?.[0]?.message?.content?.trim() ?? ''
 }
 
-export async function listGroqModels(apiKey: string, baseUrl?: string): Promise<string[]> {
-  const res = await fetch(`${resolveBaseUrl(baseUrl)}/models`, {
-    headers: headers(apiKey),
+export async function listGroqModels(
+  apiKey: string,
+  baseUrl?: string,
+  accountId?: string,
+): Promise<string[]> {
+  const resolved = resolveBaseUrl(baseUrl, accountId)
+
+  // 1. Direct Pollinations text models endpoint
+  if (resolved.includes('text.pollinations.ai')) {
+    try {
+      const pRes = await fetch('https://text.pollinations.ai/models')
+      if (pRes.ok) {
+        const json = await pRes.json()
+        if (Array.isArray(json)) {
+          return json.map((m: any) => m.name || m.id || m).filter(Boolean).sort()
+        }
+      }
+    } catch {
+      // Fall through to standard endpoint
+    }
+  }
+
+  // 2. Cloudflare endpoint
+  const url = resolved.includes('api.cloudflare.com')
+    ? `${resolved.replace(/\/v1$/, '')}/models/search`
+    : `${resolved}/models`
+
+  const res = await fetch(url, {
+    headers: headers(apiKey, resolved),
   })
   if (!res.ok) throw errorFrom(await res.text().catch(() => ''), res.status)
   const json = await res.json()
-  const rawList = Array.isArray(json?.data)
-    ? json.data
-    : Array.isArray(json?.models)
-      ? json.models
-      : []
+  const rawList = Array.isArray(json)
+    ? json
+    : Array.isArray(json?.data)
+      ? json.data
+      : Array.isArray(json?.models)
+        ? json.models
+        : Array.isArray(json?.result)
+          ? json.result
+          : []
   return rawList
-    .map((m: { id?: string; name?: string }) => m.id || m.name || '')
+    .map((m: { id?: string; name?: string } | string) =>
+      typeof m === 'string' ? m : m.id || m.name || '',
+    )
     .filter((id: string) => id && !NON_CHAT.test(id))
     .sort()
 }

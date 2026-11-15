@@ -1,10 +1,20 @@
-import { useState } from 'react'
-import { Check, Copy, RotateCcw, Trash2 } from 'lucide-react'
-import type { Character, Message } from '@/types'
+import { useEffect, useState } from 'react'
+import {
+  Check,
+  Copy,
+  Download,
+  Loader2,
+  RotateCcw,
+  Square,
+  Trash2,
+  Volume2,
+} from 'lucide-react'
+import type { Character, Message, PerChatConfig } from '@/types'
 import { useStore } from '@/store/useStore'
 import { Avatar } from './Avatar'
 import { MarkdownText, RawText } from './RichText'
-import { cn, copyText, formatTime } from '@/lib/utils'
+import { cn, copyText, download, formatTime } from '@/lib/utils'
+import { generateSpeechAudio, ttsPlayer } from '@/lib/tts'
 
 interface Props {
   message: Message
@@ -13,6 +23,7 @@ interface Props {
   onRegenerate?: () => void
   canRegenerate?: boolean
   streaming?: boolean
+  conversationTtsConfig?: PerChatConfig | null
 }
 
 export function MessageBubble({
@@ -22,16 +33,61 @@ export function MessageBubble({
   onRegenerate,
   canRegenerate,
   streaming,
+  conversationTtsConfig,
 }: Props) {
   const [copied, setCopied] = useState(false)
+  const [ttsLoading, setTtsLoading] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(() => ttsPlayer.isPlaying(message.id))
+  const [ttsNotice, setTtsNotice] = useState<string | null>(null)
+
   const bubbleStyle = useStore((s) => s.settings.bubbleStyle)
+  const settings = useStore((s) => s.settings)
   const isUser = message.role === 'user'
-  const isEmptyStreaming = streaming && !message.content
+  const isEmptyStreaming = Boolean(streaming && !message.content)
+
+  useEffect(() => {
+    const unsub = ttsPlayer.addListener((id) => {
+      setIsPlaying(id === message.id)
+    })
+    return () => unsub()
+  }, [message.id])
 
   const handleCopy = async () => {
     await copyText(isUser ? message.raw ?? message.content : message.content)
     setCopied(true)
     setTimeout(() => setCopied(false), 1400)
+  }
+
+  const handleToggleSpeech = async () => {
+    if (isPlaying) {
+      ttsPlayer.stop()
+      return
+    }
+
+    setTtsNotice(null)
+    setTtsLoading(true)
+
+    try {
+      const preferred = conversationTtsConfig?.providerId
+        ? {
+            providerId: conversationTtsConfig.providerId,
+            voice: conversationTtsConfig.voice || 'alloy',
+          }
+        : null
+
+      const { audioUrl } = await generateSpeechAudio(
+        message.content,
+        preferred,
+        settings,
+      )
+
+      ttsPlayer.play(message.id, audioUrl)
+    } catch (err) {
+      setTtsNotice(err instanceof Error ? err.message : 'Speech playback failed.')
+      setTimeout(() => setTtsNotice(null), 3500)
+    } finally {
+      setTtsLoading(false)
+    }
   }
 
   if (isUser) {
@@ -62,6 +118,82 @@ export function MessageBubble({
               <Trash2 size={13} />
             </button>
           )}
+        </div>
+      </div>
+    )
+  }
+
+  // Handle Image Message
+  if (message.type === 'image' && message.image) {
+    return (
+      <div className="group anim-rise flex items-start gap-3">
+        <Avatar
+          name={character?.name ?? 'Eva'}
+          avatar={character?.avatar}
+          color={character?.avatarColor}
+          size={34}
+          className="mt-0.5 shrink-0"
+        />
+        <div className="min-w-0 flex-1">
+          <div className="mb-1 flex items-center gap-2 pl-0.5">
+            <span className="text-xs font-semibold text-fg">
+              {character?.name ?? 'Assistant'}
+            </span>
+            <span className="rounded bg-accent/15 px-1.5 py-0.2 text-2xs text-accent border border-accent/30 font-medium">
+              Scene Image
+            </span>
+            {message.image.model && (
+              <span className="rounded bg-surface-2 px-1.5 py-0.2 text-2xs text-faint border border-border">
+                {message.image.model}
+              </span>
+            )}
+          </div>
+
+          <div className="overflow-hidden rounded-2xl border border-border/80 bg-surface/60 max-w-lg shadow-lg">
+            <img
+              src={message.image.url}
+              alt={message.image.prompt}
+              className="w-full h-auto max-h-[460px] object-cover transition-transform duration-300 hover:scale-[1.01]"
+              loading="lazy"
+            />
+            <div className="p-3 border-t border-border/60">
+              <p className="text-xs text-muted leading-relaxed select-text italic">
+                "{message.image.prompt}"
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-1 flex items-center gap-1.5 pl-0.5 opacity-100 transition pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:group-focus-within:opacity-100">
+            <span className="px-1 text-2xs text-faint tabular-nums">
+              {formatTime(message.timestamp)}
+            </span>
+            <button
+              onClick={() => download(message.image!.url, `eva-scene-${message.id}.png`)}
+              className="grid size-7 place-items-center rounded-lg text-faint transition hover:bg-surface-2 hover:text-fg"
+              aria-label="Download image"
+              title="Download image"
+            >
+              <Download size={13} />
+            </button>
+            <button
+              onClick={() => copyText(message.image!.prompt)}
+              className="grid size-7 place-items-center rounded-lg text-faint transition hover:bg-surface-2 hover:text-fg"
+              aria-label="Copy prompt"
+              title="Copy prompt"
+            >
+              <Copy size={13} />
+            </button>
+            {onDelete && (
+              <button
+                onClick={onDelete}
+                className="grid size-7 place-items-center rounded-lg text-faint transition hover:bg-surface-2 hover:text-danger"
+                aria-label="Delete message"
+                title="Delete message"
+              >
+                <Trash2 size={13} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
     )
@@ -101,52 +233,75 @@ export function MessageBubble({
           )}
         >
           {isEmptyStreaming ? (
-            <span className="inline-flex items-center gap-1.5 py-0.5 text-xs text-muted">
-              <span className="inline-flex items-center gap-1">
-                <span className="size-1.5 rounded-full bg-accent animate-pulse" />
-                <span className="size-1.5 rounded-full bg-accent animate-pulse delay-150" />
-                <span className="size-1.5 rounded-full bg-accent animate-pulse delay-300" />
+            <div className="flex flex-col items-center justify-center py-4 px-6 gap-2">
+              <div className="size-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+              <span className="text-xs font-medium text-muted tracking-wide animate-pulse">
+                Responding
               </span>
-              <span className="text-2xs font-medium text-faint">Thinking…</span>
-            </span>
+            </div>
           ) : (
-            <MarkdownText text={message.content} className={streaming ? 'caret' : undefined} />
+            <MarkdownText text={message.content} />
           )}
         </div>
 
-        <div className="mt-1 flex items-center gap-1.5 pl-0.5 opacity-100 transition pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:group-focus-within:opacity-100">
-          <span className="px-1 text-2xs text-faint tabular-nums">
-            {formatTime(message.timestamp)}
-          </span>
-          <button
-            onClick={handleCopy}
-            className="grid size-7 place-items-center rounded-lg text-faint transition hover:bg-surface-2 hover:text-fg"
-            aria-label="Copy message"
-            title="Copy message"
-          >
-            {copied ? <Check size={13} className="text-accent" /> : <Copy size={13} />}
-          </button>
-          {canRegenerate && onRegenerate && (
+        {ttsNotice && (
+          <p className="mt-1 text-2xs text-danger/90 italic pl-1">{ttsNotice}</p>
+        )}
+
+        {!isEmptyStreaming && (
+          <div className="mt-1 flex items-center gap-1.5 pl-0.5 opacity-100 transition pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:group-focus-within:opacity-100">
+            <span className="px-1 text-2xs text-faint tabular-nums">
+              {formatTime(message.timestamp)}
+            </span>
             <button
-              onClick={onRegenerate}
+              onClick={handleCopy}
               className="grid size-7 place-items-center rounded-lg text-faint transition hover:bg-surface-2 hover:text-fg"
-              aria-label="Regenerate reply"
-              title="Regenerate reply"
+              aria-label="Copy message"
+              title="Copy message"
             >
-              <RotateCcw size={13} />
+              {copied ? <Check size={13} className="text-accent" /> : <Copy size={13} />}
             </button>
-          )}
-          {onDelete && (
+            {/* TTS Speaker button */}
             <button
-              onClick={onDelete}
-              className="grid size-7 place-items-center rounded-lg text-faint transition hover:bg-surface-2 hover:text-danger"
-              aria-label="Delete message"
-              title="Delete message"
+              onClick={handleToggleSpeech}
+              disabled={ttsLoading}
+              className={cn(
+                'grid size-7 place-items-center rounded-lg transition hover:bg-surface-2',
+                isPlaying ? 'text-accent' : 'text-faint hover:text-fg',
+              )}
+              aria-label={isPlaying ? 'Stop speech' : 'Read aloud'}
+              title={isPlaying ? 'Stop speech' : 'Read aloud'}
             >
-              <Trash2 size={13} />
+              {ttsLoading ? (
+                <Loader2 size={13} className="animate-spin text-accent" />
+              ) : isPlaying ? (
+                <Square size={13} className="fill-current" />
+              ) : (
+                <Volume2 size={13} />
+              )}
             </button>
-          )}
-        </div>
+            {canRegenerate && onRegenerate && (
+              <button
+                onClick={onRegenerate}
+                className="grid size-7 place-items-center rounded-lg text-faint transition hover:bg-surface-2 hover:text-fg"
+                aria-label="Regenerate reply"
+                title="Regenerate reply"
+              >
+                <RotateCcw size={13} />
+              </button>
+            )}
+            {onDelete && (
+              <button
+                onClick={onDelete}
+                className="grid size-7 place-items-center rounded-lg text-faint transition hover:bg-surface-2 hover:text-danger"
+                aria-label="Delete message"
+                title="Delete message"
+              >
+                <Trash2 size={13} />
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

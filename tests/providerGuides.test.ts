@@ -5,7 +5,18 @@ import {
 } from '../src/lib/providerGuides'
 
 describe('Provider Setup Guides Database', () => {
-  const supportedIds = ['groq', 'openrouter', 'ollama', 'lmstudio', 'ollamacloud', 'openai', 'custom']
+  const supportedIds = [
+    'groq',
+    'openrouter',
+    'ollama',
+    'lmstudio',
+    'ollamacloud',
+    'openai',
+    'google',
+    'pollinations',
+    'cloudflare',
+    'custom',
+  ]
 
   it('contains comprehensive guides for all supported providers', () => {
     for (const id of supportedIds) {
@@ -43,6 +54,9 @@ describe('Provider Setup Guides Database', () => {
     expect(getGuideForBaseUrl('http://localhost:1234/v1').id).toBe('lmstudio')
     expect(getGuideForBaseUrl('https://ollama.com/v1').id).toBe('ollamacloud')
     expect(getGuideForBaseUrl('https://api.openai.com/v1').id).toBe('openai')
+    expect(getGuideForBaseUrl('https://generativelanguage.googleapis.com/v1beta/openai').id).toBe('google')
+    expect(getGuideForBaseUrl('https://text.pollinations.ai/openai').id).toBe('pollinations')
+    expect(getGuideForBaseUrl('https://api.cloudflare.com/client/v4/accounts/123/ai/v1').id).toBe('cloudflare')
     expect(getGuideForBaseUrl('https://api.deepseek.com/v1').id).toBe('custom')
     expect(getGuideForBaseUrl('http://192.168.1.100:8000/v1').id).toBe('custom')
   })

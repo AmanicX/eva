@@ -366,7 +366,15 @@ export function mergeSyncData(
 
       const mergedConv: Conversation = {
         ...lConv,
-        ...(isRemoteNewer ? { title: rConv.title, pinned: rConv.pinned } : {}),
+        ...(isRemoteNewer
+          ? {
+              title: rConv.title,
+              pinned: rConv.pinned,
+              chatConfig: rConv.chatConfig !== undefined ? rConv.chatConfig : lConv.chatConfig,
+              imageConfig: rConv.imageConfig !== undefined ? rConv.imageConfig : lConv.imageConfig,
+              ttsConfig: rConv.ttsConfig !== undefined ? rConv.ttsConfig : lConv.ttsConfig,
+            }
+          : {}),
         messages: mergedMessages,
         memory: mergedMemory,
         worldState: mergedWorldState,

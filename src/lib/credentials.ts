@@ -382,6 +382,68 @@ export async function clearSecureSecret(key: string): Promise<void> {
 export const removeSecureSecret = clearSecureSecret
 
 /**
+ * Per-provider secure key storage abstraction.
+ * Stores keys encrypted per platform without exposing them in unencrypted Zustand stores.
+ */
+export async function getProviderKey(providerId: string): Promise<string> {
+  const secretKey = `provider_key_${providerId}`
+  const key = await getSecureSecret(secretKey)
+  if (key) return key
+
+  // Fallback for legacy single-key storage if provider is groq
+  if (providerId === 'groq') {
+    return await getApiKey()
+  }
+  return ''
+}
+
+export async function setProviderKey(providerId: string, key: string): Promise<void> {
+  const clean = (key || '').trim()
+  const secretKey = `provider_key_${providerId}`
+  if (!clean) {
+    await clearSecureSecret(secretKey)
+    if (providerId === 'groq') {
+      await clearApiKey()
+    }
+  } else {
+    await setSecureSecret(secretKey, clean)
+    if (providerId === 'groq') {
+      await setApiKey(clean)
+    }
+  }
+}
+
+export async function clearProviderKey(providerId: string): Promise<void> {
+  return setProviderKey(providerId, '')
+}
+
+export async function getCloudflareCredentials(): Promise<{ accountId: string; apiToken: string }> {
+  const accountId = (await getSecureSecret('cf_account_id')) || ''
+  const apiToken = (await getSecureSecret('cf_api_token')) || ''
+  return { accountId, apiToken }
+}
+
+export async function setCloudflareCredentials(accountId: string, apiToken: string): Promise<void> {
+  const cleanId = (accountId || '').trim()
+  const cleanToken = (apiToken || '').trim()
+  if (!cleanId) {
+    await clearSecureSecret('cf_account_id')
+  } else {
+    await setSecureSecret('cf_account_id', cleanId)
+  }
+  if (!cleanToken) {
+    await clearSecureSecret('cf_api_token')
+  } else {
+    await setSecureSecret('cf_api_token', cleanToken)
+  }
+}
+
+export async function clearCloudflareCredentials(): Promise<void> {
+  await clearSecureSecret('cf_account_id')
+  await clearSecureSecret('cf_api_token')
+}
+
+/**
  * Migrates legacy unencrypted API keys from localStorage into platform secure storage.
  * Verifies successful migration before purging plaintext copies.
  */

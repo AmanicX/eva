@@ -69,6 +69,15 @@ export interface ParsedInput {
   commands: ParsedCommand[]
 }
 
+export interface MessageImage {
+  id?: string
+  prompt: string
+  url: string // Local storage URL or base64 data
+  model?: string
+  width?: number
+  height?: number
+}
+
 export interface Message {
   id: string
   role: Role
@@ -77,6 +86,9 @@ export interface Message {
   commands?: ParsedCommand[]
   timestamp: number
   error?: boolean
+  type?: 'text' | 'image'
+  image?: MessageImage
+  audioUrl?: string
 }
 
 export interface Reputation {
@@ -87,6 +99,12 @@ export interface WorldState {
   reputation: Reputation
   events: string[]
   notes: string
+}
+
+export interface PerChatConfig {
+  providerId?: string
+  model?: string
+  voice?: string
 }
 
 export interface Conversation {
@@ -101,6 +119,9 @@ export interface Conversation {
   createdAt: number
   updatedAt: number
   pinned?: boolean
+  chatConfig?: PerChatConfig | null
+  imageConfig?: PerChatConfig | null
+  ttsConfig?: PerChatConfig | null
 }
 
 export type AppearanceMode = 'dark' | 'light' | 'system'
@@ -109,6 +130,18 @@ export interface ThemeAccentConfig {
   paletteId?: string
   primary: string
   contrast: string
+}
+
+export interface ProviderCapability {
+  chat: boolean
+  image: boolean
+  tts: boolean
+}
+
+export interface ProviderCapabilityModels {
+  chatModel?: string
+  imageModel?: string
+  ttsVoice?: string
 }
 
 export interface Settings {
@@ -134,6 +167,21 @@ export interface Settings {
   customAccentColor: string
   customContrastColor: string
   themeAccents: Record<ThemeId, ThemeAccentConfig>
+  // Provider Capabilities & Defaults
+  keyedProviders: string[]
+  providerCapabilities: Record<string, ProviderCapability>
+  providerModels: Record<string, ProviderCapabilityModels>
+  chatDefault: { providerId: string; model: string }
+  imageDefault: { providerId: string; model: string }
+  ttsDefault: { providerId: string; voice: string }
+  fallbackModel: { providerId: string; model: string }
+  chatProviderOrder: string[]
+  imageProviderOrder: string[]
+  ttsProviderOrder: string[]
+  // TTS Settings
+  ttsEnabled: boolean
+  ttsAutoRead: boolean
+  ttsReadNarration: boolean
 }
 
 export interface GroqModel {

@@ -15,9 +15,11 @@ import {
   Settings as SettingsIcon,
   HelpCircle,
   Hash,
+  Search,
 } from 'lucide-react'
 import { useStore, MIN_AGE } from '@/store/useStore'
-import { providerNeedsKey } from '@/lib/groq'
+import { providerNeedsKey, PROVIDER_PRESETS, MODEL_SUGGESTIONS } from '@/lib/groq'
+import { lookupOnlineInfo } from '@/lib/lookup'
 import {
   generateCharacterProfile,
   regenerateCharacterSection,
@@ -65,6 +67,10 @@ export function CharacterGenerator({
   const [writingStyle, setWritingStyle] = useState<WritingStyle>('standard')
   const [roleplayFocus, setRoleplayFocus] = useState<RoleplayFocus>('roleplay')
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [selectedProvider, setSelectedProvider] = useState<string>('inherit')
+  const [selectedModel, setSelectedModel] = useState<string>('')
+  const [lookupOnline, setLookupOnline] = useState(false)
+  const [lookupStatus, setLookupStatus] = useState('')
 
   // Generation status
   const [isGenerating, setIsGenerating] = useState(false)
@@ -118,20 +124,40 @@ export function CharacterGenerator({
 
     setGeneralError(null)
     setIsGenerating(true)
+    setLookupStatus('')
 
     const controller = new AbortController()
     abortRef.current = controller
 
     try {
+      let finalDescription = description.trim()
+      if (lookupOnline) {
+        setLookupStatus('Searching MediaWiki (Wikipedia / Fandom) for canon reference…')
+        try {
+          const lookup = await lookupOnlineInfo(description.trim(), controller.signal)
+          if (lookup?.content) {
+            finalDescription = `[Internet reference notes:\n${lookup.content}]\n\n${finalDescription}`
+            setLookupStatus(`Found reference notes from ${lookup.sources.length} sources.`)
+          } else {
+            setLookupStatus('No online articles found. Proceeding with creative generation.')
+          }
+        } catch {
+          setLookupStatus('Online lookup bypassed.')
+        }
+      }
+
       const generated = await generateCharacterProfile({
-        description: description.trim(),
+        description: finalDescription,
         complexity,
         writingStyle,
         roleplayFocus,
         provider: {
           apiKey: settings.apiKey,
           baseUrl: settings.baseUrl,
-          model: settings.model,
+          model:
+            selectedProvider !== 'inherit' && selectedModel
+              ? selectedModel
+              : settings.model,
         },
         signal: controller.signal,
       })
@@ -428,9 +454,69 @@ export function CharacterGenerator({
                   ))}
                 </div>
               </div>
+
+              {/* Lookup online & Model override */}
+              <div className="pt-2 border-t border-border/60 space-y-3">
+                <label className="flex items-center gap-2 cursor-pointer text-xs text-muted hover:text-fg transition">
+                  <input
+                    type="checkbox"
+                    checked={lookupOnline}
+                    onChange={(e) => setLookupOnline(e.target.checked)}
+                    className="size-3.5 rounded accent-accent"
+                  />
+                  <Search size={13} className="text-accent" />
+                  <span>Look up canon backstory & lore online (Wikipedia / Fandom)</span>
+                </label>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-3xs font-semibold uppercase text-faint mb-1">
+                      Provider Override
+                    </label>
+                    <select
+                      value={selectedProvider}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        setSelectedProvider(val)
+                        setSelectedModel(MODEL_SUGGESTIONS[val]?.[0] || '')
+                      }}
+                      className="w-full rounded-lg border border-border bg-surface px-2 py-1 text-2xs text-fg outline-none"
+                    >
+                      <option value="inherit">Global Default</option>
+                      {PROVIDER_PRESETS.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {selectedProvider !== 'inherit' && (
+                    <div>
+                      <label className="block text-3xs font-semibold uppercase text-faint mb-1">
+                        Model
+                      </label>
+                      <select
+                        value={selectedModel}
+                        onChange={(e) => setSelectedModel(e.target.value)}
+                        className="w-full rounded-lg border border-border bg-surface px-2 py-1 text-2xs text-fg font-mono outline-none"
+                      >
+                        {(MODEL_SUGGESTIONS[selectedProvider] || []).map((m) => (
+                          <option key={m} value={m}>
+                            {m}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>
+
+        {lookupStatus && (
+          <p className="text-2xs text-accent italic px-1">{lookupStatus}</p>
+        )}
 
         {/* Action button */}
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/80">

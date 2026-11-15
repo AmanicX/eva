@@ -525,6 +525,221 @@ export const PROVIDER_GUIDES: Record<string, ProviderGuide> = {
     ],
   },
 
+  google: {
+    id: 'google',
+    name: 'Google AI',
+    tagline: 'Gemini models with multimodal intelligence, high speed, and generous AI Studio limits.',
+    badge: 'Multimodal',
+    badgeVariant: 'accent',
+    isLocal: false,
+    needsKey: true,
+    defaultBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+    keyPlaceholder: 'AIza…',
+    officialWebsite: 'https://aistudio.google.com',
+    keyManagementUrl: 'https://aistudio.google.com/app/apikey',
+    requirements: [
+      'A Google AI Studio account (free tier available)',
+      'API key created in Google AI Studio',
+      'Supports chat, Imagen image generation, and text-to-speech',
+    ],
+    steps: [
+      {
+        number: 1,
+        title: 'Visit Google AI Studio',
+        instruction: 'Navigate to Google AI Studio and sign in with your Google account.',
+        actionLabel: 'Open AI Studio',
+        actionUrl: 'https://aistudio.google.com/app/apikey',
+      },
+      {
+        number: 2,
+        title: 'Create API Key',
+        instruction: 'Click "Get API key" and select "+ Create API key". Choose your Google Cloud project.',
+        tip: 'Keys begin with "AIza" and are 39 characters long.',
+      },
+      {
+        number: 3,
+        title: 'Paste Key into Eva',
+        instruction: 'Paste your key into the API key field and click "Done" to validate and store it securely.',
+      },
+      {
+        number: 4,
+        title: 'Test Connection',
+        instruction: 'Click "Test Connection" to confirm Eva connects to Gemini models.',
+      },
+    ],
+    recommendedModels: [
+      {
+        id: 'gemini-2.5-flash',
+        name: 'Gemini 2.5 Flash',
+        description: 'Next-gen adaptive model with high speed and multimodal reasoning.',
+        badge: 'Recommended',
+      },
+      {
+        id: 'gemini-2.0-flash',
+        name: 'Gemini 2.0 Flash',
+        description: 'Fast, efficient, and versatile for realtime character roleplay.',
+      },
+      {
+        id: 'gemini-1.5-pro',
+        name: 'Gemini 1.5 Pro',
+        description: 'Massive 2M token context window, exceptional for long-running roleplay and lore.',
+      },
+    ],
+    commonErrors: [
+      {
+        code: '401',
+        title: 'Invalid API Key',
+        cause: 'The key is incorrect or was disabled.',
+        resolution: 'Check aistudio.google.com/app/apikey and ensure the key begins with AIza.',
+      },
+      {
+        code: '429',
+        title: 'Rate Limit',
+        cause: 'Free tier requests per minute exceeded.',
+        resolution: 'Wait a few seconds before retrying or enable pay-as-you-go billing in Google Cloud.',
+      },
+    ],
+  },
+
+  pollinations: {
+    id: 'pollinations',
+    name: 'Pollinations.ai',
+    tagline: 'Free, open, community-powered AI for chat, Flux image generation, and TTS.',
+    badge: 'Free & Open',
+    badgeVariant: 'success',
+    isLocal: false,
+    needsKey: false,
+    defaultBaseUrl: 'https://text.pollinations.ai/openai',
+    keyPlaceholder: 'optional API key or token',
+    officialWebsite: 'https://pollinations.ai',
+    requirements: [
+      'No account or API key required for standard usage',
+      'Optional API token for higher tier limits',
+      'Offers Flux image generation and audio TTS',
+    ],
+    steps: [
+      {
+        number: 1,
+        title: 'Open Pollinations',
+        instruction: 'Pollinations is completely open and ready to use without an account.',
+        actionLabel: 'Visit Pollinations',
+        actionUrl: 'https://pollinations.ai',
+      },
+      {
+        number: 2,
+        title: 'Optional API Token',
+        instruction: 'If you have a Pollinations API key or Patreon token, enter it in the key field and click "Done". Otherwise leave it blank.',
+      },
+      {
+        number: 3,
+        title: 'Select Models',
+        instruction: 'Choose from OpenAI, Mistral, Qwen, Flux image models, and TTS voices.',
+      },
+    ],
+    recommendedModels: [
+      {
+        id: 'openai',
+        name: 'OpenAI (via Pollinations)',
+        description: 'Balanced and responsive conversational model.',
+        badge: 'Default',
+      },
+      {
+        id: 'qwen',
+        name: 'Qwen 2.5',
+        description: 'Expressive and nuanced character storytelling.',
+      },
+      {
+        id: 'mistral',
+        name: 'Mistral Nemo',
+        description: 'Fast, creative open-weights model.',
+      },
+    ],
+    commonErrors: [
+      {
+        code: '503',
+        title: 'Service Temporarily Unavailable',
+        cause: 'Community compute capacity is temporarily under heavy load.',
+        resolution: 'Wait a moment or switch models / fallback providers.',
+      },
+    ],
+  },
+
+  cloudflare: {
+    id: 'cloudflare',
+    name: 'Cloudflare Workers AI',
+    tagline: 'Serverless GPU inference powered by Cloudflare’s global edge network.',
+    badge: 'Serverless',
+    badgeVariant: 'neutral',
+    isLocal: false,
+    needsKey: true,
+    defaultBaseUrl: 'https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/v1',
+    keyPlaceholder: 'Account ID & API Token',
+    officialWebsite: 'https://workers.cloudflare.com',
+    keyManagementUrl: 'https://dash.cloudflare.com/',
+    requirements: [
+      'A Cloudflare account with Workers AI enabled',
+      'Both a 32-character Account ID and an API Token are required',
+      'Available on Desktop and Android (browser CORS blocks direct web calls)',
+    ],
+    steps: [
+      {
+        number: 1,
+        title: 'Find your Account ID',
+        instruction: 'Log in to the Cloudflare dashboard. On your account overview page, copy your 32-character Account ID from the right sidebar.',
+        actionLabel: 'Open Cloudflare Dash',
+        actionUrl: 'https://dash.cloudflare.com/',
+      },
+      {
+        number: 2,
+        title: 'Create Workers AI Token',
+        instruction: 'Go to My Profile > API Tokens > Create Token. Select the "Workers AI" template with Read/Edit permissions.',
+        tip: 'Make sure your token has permissions for Workers AI.',
+      },
+      {
+        number: 3,
+        title: 'Enter Credentials in Eva',
+        instruction: 'Enter both your Account ID (32 hex characters) and API Token, then click "Done".',
+      },
+      {
+        number: 4,
+        title: 'Test Connection',
+        instruction: 'Click "Test Connection" to fetch live available models and confirm your token is valid.',
+      },
+    ],
+    recommendedModels: [
+      {
+        id: '@cf/meta/llama-3.3-70b-instruct',
+        name: 'Llama 3.3 70B',
+        description: 'High-intelligence open model running on Cloudflare GPUs.',
+        badge: 'Recommended',
+      },
+      {
+        id: '@cf/meta/llama-3.1-8b-instruct',
+        name: 'Llama 3.1 8B',
+        description: 'Ultra-fast low-latency model for rapid interactions.',
+      },
+      {
+        id: '@cf/deepseek-ai/deepseek-r1-distill-qwen-32b',
+        name: 'DeepSeek R1 Distill 32B',
+        description: 'Deep reasoning model for complex world logic.',
+      },
+    ],
+    commonErrors: [
+      {
+        code: '401',
+        title: 'Invalid Authentication',
+        cause: 'The API Token or Account ID is incorrect.',
+        resolution: 'Verify your Account ID is 32 hex characters and your API token has Workers AI permissions.',
+      },
+      {
+        code: 'CORS',
+        title: 'Browser Network Block',
+        cause: 'Direct browser web calls to Cloudflare API are restricted by CORS policy.',
+        resolution: 'Use Cloudflare on Desktop (Linux/Windows/macOS) or Android APK.',
+      },
+    ],
+  },
+
   custom: {
     id: 'custom',
     name: 'Custom Endpoint',
@@ -591,5 +806,8 @@ export function getGuideForBaseUrl(baseUrl: string): ProviderGuide {
   if (clean.includes('1234')) return PROVIDER_GUIDES.lmstudio
   if (clean.includes('ollama.com')) return PROVIDER_GUIDES.ollamacloud
   if (clean.includes('api.openai.com')) return PROVIDER_GUIDES.openai
+  if (clean.includes('googleapis.com')) return PROVIDER_GUIDES.google
+  if (clean.includes('pollinations.ai')) return PROVIDER_GUIDES.pollinations
+  if (clean.includes('cloudflare.com')) return PROVIDER_GUIDES.cloudflare
   return PROVIDER_GUIDES.custom
 }

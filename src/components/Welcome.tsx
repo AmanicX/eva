@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   AlertCircle,
   Check,
@@ -20,6 +20,7 @@ import {
   Sparkles,
   Terminal,
   Users,
+  Volume2,
   Zap,
 } from 'lucide-react'
 import { useStore } from '@/store/useStore'
@@ -34,6 +35,15 @@ import {
   getGuideForBaseUrl,
   type ProviderGuide,
 } from '@/lib/providerGuides'
+import {
+  getProviderKey,
+  setProviderKey,
+  getCloudflareCredentials,
+  setCloudflareCredentials,
+} from '@/lib/credentials'
+import { GOOGLE_TTS_VOICES, POLLINATIONS_TTS_VOICES } from '@/lib/tts'
+import { GOOGLE_IMAGE_MODELS, POLLINATIONS_IMAGE_MODELS } from '@/lib/imageGeneration'
+import { DoneButton } from './DoneButton'
 import { Modal } from './Modal'
 import { cn } from '@/lib/utils'
 import { AppLogo } from '@/components/AppLogo'
@@ -43,6 +53,8 @@ const STEPS = [
   { label: 'Provider', title: 'Choose AI Provider', subtitle: 'Pick a cloud provider or connect your own local server.' },
   { label: 'Setup Guide', title: 'Connect & Verify', subtitle: 'Follow the step-by-step instructions for your selected provider.' },
   { label: 'Model', title: 'Pick a Model', subtitle: 'Choose a recommended model or select from your provider’s catalog.' },
+  { label: 'Voice', title: 'Speech & Audio', subtitle: 'Configure expressive spoken dialogue and text-to-speech.' },
+  { label: 'Visuals', title: 'Scene Visuals', subtitle: 'Enable striking image generation for your story scenes.' },
   { label: 'Tour', title: 'How Eva Works', subtitle: 'A quick tour of universes, characters, and memory.' },
 ] as const
 
@@ -96,10 +108,34 @@ export function Welcome() {
   const [showErrors, setShowErrors] = useState(false)
   const [completedSteps, setCompletedSteps] = useState<Record<string, Record<number, boolean>>>({})
 
+  const [cfAccountId, setCfAccountId] = useState('')
+  const [cfApiToken, setCfApiToken] = useState('')
+  const [savedCfAccountId, setSavedCfAccountId] = useState('')
+  const [savedCfApiToken, setSavedCfApiToken] = useState('')
+  const [savedKey, setSavedKey] = useState('')
+
   // Determine active guide based on current baseUrl
   const currentGuide: ProviderGuide = useMemo(() => {
     return getGuideForBaseUrl(settings.baseUrl)
   }, [settings.baseUrl])
+
+  useEffect(() => {
+    if (!open) return
+    const provId = currentGuide.id
+    if (provId === 'cloudflare') {
+      void getCloudflareCredentials().then((creds) => {
+        setCfAccountId(creds.accountId)
+        setSavedCfAccountId(creds.accountId)
+        setCfApiToken(creds.apiToken)
+        setSavedCfApiToken(creds.apiToken)
+      })
+    } else {
+      void getProviderKey(provId).then((k) => {
+        const val = k || (provId === 'groq' ? settings.apiKey : '')
+        setSavedKey(val)
+      })
+    }
+  }, [open, currentGuide.id, settings.apiKey])
 
   const needsKey = providerNeedsKey(settings.baseUrl)
   const currentStepInfo = STEPS[step]
@@ -347,6 +383,7 @@ export function Welcome() {
               {PROVIDER_PRESETS.map((p) => {
                 const guide = PROVIDER_GUIDES[p.id] || PROVIDER_GUIDES.custom
                 const isSelected = currentGuide.id === p.id
+                const isKeyed = settings.keyedProviders.includes(p.id)
 
                 return (
                   <button
@@ -356,7 +393,9 @@ export function Welcome() {
                       'group relative flex flex-col justify-between rounded-xl border p-3.5 text-left transition',
                       isSelected
                         ? 'border-accent bg-accent/10 shadow-sm ring-1 ring-accent'
-                        : 'border-border bg-surface hover:border-accent/40 hover:bg-surface-2',
+                        : isKeyed
+                          ? 'border-border/60 bg-surface-2/40 opacity-60 hover:opacity-85'
+                          : 'border-border bg-surface hover:border-accent/40 hover:bg-surface-2',
                     )}
                   >
                     <div>
@@ -364,20 +403,27 @@ export function Welcome() {
                         <span className="font-semibold text-sm text-fg group-hover:text-accent transition">
                           {p.label}
                         </span>
-                        {guide.badge && (
-                          <span
-                            className={cn(
-                              'rounded-full px-2 py-0.5 text-2xs font-medium',
-                              guide.badgeVariant === 'accent'
-                                ? 'bg-accent/20 text-accent font-semibold'
-                                : guide.badgeVariant === 'success'
-                                  ? 'bg-[#30d158]/15 text-[#30d158] font-semibold'
-                                  : 'bg-surface-3 text-muted',
-                            )}
-                          >
-                            {guide.badge}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1.5">
+                          {isKeyed && (
+                            <span className="rounded-full bg-accent/15 px-2 py-0.5 text-2xs font-semibold text-accent">
+                              Key Saved
+                            </span>
+                          )}
+                          {guide.badge && (
+                            <span
+                              className={cn(
+                                'rounded-full px-2 py-0.5 text-2xs font-medium',
+                                guide.badgeVariant === 'accent'
+                                  ? 'bg-accent/20 text-accent font-semibold'
+                                  : guide.badgeVariant === 'success'
+                                    ? 'bg-[#30d158]/15 text-[#30d158] font-semibold'
+                                    : 'bg-surface-3 text-muted',
+                              )}
+                            >
+                              {guide.badge}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <p className="mt-1 text-2xs text-muted leading-relaxed">
                         {guide.tagline}
@@ -616,40 +662,97 @@ export function Welcome() {
                 )}
               </div>
 
-              {needsKey ? (
-                <div className="space-y-2">
-                  <div className="relative">
+              {currentGuide.id === 'cloudflare' ? (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-2xs font-semibold uppercase text-muted block mb-1">
+                      Account ID (32-character hexadecimal)
+                    </label>
                     <input
-                      type={showKey ? 'text' : 'password'}
-                      value={settings.apiKey}
-                      onChange={(e) => updateSettings({ apiKey: e.target.value })}
-                      placeholder={currentGuide.keyPlaceholder}
-                      className="field pr-20 font-mono text-xs"
+                      type="text"
+                      value={cfAccountId}
+                      onChange={(e) => setCfAccountId(e.target.value)}
+                      placeholder="e.g. 1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d"
+                      className="field font-mono text-xs"
                       spellCheck={false}
                     />
-                    <div className="absolute top-1/2 right-1.5 -translate-y-1/2 flex items-center gap-1">
-                      <button
-                        onClick={async () => {
-                          try {
-                            const text = await navigator.clipboard.readText()
-                            if (text) updateSettings({ apiKey: text.trim() })
-                          } catch {
-                            // clipboard read denied
-                          }
-                        }}
-                        className="btn btn-ghost py-1 px-2 text-2xs text-faint hover:text-fg"
-                        title="Paste from clipboard"
-                      >
-                        Paste
-                      </button>
+                  </div>
+                  <div>
+                    <label className="text-2xs font-semibold uppercase text-muted block mb-1">
+                      API Token
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showKey ? 'text' : 'password'}
+                        value={cfApiToken}
+                        onChange={(e) => setCfApiToken(e.target.value)}
+                        placeholder="your cloudflare api token"
+                        className="field pr-12 font-mono text-xs sm:pr-9"
+                        spellCheck={false}
+                      />
                       <button
                         onClick={() => setShowKey((v) => !v)}
-                        className="grid size-8 place-items-center rounded-lg text-faint hover:text-fg"
+                        className="absolute top-1/2 right-1 grid size-9 -translate-y-1/2 place-items-center rounded-lg text-faint hover:text-fg"
+                        aria-label={showKey ? 'Hide token' : 'Show token'}
+                      >
+                        {showKey ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="pt-1">
+                    <DoneButton
+                      providerId="cloudflare"
+                      currentKey={cfApiToken}
+                      savedKey={savedCfApiToken}
+                      currentExtra={cfAccountId}
+                      savedExtra={savedCfAccountId}
+                      onSave={async (key, extra) => {
+                        await setCloudflareCredentials(extra || '', key)
+                        setSavedCfAccountId(extra || '')
+                        setSavedCfApiToken(key)
+                        const has = Boolean(key.trim() && extra?.trim())
+                        const next = has
+                          ? Array.from(new Set([...settings.keyedProviders, 'cloudflare']))
+                          : settings.keyedProviders.filter((p) => p !== 'cloudflare')
+                        updateSettings({ keyedProviders: next })
+                      }}
+                    />
+                  </div>
+                </div>
+              ) : needsKey ? (
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type={showKey ? 'text' : 'password'}
+                        value={settings.apiKey}
+                        onChange={(e) => updateSettings({ apiKey: e.target.value })}
+                        placeholder={currentGuide.keyPlaceholder}
+                        className="field pr-12 font-mono text-xs sm:pr-9"
+                        spellCheck={false}
+                      />
+                      <button
+                        onClick={() => setShowKey((v) => !v)}
+                        className="absolute top-1/2 right-1 grid size-9 -translate-y-1/2 place-items-center rounded-lg text-faint hover:text-fg"
                         aria-label={showKey ? 'Hide API key' : 'Show API key'}
                       >
                         {showKey ? <EyeOff size={15} /> : <Eye size={15} />}
                       </button>
                     </div>
+                    <DoneButton
+                      providerId={currentGuide.id}
+                      currentKey={settings.apiKey}
+                      savedKey={savedKey}
+                      onSave={async (key) => {
+                        await setProviderKey(currentGuide.id, key)
+                        setSavedKey(key)
+                        const has = Boolean(key.trim())
+                        const next = has
+                          ? Array.from(new Set([...settings.keyedProviders, currentGuide.id]))
+                          : settings.keyedProviders.filter((p) => p !== currentGuide.id)
+                        updateSettings({ keyedProviders: next })
+                      }}
+                    />
                   </div>
 
                   {currentGuide.keyManagementUrl && (
@@ -906,6 +1009,211 @@ export function Welcome() {
                 onClick={() => setStep(4)}
                 className="btn btn-accent text-xs sm:text-sm"
               >
+                Voice & Audio &rarr;
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ================================================================= */}
+        {/* STEP 4: VOICE & AUDIO (TEXT-TO-SPEECH)                           */}
+        {/* ================================================================= */}
+        {step === 4 && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold text-fg">Audio & Text-to-Speech (TTS)</h3>
+              <p className="mt-0.5 text-xs text-muted">
+                Do you want characters to speak their dialogue aloud using synthetic voices?
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-surface p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <span className="text-xs font-semibold text-fg flex items-center gap-1.5">
+                    <Volume2 size={15} className="text-accent" />
+                    Enable Text-to-Speech
+                  </span>
+                  <p className="text-2xs text-muted">
+                    Adds voice playback controls to messages in chat.
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={settings.ttsEnabled}
+                  onChange={(e) => updateSettings({ ttsEnabled: e.target.checked })}
+                  className="size-4 rounded accent-accent cursor-pointer"
+                />
+              </div>
+
+              {settings.ttsEnabled && (
+                <div className="pt-3 border-t border-border/60 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-2xs font-semibold uppercase text-muted block mb-1">
+                        Voice Provider
+                      </label>
+                      <select
+                        value={settings.ttsDefault?.providerId || 'pollinations'}
+                        onChange={(e) => {
+                          const pid = e.target.value
+                          updateSettings({
+                            ttsDefault: {
+                              providerId: pid,
+                              voice: pid === 'google' ? 'Puck' : 'alloy',
+                            },
+                          })
+                        }}
+                        className="field text-xs py-1.5"
+                      >
+                        <option value="pollinations">Pollinations.ai (Free Voice Engine)</option>
+                        {settings.keyedProviders.includes('google') && (
+                          <option value="google">Google AI Studio (Puck, Kore, etc.)</option>
+                        )}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-2xs font-semibold uppercase text-muted block mb-1">
+                        Default Voice
+                      </label>
+                      <select
+                        value={settings.ttsDefault?.voice || 'alloy'}
+                        onChange={(e) => {
+                          updateSettings({
+                            ttsDefault: {
+                              providerId: settings.ttsDefault?.providerId || 'pollinations',
+                              voice: e.target.value,
+                            },
+                          })
+                        }}
+                        className="field text-xs py-1.5"
+                      >
+                        {(settings.ttsDefault?.providerId === 'google'
+                          ? GOOGLE_TTS_VOICES
+                          : POLLINATIONS_TTS_VOICES
+                        ).map((v) => (
+                          <option key={v.id} value={v.id}>
+                            {v.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 pt-1">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs text-muted hover:text-fg">
+                      <input
+                        type="checkbox"
+                        checked={settings.ttsAutoRead}
+                        onChange={(e) => updateSettings({ ttsAutoRead: e.target.checked })}
+                        className="size-3.5 rounded accent-accent"
+                      />
+                      <span>Auto-read assistant dialogue when response completes</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer text-xs text-muted hover:text-fg">
+                      <input
+                        type="checkbox"
+                        checked={settings.ttsReadNarration}
+                        onChange={(e) => updateSettings({ ttsReadNarration: e.target.checked })}
+                        className="size-3.5 rounded accent-accent"
+                      />
+                      <span>Read scene narration aloud (uncheck to speak dialogue only)</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-between items-center pt-2">
+              <button onClick={() => setStep(3)} className="btn text-xs sm:text-sm">
+                &larr; Back to Model
+              </button>
+              <button onClick={() => setStep(5)} className="btn btn-accent text-xs sm:text-sm">
+                Scene Visuals &rarr;
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ================================================================= */}
+        {/* STEP 5: SCENE VISUALS (IMAGE GENERATION)                         */}
+        {/* ================================================================= */}
+        {step === 5 && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold text-fg">Scene Visuals & Image Generation</h3>
+              <p className="mt-0.5 text-xs text-muted">
+                Generate visuals from memorable moments in your chats.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-surface p-4 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-2xs font-semibold uppercase text-muted block mb-1">
+                    Default Image Provider
+                  </label>
+                  <select
+                    value={settings.imageDefault?.providerId || 'pollinations'}
+                    onChange={(e) => {
+                      const pid = e.target.value
+                      updateSettings({
+                        imageDefault: {
+                          providerId: pid,
+                          model: pid === 'google' ? 'imagen-3.0-generate-002' : 'flux',
+                        },
+                      })
+                    }}
+                    className="field text-xs py-1.5"
+                  >
+                    <option value="pollinations">Pollinations.ai (Flux Family - Free)</option>
+                    {settings.keyedProviders.includes('google') && (
+                      <option value="google">Google AI Studio (Imagen 3)</option>
+                    )}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-2xs font-semibold uppercase text-muted block mb-1">
+                    Image Model
+                  </label>
+                  <select
+                    value={settings.imageDefault?.model || 'flux'}
+                    onChange={(e) => {
+                      updateSettings({
+                        imageDefault: {
+                          providerId: settings.imageDefault?.providerId || 'pollinations',
+                          model: e.target.value,
+                        },
+                      })
+                    }}
+                    className="field text-xs py-1.5"
+                  >
+                    {(settings.imageDefault?.providerId === 'google'
+                      ? GOOGLE_IMAGE_MODELS
+                      : POLLINATIONS_IMAGE_MODELS
+                    ).map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border/80 bg-surface-2/60 p-3 text-2xs text-muted leading-relaxed">
+                <span className="font-semibold text-fg block mb-0.5">Content Policy Notice:</span>
+                Eva text conversations remain completely private and unfiltered. However, image generation strictly blocks sexually explicit content at the application level.
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center pt-2">
+              <button onClick={() => setStep(4)} className="btn text-xs sm:text-sm">
+                &larr; Back to Voice
+              </button>
+              <button onClick={() => setStep(6)} className="btn btn-accent text-xs sm:text-sm">
                 Orientation Tour &rarr;
               </button>
             </div>
@@ -913,9 +1221,9 @@ export function Welcome() {
         )}
 
         {/* ================================================================= */}
-        {/* STEP 4: ORIENTATION TOUR                                         */}
+        {/* STEP 6: ORIENTATION TOUR                                         */}
         {/* ================================================================= */}
-        {step === 4 && (
+        {step === 6 && (
           <div className="space-y-4">
             <div>
               <h3 className="text-sm font-semibold text-fg">How Eva Works</h3>

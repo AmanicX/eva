@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   AlertCircle,
   Check,
@@ -30,11 +30,21 @@ import {
   GROQ_MODELS,
   PROVIDER_PRESETS,
   DEFAULT_BASE_URL,
+  MODEL_SUGGESTIONS,
   listGroqModels,
   providerNeedsKey,
   presetIdFor,
   suggestionsFor,
 } from '@/lib/groq'
+import {
+  getProviderKey,
+  setProviderKey,
+  getCloudflareCredentials,
+  setCloudflareCredentials,
+} from '@/lib/credentials'
+import { GOOGLE_TTS_VOICES, POLLINATIONS_TTS_VOICES } from '@/lib/tts'
+import { GOOGLE_IMAGE_MODELS, POLLINATIONS_IMAGE_MODELS } from '@/lib/imageGeneration'
+import { DoneButton } from './DoneButton'
 import { THEMES, THEME_ORDER } from '@/data/themes'
 import { AppLogo } from './AppLogo'
 import {
@@ -81,10 +91,36 @@ export function SettingsModal() {
   const [modelFilter, setModelFilter] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
+  const [providerKeys, setProviderKeys] = useState<Record<string, string>>({})
+  const [savedKeys, setSavedKeys] = useState<Record<string, string>>({})
+  const [cfAccountId, setCfAccountId] = useState('')
+  const [cfApiToken, setCfApiToken] = useState('')
+  const [savedCfAccountId, setSavedCfAccountId] = useState('')
+  const [savedCfApiToken, setSavedCfApiToken] = useState('')
+
   const needsKey = providerNeedsKey(settings.baseUrl)
   const activePreset = PROVIDER_PRESETS.find((p) => p.baseUrl === settings.baseUrl.trim())
   const presetId = presetIdFor(settings.baseUrl)
   const curated = GROQ_MODELS.find((m) => m.id === settings.model)
+
+  useEffect(() => {
+    if (!open) return
+    const provId = activePreset?.id || 'groq'
+    if (provId === 'cloudflare') {
+      void getCloudflareCredentials().then((creds) => {
+        setCfAccountId(creds.accountId)
+        setSavedCfAccountId(creds.accountId)
+        setCfApiToken(creds.apiToken)
+        setSavedCfApiToken(creds.apiToken)
+      })
+    } else {
+      void getProviderKey(provId).then((k) => {
+        const keyVal = k || (provId === 'groq' ? settings.apiKey : '')
+        setProviderKeys((prev) => ({ ...prev, [provId]: keyVal }))
+        setSavedKeys((prev) => ({ ...prev, [provId]: keyVal }))
+      })
+    }
+  }, [open, activePreset?.id, settings.apiKey])
 
   const modelOptions = Array.from(
     new Set([
@@ -522,6 +558,7 @@ export function SettingsModal() {
                 <div className="flex flex-wrap gap-1.5">
                   {PROVIDER_PRESETS.map((p) => {
                     const active = settings.baseUrl.trim() === p.baseUrl
+                    const isKeyed = settings.keyedProviders.includes(p.id)
                     return (
                       <button
                         key={p.id}
@@ -532,9 +569,15 @@ export function SettingsModal() {
                             updateSettings({ model: 'gemma4' })
                           }
                         }}
-                        className={cn('chip', active && 'chip-active')}
+                        className={cn(
+                          'chip transition',
+                          active && 'chip-active',
+                          isKeyed && !active && 'opacity-60 text-muted bg-surface-2/40 border-border/60 hover:opacity-85',
+                        )}
+                        title={isKeyed ? `${p.label} (Key saved)` : p.label}
                       >
                         {p.label}
+                        {isKeyed && <span className="ml-1 text-2xs text-accent">✓</span>}
                       </button>
                     )
                   })}
@@ -568,46 +611,141 @@ export function SettingsModal() {
               </Section>
 
               <Section
-                title={needsKey ? 'API key' : 'API key (optional)'}
+                title={needsKey ? 'Credentials' : 'API key (optional)'}
                 hint={
                   needsKey
                     ? 'Stored securely on this device and sent only to the provider above.'
                     : 'Local servers usually ignore the key — leave it blank.'
                 }
               >
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <input
-                      type={showKey ? 'text' : 'password'}
-                      value={settings.apiKey}
-                      onChange={(e) => updateSettings({ apiKey: e.target.value })}
-                      onBlur={(e) => updateSettings({ apiKey: e.target.value.trim() })}
-                      placeholder={activePreset?.keyHint ?? 'your key'}
-                      className="field pr-12 font-mono text-xs sm:pr-9"
-                      spellCheck={false}
-                    />
-                    <button
-                      onClick={() => setShowKey((v) => !v)}
-                      className="absolute top-1/2 right-1 grid size-9 -translate-y-1/2 place-items-center rounded-lg text-faint hover:text-fg"
-                      aria-label={showKey ? 'Hide API key' : 'Show API key'}
-                      title={showKey ? 'Hide key' : 'Show key'}
-                    >
-                      {showKey ? <EyeOff size={15} /> : <Eye size={15} />}
-                    </button>
+                {activePreset?.id === 'cloudflare' ? (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-2xs font-semibold uppercase text-muted block mb-1">
+                        Account ID (32-character hexadecimal)
+                      </label>
+                      <input
+                        type="text"
+                        value={cfAccountId}
+                        onChange={(e) => setCfAccountId(e.target.value)}
+                        placeholder="e.g. 1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d"
+                        className="field font-mono text-xs"
+                        spellCheck={false}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-2xs font-semibold uppercase text-muted block mb-1">
+                        API Token
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showKey ? 'text' : 'password'}
+                          value={cfApiToken}
+                          onChange={(e) => setCfApiToken(e.target.value)}
+                          placeholder="your cloudflare api token"
+                          className="field pr-12 font-mono text-xs sm:pr-9"
+                          spellCheck={false}
+                        />
+                        <button
+                          onClick={() => setShowKey((v) => !v)}
+                          className="absolute top-1/2 right-1 grid size-9 -translate-y-1/2 place-items-center rounded-lg text-faint hover:text-fg"
+                          aria-label={showKey ? 'Hide token' : 'Show token'}
+                        >
+                          {showKey ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between pt-1">
+                      <DoneButton
+                        providerId="cloudflare"
+                        currentKey={cfApiToken}
+                        savedKey={savedCfApiToken}
+                        currentExtra={cfAccountId}
+                        savedExtra={savedCfAccountId}
+                        onSave={async (key, extra) => {
+                          await setCloudflareCredentials(extra || '', key)
+                          setSavedCfAccountId(extra || '')
+                          setSavedCfApiToken(key)
+                          const has = Boolean(key.trim() && extra?.trim())
+                          const next = has
+                            ? Array.from(new Set([...settings.keyedProviders, 'cloudflare']))
+                            : settings.keyedProviders.filter((p) => p !== 'cloudflare')
+                          updateSettings({ keyedProviders: next })
+                        }}
+                      />
+                      <button
+                        onClick={testConnection}
+                        className="btn shrink-0"
+                        disabled={testState === 'testing'}
+                      >
+                        {testState === 'testing' ? (
+                          <RefreshCw size={15} className="animate-spin text-accent" />
+                        ) : (
+                          <Zap size={15} />
+                        )}
+                        Test
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    onClick={testConnection}
-                    className="btn shrink-0"
-                    disabled={testState === 'testing'}
-                  >
-                    {testState === 'testing' ? (
-                      <RefreshCw size={15} className="animate-spin text-accent" />
-                    ) : (
-                      <Zap size={15} />
-                    )}
-                    Test
-                  </button>
-                </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <input
+                          type={showKey ? 'text' : 'password'}
+                          value={providerKeys[activePreset?.id || 'groq'] ?? settings.apiKey}
+                          onChange={(e) => {
+                            const val = e.target.value
+                            const pid = activePreset?.id || 'groq'
+                            setProviderKeys((prev) => ({ ...prev, [pid]: val }))
+                            if (pid === 'groq') updateSettings({ apiKey: val })
+                          }}
+                          placeholder={activePreset?.keyHint ?? 'your key'}
+                          className="field pr-12 font-mono text-xs sm:pr-9"
+                          spellCheck={false}
+                        />
+                        <button
+                          onClick={() => setShowKey((v) => !v)}
+                          className="absolute top-1/2 right-1 grid size-9 -translate-y-1/2 place-items-center rounded-lg text-faint hover:text-fg"
+                          aria-label={showKey ? 'Hide API key' : 'Show API key'}
+                          title={showKey ? 'Hide key' : 'Show key'}
+                        >
+                          {showKey ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                      </div>
+                      <DoneButton
+                        providerId={activePreset?.id || 'groq'}
+                        currentKey={providerKeys[activePreset?.id || 'groq'] ?? settings.apiKey}
+                        savedKey={savedKeys[activePreset?.id || 'groq'] ?? ''}
+                        onSave={async (key) => {
+                          const pid = activePreset?.id || 'groq'
+                          await setProviderKey(pid, key)
+                          setSavedKeys((prev) => ({ ...prev, [pid]: key }))
+                          const has = Boolean(key.trim())
+                          const next = has
+                            ? Array.from(new Set([...settings.keyedProviders, pid]))
+                            : settings.keyedProviders.filter((p) => p !== pid)
+                          updateSettings({
+                            keyedProviders: next,
+                            apiKey: pid === 'groq' ? key : settings.apiKey,
+                          })
+                        }}
+                      />
+                      <button
+                        onClick={testConnection}
+                        className="btn shrink-0"
+                        disabled={testState === 'testing'}
+                      >
+                        {testState === 'testing' ? (
+                          <RefreshCw size={15} className="animate-spin text-accent" />
+                        ) : (
+                          <Zap size={15} />
+                        )}
+                        Test
+                      </button>
+                    </div>
+                  </div>
+                )}
                 {testState !== 'idle' && (
                   <p
                     className={cn(
@@ -707,6 +845,268 @@ export function SettingsModal() {
                 </p>
               </Section>
 
+              {/* Capability Switches for Google AI & Pollinations */}
+              {(activePreset?.id === 'google' || activePreset?.id === 'pollinations') && (
+                <Section
+                  title={`${activePreset.label} Modalities`}
+                  hint="Enable or disable specific capabilities (Chat, Image generation, Voice TTS)."
+                >
+                  <div className="space-y-3">
+                    <div className="rounded-xl border border-border/80 bg-surface/50 p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-fg">Chat Generation</span>
+                        <Toggle
+                          label=""
+                          checked={settings.providerCapabilities[activePreset.id]?.chat !== false}
+                          onChange={(val) => {
+                            const prev = settings.providerCapabilities[activePreset.id] || { chat: true, image: true, tts: true }
+                            updateSettings({
+                              providerCapabilities: {
+                                ...settings.providerCapabilities,
+                                [activePreset.id]: { ...prev, chat: val },
+                              },
+                            })
+                          }}
+                        />
+                      </div>
+                      {settings.providerCapabilities[activePreset.id]?.chat !== false && (
+                        <div className="pt-1">
+                          <label className="text-2xs text-muted block mb-1">Preferred Model</label>
+                          <select
+                            value={settings.providerModels[activePreset.id]?.chatModel || ''}
+                            onChange={(e) => {
+                              const prev = settings.providerModels[activePreset.id] || {}
+                              updateSettings({
+                                providerModels: {
+                                  ...settings.providerModels,
+                                  [activePreset.id]: { ...prev, chatModel: e.target.value },
+                                },
+                              })
+                            }}
+                            className="field text-xs py-1"
+                          >
+                            {(MODEL_SUGGESTIONS[activePreset.id] || []).map((m) => (
+                              <option key={m} value={m}>
+                                {m}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="rounded-xl border border-border/80 bg-surface/50 p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-fg">Image Generation</span>
+                        <Toggle
+                          label=""
+                          checked={settings.providerCapabilities[activePreset.id]?.image !== false}
+                          onChange={(val) => {
+                            const prev = settings.providerCapabilities[activePreset.id] || { chat: true, image: true, tts: true }
+                            updateSettings({
+                              providerCapabilities: {
+                                ...settings.providerCapabilities,
+                                [activePreset.id]: { ...prev, image: val },
+                              },
+                            })
+                          }}
+                        />
+                      </div>
+                      {settings.providerCapabilities[activePreset.id]?.image !== false && (
+                        <div className="pt-1">
+                          <label className="text-2xs text-muted block mb-1">Preferred Image Model</label>
+                          <select
+                            value={settings.providerModels[activePreset.id]?.imageModel || ''}
+                            onChange={(e) => {
+                              const prev = settings.providerModels[activePreset.id] || {}
+                              updateSettings({
+                                providerModels: {
+                                  ...settings.providerModels,
+                                  [activePreset.id]: { ...prev, imageModel: e.target.value },
+                                },
+                              })
+                            }}
+                            className="field text-xs py-1"
+                          >
+                            {(activePreset.id === 'google' ? GOOGLE_IMAGE_MODELS : POLLINATIONS_IMAGE_MODELS).map((m) => (
+                              <option key={m.id} value={m.id}>
+                                {m.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="rounded-xl border border-border/80 bg-surface/50 p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-fg">Text-to-Speech (TTS)</span>
+                        <Toggle
+                          label=""
+                          checked={settings.providerCapabilities[activePreset.id]?.tts !== false}
+                          onChange={(val) => {
+                            const prev = settings.providerCapabilities[activePreset.id] || { chat: true, image: true, tts: true }
+                            updateSettings({
+                              providerCapabilities: {
+                                ...settings.providerCapabilities,
+                                [activePreset.id]: { ...prev, tts: val },
+                              },
+                            })
+                          }}
+                        />
+                      </div>
+                      {settings.providerCapabilities[activePreset.id]?.tts !== false && (
+                        <div className="pt-1">
+                          <label className="text-2xs text-muted block mb-1">Preferred Voice</label>
+                          <select
+                            value={settings.providerModels[activePreset.id]?.ttsVoice || ''}
+                            onChange={(e) => {
+                              const prev = settings.providerModels[activePreset.id] || {}
+                              updateSettings({
+                                providerModels: {
+                                  ...settings.providerModels,
+                                  [activePreset.id]: { ...prev, ttsVoice: e.target.value },
+                                },
+                              })
+                            }}
+                            className="field text-xs py-1"
+                          >
+                            {(activePreset.id === 'google' ? GOOGLE_TTS_VOICES : POLLINATIONS_TTS_VOICES).map((v) => (
+                              <option key={v.id} value={v.id}>
+                                {v.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Section>
+              )}
+
+              {/* Defaults & Fallback Sequence */}
+              <Section
+                title="Capability Defaults & Fallback Sequence"
+                hint="Configure preferred defaults and automatic failover handling."
+              >
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-2xs font-semibold uppercase text-muted block mb-1">
+                        Default Chat Provider
+                      </label>
+                      <select
+                        value={settings.chatDefault?.providerId || 'groq'}
+                        onChange={(e) => {
+                          const pid = e.target.value
+                          const firstModel = MODEL_SUGGESTIONS[pid]?.[0] || ''
+                          updateSettings({ chatDefault: { providerId: pid, model: firstModel } })
+                        }}
+                        className="field text-xs py-1"
+                      >
+                        {PROVIDER_PRESETS.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-2xs font-semibold uppercase text-muted block mb-1">
+                        Default Image Provider
+                      </label>
+                      <select
+                        value={settings.imageDefault?.providerId || 'pollinations'}
+                        onChange={(e) => {
+                          const pid = e.target.value
+                          updateSettings({
+                            imageDefault: {
+                              providerId: pid,
+                              model: pid === 'google' ? 'imagen-3.0-generate-002' : 'flux',
+                            },
+                          })
+                        }}
+                        className="field text-xs py-1"
+                      >
+                        <option value="pollinations">Pollinations.ai (Flux)</option>
+                        {settings.keyedProviders.includes('google') && (
+                          <option value="google">Google AI (Imagen 3)</option>
+                        )}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-2xs font-semibold uppercase text-muted block mb-1">
+                        Default Voice Provider
+                      </label>
+                      <select
+                        value={settings.ttsDefault?.providerId || 'pollinations'}
+                        onChange={(e) => {
+                          const pid = e.target.value
+                          updateSettings({
+                            ttsDefault: {
+                              providerId: pid,
+                              voice: pid === 'google' ? 'Puck' : 'alloy',
+                            },
+                          })
+                        }}
+                        className="field text-xs py-1"
+                      >
+                        <option value="pollinations">Pollinations.ai (Alloy)</option>
+                        {settings.keyedProviders.includes('google') && (
+                          <option value="google">Google AI (Puck)</option>
+                        )}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Fallback Model */}
+                  <div>
+                    <label className="text-2xs font-semibold uppercase text-muted block mb-1">
+                      Fallback Model (Last Resort)
+                    </label>
+                    <div className="flex gap-2">
+                      <select
+                        value={settings.fallbackModel?.providerId || 'groq'}
+                        onChange={(e) => {
+                          const pid = e.target.value
+                          updateSettings({
+                            fallbackModel: {
+                              providerId: pid,
+                              model: MODEL_SUGGESTIONS[pid]?.[0] || '',
+                            },
+                          })
+                        }}
+                        className="field text-xs py-1 flex-1"
+                      >
+                        {PROVIDER_PRESETS.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.label}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        value={settings.fallbackModel?.model || ''}
+                        onChange={(e) => {
+                          updateSettings({
+                            fallbackModel: {
+                              providerId: settings.fallbackModel?.providerId || 'groq',
+                              model: e.target.value,
+                            },
+                          })
+                        }}
+                        placeholder="Model identifier (e.g. llama-3.3-70b-versatile)"
+                        className="field text-xs py-1 flex-1 font-mono"
+                      />
+                    </div>
+                    <p className="text-3xs text-faint mt-1">
+                      Queried automatically if primary provider encounters 401/403, 429 rate limit, 5xx outages, or model refusal.
+                    </p>
+                  </div>
+                </div>
+              </Section>
+
               <Section title="Generation Parameters">
                 <Slider
                   label="Temperature"
@@ -756,6 +1156,27 @@ export function SettingsModal() {
                   desc="Continuously summarize conversations to preserve narrative continuity."
                   checked={settings.memoryEnabled}
                   onChange={(v) => updateSettings({ memoryEnabled: v })}
+                />
+              </Section>
+
+              <Section title="Text-to-Speech (TTS)">
+                <Toggle
+                  label="Enable Text-to-Speech"
+                  desc="Allow listening to spoken assistant dialogue with high-quality synthetic voices."
+                  checked={settings.ttsEnabled}
+                  onChange={(v) => updateSettings({ ttsEnabled: v })}
+                />
+                <Toggle
+                  label="Auto-read dialogue"
+                  desc="Automatically speak dialogue as soon as a response is received from the assistant."
+                  checked={settings.ttsAutoRead}
+                  onChange={(v) => updateSettings({ ttsAutoRead: v })}
+                />
+                <Toggle
+                  label="Read scene narration aloud"
+                  desc="When enabled, speaks both dialogue and narrative scenes. When disabled, speaks only dialogue in quotation marks."
+                  checked={settings.ttsReadNarration}
+                  onChange={(v) => updateSettings({ ttsReadNarration: v })}
                 />
               </Section>
             </div>
@@ -1081,7 +1502,7 @@ function Toggle({
   onChange,
 }: {
   label: string
-  desc: string
+  desc?: string
   checked: boolean
   onChange: (v: boolean) => void
 }) {

@@ -8,10 +8,12 @@ import {
   UserRound,
   Users,
   Pencil,
+  Wand2,
 } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { Modal } from './Modal'
 import { Avatar } from './Avatar'
+import { WorldGeneratorModal } from './WorldGeneratorModal'
 import { cn } from '@/lib/utils'
 import type { World } from '@/types'
 
@@ -62,6 +64,7 @@ export function WorldModal() {
   const activeWorld = worlds.find((w) => w.id === activeWorldId)
 
   const [form, setForm] = useState<Form>(blankForm)
+  const [generatorOpen, setGeneratorOpen] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -184,6 +187,20 @@ export function WorldModal() {
 
       {tab === 'world' ? (
         <div className="space-y-5 p-5">
+          <div className="flex items-center justify-between pb-1 border-b border-border/60">
+            <span className="text-2xs font-semibold uppercase tracking-wider text-muted">
+              World Bible & Lore
+            </span>
+            <button
+              type="button"
+              onClick={() => setGeneratorOpen(true)}
+              className="btn btn-accent flex items-center gap-1.5 py-1 px-3 text-xs shadow-sm"
+            >
+              <Wand2 size={13} />
+              <span>Generate with AI</span>
+            </button>
+          </div>
+
           {/* world switcher */}
           {worlds.length > 0 && (
             <div>
@@ -477,6 +494,28 @@ export function WorldModal() {
           )}
         </div>
       )}
+
+      <WorldGeneratorModal
+        open={generatorOpen}
+        onClose={() => setGeneratorOpen(false)}
+        onApply={(prof) => {
+          set({
+            name: prof.name,
+            genre: prof.genre,
+            description: prof.description,
+            rules: prof.rules,
+            playerName: prof.playerName,
+            playerRole: prof.playerRole,
+            playerAppearance: prof.playerAppearance,
+            avatar: prof.avatar,
+            avatarColor: prof.avatarColor,
+            locations: prof.locations,
+            factions: prof.factions,
+            lore: prof.lore,
+            color: prof.avatarColor,
+          })
+        }}
+      />
     </Modal>
   )
 }

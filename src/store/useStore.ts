@@ -13,8 +13,9 @@ import { DEFAULT_GLOBAL_PROMPT, DEFAULT_USER_PERSONA, PREVIOUS_DEFAULT_GLOBAL_PR
 import { DEFAULT_BASE_URL } from '@/lib/groq'
 import { uid } from '@/lib/utils'
 import { DEFAULT_THEME_PALETTES } from '@/data/palettes'
-import { getApiKey, setApiKey } from '@/lib/credentials'
+import { getApiKey, getCloudflareCredentials, getProviderKey, setApiKey } from '@/lib/credentials'
 import { recordTombstone } from '@/lib/sync/syncMerge'
+import { PROVIDER_PRESETS } from '@/lib/groq'
 
 export const MIN_AGE = 18
 
@@ -67,6 +68,7 @@ interface State {
   focusOrCreateConversation: (characterId: string, worldId?: string) => string
   setActiveConversation: (id: string | null) => void
   renameConversation: (id: string, title: string) => void
+  updateConversation: (id: string, patch: Partial<Conversation>) => void
   deleteConversation: (id: string) => void
   clearConversation: (id: string) => void
   togglePin: (id: string) => void
@@ -117,6 +119,34 @@ export const DEFAULT_SETTINGS: Settings = {
     anime: { ...DEFAULT_THEME_PALETTES.anime },
     world: { ...DEFAULT_THEME_PALETTES.world },
   },
+  // Keyed Providers & Capabilities
+  keyedProviders: [],
+  providerCapabilities: {
+    google: { chat: true, image: true, tts: true },
+    pollinations: { chat: true, image: true, tts: true },
+    cloudflare: { chat: true, image: false, tts: false },
+    groq: { chat: true, image: false, tts: false },
+    openrouter: { chat: true, image: false, tts: false },
+    ollamacloud: { chat: true, image: false, tts: false },
+    openai: { chat: true, image: false, tts: false },
+    ollama: { chat: true, image: false, tts: false },
+    lmstudio: { chat: true, image: false, tts: false },
+  },
+  providerModels: {
+    google: { chatModel: 'gemini-2.5-flash', imageModel: 'imagen-3.0-generate-002', ttsVoice: 'Puck' },
+    pollinations: { chatModel: 'openai', imageModel: 'flux', ttsVoice: 'alloy' },
+    cloudflare: { chatModel: '@cf/meta/llama-3.3-70b-instruct' },
+  },
+  chatDefault: { providerId: 'groq', model: 'openai/gpt-oss-20b' },
+  imageDefault: { providerId: 'pollinations', model: 'flux' },
+  ttsDefault: { providerId: 'pollinations', voice: 'alloy' },
+  fallbackModel: { providerId: 'groq', model: 'openai/gpt-oss-20b' },
+  chatProviderOrder: ['groq', 'google', 'openrouter', 'pollinations', 'cloudflare', 'ollamacloud', 'openai', 'ollama', 'lmstudio'],
+  imageProviderOrder: ['pollinations', 'google'],
+  ttsProviderOrder: ['pollinations', 'google'],
+  ttsEnabled: true,
+  ttsAutoRead: false,
+  ttsReadNarration: false,
 }
 
 const defaultUI: UIState = {
@@ -367,6 +397,13 @@ export const useStore = create<State>()(
           ),
         })),
 
+      updateConversation: (id, patch) =>
+        set((s) => ({
+          conversations: s.conversations.map((c) =>
+            c.id === id ? { ...c, ...patch, updatedAt: Date.now() } : c,
+          ),
+        })),
+
       deleteConversation: (id) => {
         recordTombstone('conversations', id)
         set((s) => ({
@@ -492,14 +529,14 @@ export const useStore = create<State>()(
     }),
     {
       name: 'nexus-chat-store',
-      version: 6,
+      version: 7,
       migrate: (persisted: any) => {
         if (persisted?.settings) {
           if (!persisted.settings.appearanceMode) persisted.settings.appearanceMode = 'dark'
-          if (!persisted.settings.accentPalette) persisted.settings.accentPalette = 'cobalt'
+          if (!persisted.settings.accentPalette) persisted.settings.accentPalette = 'gold'
           if (persisted.settings.frostedGlass === undefined) persisted.settings.frostedGlass = true
-          if (!persisted.settings.customAccentColor) persisted.settings.customAccentColor = '#0a84ff'
-          if (!persisted.settings.customContrastColor) persisted.settings.customContrastColor = '#38bdf8'
+          if (!persisted.settings.customAccentColor) persisted.settings.customAccentColor = '#D4A359'
+          if (!persisted.settings.customContrastColor) persisted.settings.customContrastColor = '#E5B869'
           if (!persisted.settings.themeAccents) {
             persisted.settings.themeAccents = {
               chatbot: { ...DEFAULT_THEME_PALETTES.chatbot },
@@ -523,6 +560,54 @@ export const useStore = create<State>()(
         }
         if (persisted?.settings && !Array.isArray(persisted.settings.cachedModels)) {
           persisted.settings.cachedModels = []
+        }
+        // Version 7 settings migration
+        if (persisted?.settings) {
+          if (!Array.isArray(persisted.settings.keyedProviders)) {
+            persisted.settings.keyedProviders = []
+          }
+          if (!persisted.settings.providerCapabilities) {
+            persisted.settings.providerCapabilities = { ...DEFAULT_SETTINGS.providerCapabilities }
+          }
+          if (!persisted.settings.providerModels) {
+            persisted.settings.providerModels = { ...DEFAULT_SETTINGS.providerModels }
+          }
+          if (!persisted.settings.chatDefault) {
+            persisted.settings.chatDefault = {
+              providerId: 'groq',
+              model: persisted.settings.model || DEFAULT_SETTINGS.model,
+            }
+          }
+          if (!persisted.settings.imageDefault) {
+            persisted.settings.imageDefault = { ...DEFAULT_SETTINGS.imageDefault }
+          }
+          if (!persisted.settings.ttsDefault) {
+            persisted.settings.ttsDefault = { ...DEFAULT_SETTINGS.ttsDefault }
+          }
+          if (!persisted.settings.fallbackModel) {
+            persisted.settings.fallbackModel = { ...DEFAULT_SETTINGS.fallbackModel }
+          }
+          if (!persisted.settings.chatProviderOrder) {
+            persisted.settings.chatProviderOrder = [...DEFAULT_SETTINGS.chatProviderOrder]
+          }
+          if (!persisted.settings.imageProviderOrder) {
+            persisted.settings.imageProviderOrder = [...DEFAULT_SETTINGS.imageProviderOrder]
+          }
+          if (!persisted.settings.ttsProviderOrder) {
+            persisted.settings.ttsProviderOrder = [...DEFAULT_SETTINGS.ttsProviderOrder]
+          }
+          if (persisted.settings.ttsEnabled === undefined) persisted.settings.ttsEnabled = true
+          if (persisted.settings.ttsAutoRead === undefined) persisted.settings.ttsAutoRead = false
+          if (persisted.settings.ttsReadNarration === undefined) persisted.settings.ttsReadNarration = false
+        }
+        // Version 7 conversation migration: old chats get null for chatConfig, imageConfig, ttsConfig
+        if (Array.isArray(persisted?.conversations)) {
+          persisted.conversations = persisted.conversations.map((c: any) => ({
+            ...c,
+            chatConfig: c.chatConfig ?? null,
+            imageConfig: c.imageConfig ?? null,
+            ttsConfig: c.ttsConfig ?? null,
+          }))
         }
         // Only a genuinely fresh install should see the welcome tour.
         if (persisted?.settings && persisted.settings.onboarded === undefined) {
@@ -560,6 +645,28 @@ export const useStore = create<State>()(
           void getApiKey().then((storedKey) => {
             if (storedKey && !state.settings.apiKey) {
               state.updateSettings({ apiKey: storedKey })
+            }
+          })
+
+          // Populate keyedProviders based on platform secure storage
+          void Promise.all(
+            PROVIDER_PRESETS.map(async (p) => {
+              if (p.id === 'cloudflare') {
+                const creds = await getCloudflareCredentials()
+                return creds.accountId && creds.apiToken ? 'cloudflare' : null
+              }
+              if (p.id === 'ollama' || p.id === 'lmstudio') {
+                return null
+              }
+              const k = await getProviderKey(p.id)
+              return k ? p.id : null
+            }),
+          ).then((ids) => {
+            const validIds = ids.filter(Boolean) as string[]
+            if (validIds.length > 0) {
+              const current = state.settings.keyedProviders || []
+              const merged = Array.from(new Set([...current, ...validIds]))
+              state.updateSettings({ keyedProviders: merged })
             }
           })
         }
