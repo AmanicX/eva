@@ -4,18 +4,34 @@
  * Uses the isolated Google Drive Application Data Folder (appDataFolder).
  * Scope: https://www.googleapis.com/auth/drive.appdata
  * Files placed in appDataFolder are completely hidden from user's standard Drive and other apps.
+ *
+ * Implements:
+ * - RFC 7636 PKCE OAuth 2.0 authorization
+ * - Automatic token refresh with expiration tracking and invalid_grant recovery
+ * - Concurrency conflict detection using remote file versions
  */
 
 import type { EncryptedBackupEnvelope } from './syncTypes'
+import { ConcurrencyConflictError } from './githubProvider'
 
 export const GOOGLE_BACKUP_FILENAME = 'eva-backup.enc.json'
 export const GOOGLE_DRIVE_APPDATA_SCOPE = 'https://www.googleapis.com/auth/drive.appdata'
 export const GOOGLE_USERINFO_SCOPE = 'https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
 
+// Public default Google OAuth client ID (for public native client PKCE)
+export const DEFAULT_GOOGLE_CLIENT_ID = '934524183887-o3s125v1b0f5j0p05h7g4t98c76i8u9k.apps.googleusercontent.com'
+
 export interface GoogleUserProfile {
   email: string
   name: string
   picture: string
+}
+
+export interface GoogleRemoteFileInfo {
+  fileId: string
+  version: string
+  modifiedTime: string
+  envelope: EncryptedBackupEnvelope
 }
 
 /**
@@ -49,7 +65,6 @@ export async function getGoogleUserProfile(accessToken: string): Promise<GoogleU
 export async function generatePKCECodes(): Promise<{ verifier: string; challenge: string }> {
   const randomBytes = new Uint8Array(32)
   crypto.getRandomValues(randomBytes)
-  // Base64url without padding
   const verifier = Array.from(randomBytes)
     .map((b) => ('0' + b.toString(16)).slice(-2))
     .join('')
@@ -67,10 +82,21 @@ export async function generatePKCECodes(): Promise<{ verifier: string; challenge
 }
 
 /**
+ * Generates a cryptographically random OAuth state token to protect against CSRF.
+ */
+export function generateOAuthState(): string {
+  const bytes = new Uint8Array(16)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+/**
  * Generates an OAuth 2.0 authorization URL for Google Drive appDataFolder access.
  */
 export function buildGoogleAuthUrl(
-  clientId: string,
+  clientId: string = DEFAULT_GOOGLE_CLIENT_ID,
   redirectUri: string,
   state: string,
   codeChallenge: string,
@@ -91,7 +117,7 @@ export function buildGoogleAuthUrl(
 }
 
 /**
- * Exchanges authorization code for tokens.
+ * Exchanges authorization code for access and refresh tokens.
  */
 export async function exchangeGoogleAuthCode(
   clientId: string,
@@ -127,13 +153,48 @@ export async function exchangeGoogleAuthCode(
 }
 
 /**
+ * Refreshes an expired Google access token using the stored refresh token.
+ */
+export async function refreshGoogleAccessToken(
+  clientId: string,
+  refreshToken: string,
+): Promise<{ accessToken: string; refreshToken?: string; expiresIn: number }> {
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      client_id: clientId.trim(),
+      refresh_token: refreshToken.trim(),
+      grant_type: 'refresh_token',
+    }),
+  })
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}))
+    if (errData.error === 'invalid_grant') {
+      throw new Error('Google authorization has expired or was revoked. Please reconnect your account.')
+    }
+    throw new Error(`Google token refresh failed: ${errData.error_description || res.statusText}`)
+  }
+
+  const data = await res.json()
+  return {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token || refreshToken,
+    expiresIn: data.expires_in,
+  }
+}
+
+/**
  * Searches the user's appDataFolder for existing eva-backup.enc.json.
  */
 export async function findEvaGoogleDriveFile(
   accessToken: string,
-): Promise<{ fileId: string; modifiedTime: string } | null> {
+): Promise<GoogleRemoteFileInfo | null> {
   const query = encodeURIComponent(`name = '${GOOGLE_BACKUP_FILENAME}' and trashed = false`)
-  const url = `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${query}&fields=files(id,name,modifiedTime,size)`
+  const url = `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${query}&fields=files(id,name,modifiedTime,version,size)`
 
   const res = await fetch(url, {
     headers: {
@@ -151,9 +212,13 @@ export async function findEvaGoogleDriveFile(
   }
 
   const file = data.files[0]
+  const envelope = await downloadFromGoogleDrive(accessToken, file.id)
+
   return {
     fileId: file.id,
+    version: file.version || file.modifiedTime,
     modifiedTime: file.modifiedTime,
+    envelope,
   }
 }
 
@@ -174,23 +239,45 @@ export async function downloadFromGoogleDrive(
     throw new Error(`Failed to download backup from Google Drive: ${res.statusText}`)
   }
 
-  const envelope = await res.json()
-  return envelope as EncryptedBackupEnvelope
+  return (await res.json()) as EncryptedBackupEnvelope
 }
 
 /**
- * Uploads an encrypted backup envelope to Google Drive appDataFolder.
+ * Uploads an encrypted backup envelope to Google Drive appDataFolder with concurrency protection.
  */
 export async function uploadToGoogleDrive(
   accessToken: string,
   envelope: EncryptedBackupEnvelope,
+  lastKnownVersion?: string,
   existingFileId?: string,
-): Promise<string> {
+): Promise<{ fileId: string; version: string }> {
   let fileId = existingFileId
   if (!fileId) {
     const found = await findEvaGoogleDriveFile(accessToken)
     if (found) {
       fileId = found.fileId
+      if (lastKnownVersion && found.version !== lastKnownVersion) {
+        throw new ConcurrencyConflictError(
+          'Remote Google Drive backup was updated by another device. Sync will re-fetch and merge.',
+        )
+      }
+    }
+  } else if (lastKnownVersion) {
+    // Check if remote version changed
+    const metaRes = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${fileId}?fields=version,modifiedTime`,
+      {
+        headers: { Authorization: `Bearer ${accessToken.trim()}` },
+      },
+    )
+    if (metaRes.ok) {
+      const meta = await metaRes.json()
+      const currentVer = meta.version || meta.modifiedTime
+      if (currentVer !== lastKnownVersion) {
+        throw new ConcurrencyConflictError(
+          'Remote Google Drive backup was updated by another device. Sync will re-fetch and merge.',
+        )
+      }
     }
   }
 
@@ -215,7 +302,7 @@ export async function uploadToGoogleDrive(
     }
 
     const data = await res.json()
-    return data.id
+    return { fileId: data.id, version: data.version || new Date().toISOString() }
   } else {
     // Multipart upload to create file in appDataFolder
     const metadata = {
@@ -254,6 +341,6 @@ export async function uploadToGoogleDrive(
     }
 
     const data = await res.json()
-    return data.id
+    return { fileId: data.id, version: data.version || new Date().toISOString() }
   }
 }

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
     <!-- Exclude sensitive credentials, auth tokens, and encryption keys from OS auto-backup -->
+    <exclude domain="sharedpref" path="eva_secure_storage.xml" />
     <exclude domain="sharedpref" path="eva_credentials.xml" />
     <exclude domain="file" path="eva-credentials.enc.json" />
     <exclude domain="database" path="eva_secure_storage" />

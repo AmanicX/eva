@@ -11,6 +11,8 @@ const desktopApi = {
   getSecureCredential: (key) => ipcRenderer.invoke('secure-storage-get', key),
   setSecureCredential: (key, val) => ipcRenderer.invoke('secure-storage-set', key, val),
   deleteSecureCredential: (key) => ipcRenderer.invoke('secure-storage-delete', key),
+  // Google PKCE Loopback OAuth
+  startGoogleOAuth: (authUrl, port) => ipcRenderer.invoke('oauth-google-start', authUrl, port),
 }
 
 // Expose modern evaDesktop and legacy nexusDesktop for backwards compatibility

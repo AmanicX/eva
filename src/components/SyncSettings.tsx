@@ -1,15 +1,16 @@
 /**
- * Cloud Backup & Sync Settings Component for Eva
+ * Cloud Backup & Sync Settings Component for Eva v2.x
  *
  * Implements:
- * - Google Drive appDataFolder and GitHub Private Gist account linking
- * - Client-side AES-256-GCM zero-knowledge encryption passphrase and recovery key management
- * - Automatic debounced cross-device synchronization toggle
- * - Manual Backup Now, Sync Now, and Restore from Cloud actions
- * - Restore preview with 3-way merge or clean replacement
+ * - Real Google Drive OAuth 2.0 PKCE flow with automatic token refresh
+ * - Real GitHub Device Authorization Flow (RFC 8628) with live user code & polling
+ * - Storage target selection: Dedicated Private Repository vs Unlisted Secret Gist
+ * - Client-side AES-256-GCM zero-knowledge encryption with PBKDF2 & recovery keys
+ * - Hardware credential storage diagnostics & web storage explicit consent
+ * - Safe conflict detection and resolution previews
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import {
   CheckCircle2,
   AlertCircle,
@@ -22,9 +23,24 @@ import {
   Lock,
   Copy,
   Check,
+  Smartphone,
+  HardDrive,
 } from 'lucide-react'
 import { syncEngine } from '@/lib/sync/syncEngine'
 import { generateRecoveryKey } from '@/lib/sync/syncCrypto'
+import {
+  startGitHubDeviceFlow,
+  pollGitHubDeviceFlow,
+  DEFAULT_GITHUB_CLIENT_ID,
+  type DeviceCodeResponse,
+} from '@/lib/sync/githubProvider'
+import { DEFAULT_GOOGLE_CLIENT_ID } from '@/lib/sync/googleDriveProvider'
+import {
+  getCredentialStorageInfo,
+  isWebPersistenceAllowed,
+  setWebPersistenceAllowed,
+  type CredentialStorageInfo,
+} from '@/lib/credentials'
 import type { RestorePreview, SyncConfig } from '@/lib/sync/syncTypes'
 
 export function SyncSettings() {
@@ -34,14 +50,26 @@ export function SyncSettings() {
   const [generatedKey, setGeneratedKey] = useState('')
   const [copiedKey, setCopiedKey] = useState(false)
 
-  // GitHub connection modal state
-  const [showGitHubModal, setShowGitHubModal] = useState(false)
-  const [gitHubTokenInput, setGitHubTokenInput] = useState('')
-  const [gitHubLoading, setGitHubLoading] = useState(false)
-  const [gitHubError, setGitHubError] = useState('')
+  // Platform Storage Diagnostics & Web Consent
+  const [storageInfo, setStorageInfo] = useState<CredentialStorageInfo | null>(null)
+  const [webConsent, setWebConsent] = useState(isWebPersistenceAllowed())
 
-  // Google connection modal state
+  // GitHub Device Flow State
+  const [showGitHubModal, setShowGitHubModal] = useState(false)
+  const [gitHubMode, setGitHubMode] = useState<'device' | 'token'>('device')
+  const [gitHubDeviceCode, setGitHubDeviceCode] = useState<DeviceCodeResponse | null>(null)
+  const [gitHubPolling, setGitHubPolling] = useState(false)
+  const [gitHubCopiedUserCode, setGitHubCopiedUserCode] = useState(false)
+  const [gitHubTokenInput, setGitHubTokenInput] = useState('')
+  const [gitHubError, setGitHubError] = useState('')
+  const gitHubAbortRef = useRef<AbortController | null>(null)
+
+  // Google OAuth Flow State
   const [showGoogleModal, setShowGoogleModal] = useState(false)
+  const [googleMode, setGoogleMode] = useState<'oauth' | 'token'>('oauth')
+  const [googleClientIdInput, setGoogleClientIdInput] = useState(
+    config.googleAccount.googleClientId || DEFAULT_GOOGLE_CLIENT_ID,
+  )
   const [googleTokenInput, setGoogleTokenInput] = useState('')
   const [googleLoading, setGoogleLoading] = useState(false)
   const [googleError, setGoogleError] = useState('')
@@ -55,13 +83,19 @@ export function SyncSettings() {
   const [restoreError, setRestoreError] = useState('')
 
   // Sync action feedback
-  const [actionFeedback, setActionFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [actionFeedback, setActionFeedback] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null)
 
   useEffect(() => {
     const unsubscribe = syncEngine.subscribe((newConfig) => {
       setConfig(newConfig)
     })
-    return () => unsubscribe()
+    void getCredentialStorageInfo().then(setStorageInfo)
+    return () => {
+      unsubscribe()
+      if (gitHubAbortRef.current) {
+        gitHubAbortRef.current.abort()
+      }
+    }
   }, [])
 
   const handleSetPassphrase = async () => {
@@ -92,23 +126,98 @@ export function SyncSettings() {
     setTimeout(() => setCopiedKey(false), 2000)
   }
 
-  const handleConnectGitHub = async () => {
+  const handleWebConsentToggle = (allowed: boolean) => {
+    setWebPersistenceAllowed(allowed)
+    setWebConsent(allowed)
+    void getCredentialStorageInfo().then(setStorageInfo)
+    setActionFeedback({
+      type: 'info',
+      text: allowed
+        ? 'Browser persistence enabled. Credentials will persist in this browser.'
+        : 'In-memory storage enabled. Credentials will clear upon closing this tab.',
+    })
+  }
+
+  // --- Real GitHub Device Flow ---
+
+  const handleStartGitHubDeviceFlow = async () => {
+    setGitHubError('')
+    setGitHubPolling(true)
+    const controller = new AbortController()
+    gitHubAbortRef.current = controller
+
+    try {
+      const scope = config.githubAccount.gitHubStorageType === 'gist' ? 'gist' : 'repo'
+      const deviceRes = await startGitHubDeviceFlow(DEFAULT_GITHUB_CLIENT_ID, scope)
+      setGitHubDeviceCode(deviceRes)
+
+      // Automatically poll for completion
+      const token = await pollGitHubDeviceFlow(
+        DEFAULT_GITHUB_CLIENT_ID,
+        deviceRes.device_code,
+        deviceRes.interval,
+        controller.signal,
+      )
+
+      await syncEngine.connectGitHubWithToken(token)
+      setShowGitHubModal(false)
+      setGitHubDeviceCode(null)
+      setGitHubPolling(false)
+      setActionFeedback({ type: 'success', text: 'GitHub account connected successfully.' })
+    } catch (err: any) {
+      if (err.name === 'AbortError') return
+      setGitHubError(err.message || 'GitHub device authorization failed.')
+      setGitHubPolling(false)
+    }
+  }
+
+  const handleCancelGitHubDeviceFlow = () => {
+    if (gitHubAbortRef.current) {
+      gitHubAbortRef.current.abort()
+      gitHubAbortRef.current = null
+    }
+    setGitHubPolling(false)
+    setGitHubDeviceCode(null)
+    setGitHubError('')
+  }
+
+  const handleCopyGitHubUserCode = () => {
+    if (!gitHubDeviceCode?.user_code) return
+    navigator.clipboard.writeText(gitHubDeviceCode.user_code)
+    setGitHubCopiedUserCode(true)
+    setTimeout(() => setGitHubCopiedUserCode(false), 2000)
+  }
+
+  const handleConnectGitHubManualToken = async () => {
     if (!gitHubTokenInput.trim()) return
-    setGitHubLoading(true)
     setGitHubError('')
     try {
       await syncEngine.connectGitHubWithToken(gitHubTokenInput.trim())
       setShowGitHubModal(false)
       setGitHubTokenInput('')
-      setActionFeedback({ type: 'success', text: 'GitHub account connected for cloud backup.' })
+      setActionFeedback({ type: 'success', text: 'GitHub account connected with access token.' })
     } catch (err: any) {
-      setGitHubError(err.message || 'Failed to authenticate with GitHub.')
-    } finally {
-      setGitHubLoading(false)
+      setGitHubError(err.message || 'Failed to authenticate with GitHub token.')
     }
   }
 
-  const handleConnectGoogle = async () => {
+  // --- Real Google PKCE Flow ---
+
+  const handleConnectGoogleOAuth = async () => {
+    setGoogleLoading(true)
+    setGoogleError('')
+    try {
+      await syncEngine.connectGoogleWithOAuth(googleClientIdInput.trim() || DEFAULT_GOOGLE_CLIENT_ID)
+      setShowGoogleModal(false)
+      setActionFeedback({ type: 'success', text: 'Google Drive connected successfully via PKCE.' })
+    } catch (err: any) {
+      setGoogleError(err.message || 'Google authorization failed.')
+    } finally {
+      setGoogleLoading(false)
+    }
+  }
+
+  const handleConnectGoogleManualToken = async () => {
     if (!googleTokenInput.trim()) return
     setGoogleLoading(true)
     setGoogleError('')
@@ -116,9 +225,9 @@ export function SyncSettings() {
       await syncEngine.connectGoogleWithToken(googleTokenInput.trim())
       setShowGoogleModal(false)
       setGoogleTokenInput('')
-      setActionFeedback({ type: 'success', text: 'Google account connected for cloud backup.' })
+      setActionFeedback({ type: 'success', text: 'Google Drive connected with access token.' })
     } catch (err: any) {
-      setGoogleError(err.message || 'Failed to authenticate with Google Drive.')
+      setGoogleError(err.message || 'Failed to authenticate with Google token.')
     } finally {
       setGoogleLoading(false)
     }
@@ -209,11 +318,63 @@ export function SyncSettings() {
           </span>
         </div>
         <p className="text-xs text-white/60 leading-relaxed">
-          Optionally synchronize your characters, conversations, and worlds across devices.
-          All application data is encrypted client-side using your personal passphrase before leaving your device.
-          Neither Google, GitHub, nor any third party can read your data.
+          Optionally synchronize characters, conversations, and worlds across devices with 3-way merge conflict protection.
+          Data is zero-knowledge encrypted on your device before transmission. Neither Google, GitHub, nor third parties can read your messages.
         </p>
       </div>
+
+      {/* Hardware Credential Storage Diagnostics Banner */}
+      {storageInfo && (
+        <div className="p-3 rounded-xl border border-white/10 bg-black/30 flex items-start justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5">
+            {storageInfo.isHardwareEncrypted ? (
+              <HardDrive className="text-emerald-400 shrink-0" size={16} />
+            ) : (
+              <Smartphone className="text-amber-400 shrink-0" size={16} />
+            )}
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-white">Local Credential Security:</span>
+                <span
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
+                    storageInfo.isHardwareEncrypted
+                      ? 'bg-emerald-500/20 text-emerald-300'
+                      : 'bg-amber-500/20 text-amber-300'
+                  }`}
+                >
+                  {storageInfo.platform}
+                </span>
+              </div>
+              <p className="text-white/50 text-[11px] mt-0.5">{storageInfo.description}</p>
+            </div>
+          </div>
+
+          {!storageInfo.isHardwareEncrypted && (
+            <label className="flex items-center gap-1.5 shrink-0 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={webConsent}
+                onChange={(e) => handleWebConsentToggle(e.target.checked)}
+                className="rounded border-white/20 bg-black/40 text-blue-500"
+              />
+              <span className="text-[11px] text-white/70">Allow browser persistence</span>
+            </label>
+          )}
+        </div>
+      )}
+
+      {/* Conflict Alert Banner */}
+      {config.conflicts && config.conflicts.length > 0 && (
+        <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs space-y-1">
+          <div className="flex items-center gap-2 font-semibold">
+            <AlertCircle size={15} />
+            <span>{config.conflicts.length} Concurrent Conflict(s) Preserved</span>
+          </div>
+          <p className="text-white/60 text-[11px]">
+            Another device modified the same character fields concurrently. To prevent data loss, Eva preserved both versions: your local version remains active, and the remote version has been saved as a branched copy.
+          </p>
+        </div>
+      )}
 
       {/* Sync Status Feedback */}
       {config.syncStatus === 'syncing' && (
@@ -228,7 +389,9 @@ export function SyncSettings() {
           className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${
             actionFeedback.type === 'success'
               ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
-              : 'bg-red-500/10 border-red-500/20 text-red-300'
+              : actionFeedback.type === 'error'
+              ? 'bg-red-500/10 border-red-500/20 text-red-300'
+              : 'bg-blue-500/10 border-blue-500/20 text-blue-300'
           }`}
         >
           {actionFeedback.type === 'success' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
@@ -256,7 +419,7 @@ export function SyncSettings() {
                 </div>
                 <div>
                   <h5 className="text-sm font-medium text-white">Google Drive</h5>
-                  <p className="text-xs text-white/50">Isolated appDataFolder</p>
+                  <p className="text-xs text-white/50">Private appDataFolder</p>
                 </div>
               </div>
               {config.googleAccount.connected ? (
@@ -330,8 +493,12 @@ export function SyncSettings() {
                   GH
                 </div>
                 <div>
-                  <h5 className="text-sm font-medium text-white">GitHub Gists</h5>
-                  <p className="text-xs text-white/50">Private Encrypted Gist</p>
+                  <h5 className="text-sm font-medium text-white">GitHub Cloud</h5>
+                  <p className="text-xs text-white/50">
+                    {config.githubAccount.gitHubStorageType === 'gist'
+                      ? 'Secret Gist (Unlisted)'
+                      : 'Private Repository (Access-Controlled)'}
+                  </p>
                 </div>
               </div>
               {config.githubAccount.connected ? (
@@ -351,6 +518,12 @@ export function SyncSettings() {
                   <span className="text-white/40">Account:</span>
                   <span className="font-mono text-white/90">
                     @{config.githubAccount.accountIdentity || 'GitHub User'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/40">Storage:</span>
+                  <span className="text-white/80 font-medium">
+                    {config.githubAccount.gitHubStorageType === 'gist' ? 'Secret Gist' : 'Private Repo'}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -468,91 +641,246 @@ export function SyncSettings() {
         </button>
       </div>
 
-      {/* GitHub Token Modal */}
+      {/* GitHub Authorization Modal */}
       {showGitHubModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="w-full max-w-md p-6 rounded-2xl bg-neutral-900 border border-white/10 shadow-2xl space-y-4">
-            <h3 className="text-base font-semibold text-white">Connect GitHub Cloud Backup</h3>
-            <p className="text-xs text-white/60 leading-relaxed">
-              Eva stores an encrypted backup in a private GitHub Gist on your account. To connect, generate a Personal Access Token with the <code className="bg-white/10 px-1 py-0.5 rounded text-white">gist</code> scope.
-            </p>
-
-            <a
-              href="https://github.com/settings/tokens/new?scopes=gist&description=Eva+CrossDevice+Sync"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition"
-            >
-              Generate token on GitHub <ExternalLink size={12} />
-            </a>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-white/70">Personal Access Token (classic or fine-grained)</label>
-              <input
-                type="password"
-                placeholder="ghp_..."
-                value={gitHubTokenInput}
-                onChange={(e) => setGitHubTokenInput(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-xs font-mono focus:outline-none focus:border-blue-500"
-              />
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-white">Connect GitHub Cloud Backup</h3>
+              <div className="flex bg-white/10 rounded-lg p-0.5 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setGitHubMode('device')}
+                  className={`px-2 py-0.5 rounded-md ${gitHubMode === 'device' ? 'bg-blue-600 text-white font-medium' : 'text-white/60'}`}
+                >
+                  Device Flow
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGitHubMode('token')}
+                  className={`px-2 py-0.5 rounded-md ${gitHubMode === 'token' ? 'bg-blue-600 text-white font-medium' : 'text-white/60'}`}
+                >
+                  Manual Token
+                </button>
+              </div>
             </div>
+
+            {/* Storage Target Selector with Transparent Security Explanation */}
+            <div className="space-y-1.5 p-3 rounded-xl bg-white/5 border border-white/10">
+              <label className="text-xs font-medium text-white/80 block">Storage Target on GitHub:</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => syncEngine.setGitHubStorageType('repo')}
+                  className={`p-2 rounded-lg border text-left transition ${
+                    config.githubAccount.gitHubStorageType !== 'gist'
+                      ? 'border-blue-500 bg-blue-500/10 text-white'
+                      : 'border-white/10 bg-black/20 text-white/60 hover:bg-white/5'
+                  }`}
+                >
+                  <div className="text-xs font-semibold">Private Repo (Recommended)</div>
+                  <div className="text-[10px] text-white/50 mt-0.5">Strict access-control via GitHub permissions</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => syncEngine.setGitHubStorageType('gist')}
+                  className={`p-2 rounded-lg border text-left transition ${
+                    config.githubAccount.gitHubStorageType === 'gist'
+                      ? 'border-blue-500 bg-blue-500/10 text-white'
+                      : 'border-white/10 bg-black/20 text-white/60 hover:bg-white/5'
+                  }`}
+                >
+                  <div className="text-xs font-semibold">Secret Gist (Unlisted)</div>
+                  <div className="text-[10px] text-white/50 mt-0.5">Hidden from search, but anyone with link can view</div>
+                </button>
+              </div>
+            </div>
+
+            {gitHubMode === 'device' ? (
+              <div className="space-y-3">
+                <p className="text-xs text-white/60 leading-relaxed">
+                  Connect without pasting passwords using GitHub OAuth Device Authorization (RFC 8628).
+                </p>
+
+                {gitHubDeviceCode ? (
+                  <div className="p-4 rounded-xl bg-black/40 border border-white/10 text-center space-y-3">
+                    <span className="text-xs text-white/50 block">Enter this code on GitHub:</span>
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-xl font-mono font-bold tracking-widest text-emerald-400">
+                        {gitHubDeviceCode.user_code}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleCopyGitHubUserCode}
+                        className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/80"
+                        title="Copy Code"
+                      >
+                        {gitHubCopiedUserCode ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                      </button>
+                    </div>
+
+                    <a
+                      href={gitHubDeviceCode.verification_uri}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-500 transition shadow-lg"
+                    >
+                      Open GitHub Activation Page <ExternalLink size={13} />
+                    </a>
+
+                    {gitHubPolling && (
+                      <div className="flex items-center justify-center gap-1.5 text-[11px] text-white/40 pt-1">
+                        <RefreshCw className="animate-spin" size={12} />
+                        <span>Waiting for you to authorize on GitHub...</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleStartGitHubDeviceFlow}
+                    disabled={gitHubPolling}
+                    className="w-full py-2.5 rounded-xl bg-blue-600 text-white text-xs font-medium hover:bg-blue-500 transition flex items-center justify-center gap-2"
+                  >
+                    {gitHubPolling ? <RefreshCw className="animate-spin" size={14} /> : null}
+                    Start Device Authorization
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-xs text-white/60 leading-relaxed">
+                  Provide a Personal Access Token with <code className="bg-white/10 px-1 py-0.5 rounded text-white">{config.githubAccount.gitHubStorageType === 'gist' ? 'gist' : 'repo'}</code> scope.
+                </p>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-white/70">Personal Access Token</label>
+                  <input
+                    type="password"
+                    placeholder="ghp_..."
+                    value={gitHubTokenInput}
+                    onChange={(e) => setGitHubTokenInput(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-xs font-mono focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    onClick={handleConnectGitHubManualToken}
+                    disabled={!gitHubTokenInput.trim()}
+                    className="px-4 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-40"
+                  >
+                    Save Token
+                  </button>
+                </div>
+              </div>
+            )}
 
             {gitHubError && <p className="text-xs text-red-400">{gitHubError}</p>}
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 pt-2 border-t border-white/10">
               <button
-                onClick={() => setShowGitHubModal(false)}
+                onClick={() => {
+                  handleCancelGitHubDeviceFlow()
+                  setShowGitHubModal(false)
+                }}
                 className="px-3 py-1.5 rounded-lg text-xs text-white/70 hover:text-white"
               >
-                Cancel
-              </button>
-              <button
-                onClick={handleConnectGitHub}
-                disabled={gitHubLoading || !gitHubTokenInput.trim()}
-                className="px-4 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-40"
-              >
-                {gitHubLoading ? 'Connecting...' : 'Connect'}
+                Close
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Google Token Modal */}
+      {/* Google Authorization Modal */}
       {showGoogleModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="w-full max-w-md p-6 rounded-2xl bg-neutral-900 border border-white/10 shadow-2xl space-y-4">
-            <h3 className="text-base font-semibold text-white">Connect Google Drive</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-white">Connect Google Drive</h3>
+              <div className="flex bg-white/10 rounded-lg p-0.5 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setGoogleMode('oauth')}
+                  className={`px-2 py-0.5 rounded-md ${googleMode === 'oauth' ? 'bg-blue-600 text-white font-medium' : 'text-white/60'}`}
+                >
+                  PKCE OAuth
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGoogleMode('token')}
+                  className={`px-2 py-0.5 rounded-md ${googleMode === 'token' ? 'bg-blue-600 text-white font-medium' : 'text-white/60'}`}
+                >
+                  Manual Token
+                </button>
+              </div>
+            </div>
+
             <p className="text-xs text-white/60 leading-relaxed">
-              Eva uses Google Drive’s private <code className="bg-white/10 px-1 py-0.5 rounded text-white">appDataFolder</code>. Your backups are completely hidden from regular Drive views. Provide an authorized OAuth access token to link your account.
+              Backups are saved to Google Drive’s private <code className="bg-white/10 px-1 py-0.5 rounded text-white">appDataFolder</code>. Files are completely invisible to regular Drive views.
             </p>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-white/70">Google OAuth Access Token</label>
-              <input
-                type="password"
-                placeholder="ya29...."
-                value={googleTokenInput}
-                onChange={(e) => setGoogleTokenInput(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-xs font-mono focus:outline-none focus:border-blue-500"
-              />
-            </div>
+            {googleMode === 'oauth' ? (
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-white/70 flex items-center justify-between">
+                    <span>Google OAuth Client ID</span>
+                    <span className="text-[10px] text-white/40">Public native client</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={googleClientIdInput}
+                    onChange={(e) => setGoogleClientIdInput(e.target.value)}
+                    placeholder="Enter Google Client ID"
+                    className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-xs font-mono focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleConnectGoogleOAuth}
+                  disabled={googleLoading}
+                  className="w-full py-2.5 rounded-xl bg-blue-600 text-white text-xs font-medium hover:bg-blue-500 transition flex items-center justify-center gap-2 disabled:opacity-40"
+                >
+                  {googleLoading ? <RefreshCw className="animate-spin" size={14} /> : null}
+                  Authorize with Google Account
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-white/70">Google OAuth Access Token</label>
+                  <input
+                    type="password"
+                    placeholder="ya29...."
+                    value={googleTokenInput}
+                    onChange={(e) => setGoogleTokenInput(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-xs font-mono focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    onClick={handleConnectGoogleManualToken}
+                    disabled={googleLoading || !googleTokenInput.trim()}
+                    className="px-4 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-40"
+                  >
+                    Save Token
+                  </button>
+                </div>
+              </div>
+            )}
 
             {googleError && <p className="text-xs text-red-400">{googleError}</p>}
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 pt-2 border-t border-white/10">
               <button
                 onClick={() => setShowGoogleModal(false)}
                 className="px-3 py-1.5 rounded-lg text-xs text-white/70 hover:text-white"
               >
                 Cancel
-              </button>
-              <button
-                onClick={handleConnectGoogle}
-                disabled={googleLoading || !googleTokenInput.trim()}
-                className="px-4 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-40"
-              >
-                {googleLoading ? 'Connecting...' : 'Connect'}
               </button>
             </div>
           </div>
@@ -582,7 +910,7 @@ export function SyncSettings() {
 
             <div className="p-3 rounded-lg bg-white/5 border border-white/10 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-white/70">Or generate a high-entropy key:</span>
+                <span className="text-xs text-white/70">Or generate a high-entropy recovery key:</span>
                 <button
                   type="button"
                   onClick={handleGenerateKey}
@@ -722,7 +1050,7 @@ export function SyncSettings() {
               </div>
             )}
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 pt-2 border-t border-white/10">
               <button
                 onClick={() => setShowRestoreModal(false)}
                 className="px-3 py-1.5 rounded-lg text-xs text-white/70 hover:text-white"

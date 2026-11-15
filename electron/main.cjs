@@ -1,6 +1,7 @@
 const { app, BrowserWindow, session, shell, ipcMain, safeStorage } = require('electron')
 const fs = require('node:fs')
 const path = require('node:path')
+const http = require('node:http')
 
 const devServerUrl = process.env.VITE_DEV_SERVER_URL
 
@@ -149,12 +150,23 @@ ipcMain.handle('window-is-maximized', (event) => {
   return win ? win.isMaximized() : false
 })
 
+function validateIpcSender(event) {
+  const url = event.senderFrame ? event.senderFrame.url : null
+  if (!url) return true
+  if (url.startsWith('file://') || url.startsWith('http://localhost:') || url.startsWith('http://127.0.0.1:')) {
+    return true
+  }
+  throw new Error(`Unauthorized IPC call from origin: ${url}`)
+}
+
 // Secure Storage IPC Handlers
-ipcMain.handle('secure-storage-is-available', () => {
+ipcMain.handle('secure-storage-is-available', (event) => {
+  validateIpcSender(event)
   return !!(safeStorage && safeStorage.isEncryptionAvailable())
 })
 
 ipcMain.handle('secure-storage-get', (event, key) => {
+  validateIpcSender(event)
   if (!safeStorage || !safeStorage.isEncryptionAvailable()) return null
   const creds = loadEncryptedCredentials()
   const encBase64 = creds[key]
@@ -167,6 +179,7 @@ ipcMain.handle('secure-storage-get', (event, key) => {
 })
 
 ipcMain.handle('secure-storage-set', (event, key, plainText) => {
+  validateIpcSender(event)
   if (!safeStorage || !safeStorage.isEncryptionAvailable()) return false
   const creds = loadEncryptedCredentials()
   try {
@@ -180,6 +193,7 @@ ipcMain.handle('secure-storage-set', (event, key, plainText) => {
 })
 
 ipcMain.handle('secure-storage-delete', (event, key) => {
+  validateIpcSender(event)
   const creds = loadEncryptedCredentials()
   if (key in creds) {
     delete creds[key]
@@ -187,6 +201,56 @@ ipcMain.handle('secure-storage-delete', (event, key) => {
     return true
   }
   return false
+})
+
+// Desktop OAuth Loopback Server for Google PKCE
+ipcMain.handle('oauth-google-start', async (event, authUrl, port = 54321) => {
+  validateIpcSender(event)
+  return new Promise((resolve, reject) => {
+    let server = null
+    const timeout = setTimeout(() => {
+      if (server) {
+        try { server.close() } catch {}
+      }
+      reject(new Error('OAuth authentication timed out after 5 minutes.'))
+    }, 5 * 60 * 1000)
+
+    server = http.createServer((req, res) => {
+      try {
+        const parsedUrl = new URL(req.url, `http://127.0.0.1:${port}`)
+        if (parsedUrl.pathname === '/oauth2callback' || parsedUrl.pathname === '/') {
+          const code = parsedUrl.searchParams.get('code')
+          const state = parsedUrl.searchParams.get('state')
+          const error = parsedUrl.searchParams.get('error')
+
+          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+          if (error) {
+            res.end(`<html><body style="font-family:system-ui;background:#18181b;color:#f87171;text-align:center;padding:60px 20px;"><h2>Authentication Failed</h2><p style="color:#a1a1aa;">${error}</p></body></html>`)
+            clearTimeout(timeout)
+            try { server.close() } catch {}
+            reject(new Error(error))
+            return
+          }
+
+          res.end(`<html><body style="font-family:system-ui;background:#18181b;color:#fff;text-align:center;padding:60px 20px;"><div style="max-width:400px;margin:0 auto;background:#27272a;padding:32px;border-radius:16px;box-shadow:0 10px 25px rgba(0,0,0,0.5);"><h2 style="color:#60a5fa;margin-top:0;">Authentication Successful</h2><p style="color:#a1a1aa;font-size:14px;">Google Drive connected to Eva. You may close this tab and return to the application.</p></div></body></html>`)
+          clearTimeout(timeout)
+          try { server.close() } catch {}
+          resolve({ code, state })
+        }
+      } catch {
+        // ignore invalid request
+      }
+    })
+
+    server.listen(port, '127.0.0.1', () => {
+      shell.openExternal(authUrl)
+    })
+
+    server.on('error', (err) => {
+      clearTimeout(timeout)
+      reject(new Error(`Failed to start OAuth callback listener on port ${port}: ${err.message}`))
+    })
+  })
 })
 
 app.whenReady().then(() => {

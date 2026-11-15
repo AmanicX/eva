@@ -1,12 +1,14 @@
 /**
- * Central Cloud Backup & Synchronization Engine for Eva
+ * Central Cloud Backup & Synchronization Engine for Eva v2.x
  *
  * Coordinates:
- * - End-to-end zero-knowledge encryption
- * - Google Drive appDataFolder and GitHub Gists providers
- * - Deterministic 3-way data merging
- * - Debounced auto-sync on local changes
- * - Secure credential storage for tokens and passphrases
+ * - End-to-end zero-knowledge client-side encryption (AES-256-GCM + PBKDF2)
+ * - Provider-aware concurrency controls and atomic compare-and-swap conflict resolution
+ * - Revision-aware 3-way entity merging without simplistic overwrites
+ * - Google Drive appDataFolder with PKCE OAuth and token refresh lifecycle
+ * - GitHub Private Repository and Secret Gist with Device Flow authorization
+ * - Infinite-loop prevention during store hydration and sync application
+ * - Offline change tracking and network reconnection handling
  */
 
 import { useStore } from '@/store/useStore'
@@ -20,14 +22,23 @@ import {
 } from './syncCrypto'
 import {
   findEvaGist,
+  findEvaRepoFile,
   getGitHubUserProfile,
   uploadToGitHubGist,
+  uploadToGitHubRepo,
+  ConcurrencyConflictError,
+  type GitHubStorageType,
 } from './githubProvider'
 import {
-  downloadFromGoogleDrive,
   findEvaGoogleDriveFile,
   getGoogleUserProfile,
   uploadToGoogleDrive,
+  buildGoogleAuthUrl,
+  exchangeGoogleAuthCode,
+  generateOAuthState,
+  generatePKCECodes,
+  refreshGoogleAccessToken,
+  DEFAULT_GOOGLE_CLIENT_ID,
 } from './googleDriveProvider'
 import { getLocalTombstones, mergeSyncData } from './syncMerge'
 import type {
@@ -47,6 +58,7 @@ const DEVICE_ID_KEY = 'eva_device_id'
 const PASSPHRASE_SECRET_KEY = 'sync_passphrase'
 const GITHUB_TOKEN_KEY = 'github_sync_token'
 const GOOGLE_TOKEN_KEY = 'google_sync_token'
+const GOOGLE_REFRESH_TOKEN_KEY = 'google_refresh_token'
 
 export type SyncListener = (config: SyncConfig) => void
 
@@ -54,19 +66,24 @@ class SyncEngine {
   private config: SyncConfig = {
     autoSyncEnabled: false,
     activeProvider: 'none',
-    googleAccount: { provider: 'google', connected: false },
-    githubAccount: { provider: 'github', connected: false },
+    googleAccount: { provider: 'google', connected: false, googleClientId: DEFAULT_GOOGLE_CLIENT_ID },
+    githubAccount: { provider: 'github', connected: false, gitHubStorageType: 'repo' },
     hasPassphrase: false,
     syncStatus: 'idle',
     lastSyncMessage: '',
+    conflicts: [],
   }
 
   private listeners: Set<SyncListener> = new Set()
   private cachedKey: CryptoKey | null = null
   private cachedSalt: Uint8Array | null = null
   private isSyncing = false
+  private isApplyingRemoteUpdate = false
   private autoSyncTimer: any = null
   private deviceId: string = ''
+  private lastRemoteVersion: string | undefined = undefined
+  private lastEnvelopeId: string | undefined = undefined
+  private hasPendingOfflineChanges = false
 
   constructor() {
     this.init()
@@ -77,6 +94,7 @@ class SyncEngine {
     await this.loadConfig()
     await this.checkPassphraseState()
     this.setupStoreListener()
+    this.setupNetworkListeners()
   }
 
   private getOrCreateDeviceId(): string {
@@ -99,12 +117,19 @@ class SyncEngine {
           ...this.config,
           autoSyncEnabled: !!parsed.autoSyncEnabled,
           activeProvider: parsed.activeProvider || 'none',
-          googleAccount: parsed.googleAccount || { provider: 'google', connected: false },
-          githubAccount: parsed.githubAccount || { provider: 'github', connected: false },
+          googleAccount: {
+            ...this.config.googleAccount,
+            ...(parsed.googleAccount || {}),
+          },
+          githubAccount: {
+            ...this.config.githubAccount,
+            ...(parsed.githubAccount || {}),
+            gitHubStorageType: parsed.githubAccount?.gitHubStorageType || 'repo',
+          },
         }
       }
 
-      // Verify stored tokens in secure storage
+      // Verify stored tokens
       const ghToken = await getSecureSecret(GITHUB_TOKEN_KEY)
       if (ghToken && this.config.githubAccount.connected) {
         try {
@@ -112,7 +137,7 @@ class SyncEngine {
           this.config.githubAccount.accountIdentity = profile.login
           this.config.githubAccount.avatarUrl = profile.avatar_url
         } catch {
-          // Token may have expired
+          // Token expired or invalid
         }
       }
 
@@ -123,11 +148,11 @@ class SyncEngine {
           this.config.googleAccount.accountIdentity = profile.email
           this.config.googleAccount.avatarUrl = profile.picture
         } catch {
-          // Token may have expired
+          // Token expired
         }
       }
     } catch {
-      // Ignore config read error
+      // Ignore
     }
     this.notify()
   }
@@ -174,6 +199,21 @@ class SyncEngine {
     this.config.syncStatus = status
     this.config.lastSyncMessage = message
     this.notify()
+  }
+
+  // --- Network State Observers ---
+
+  private setupNetworkListeners(): void {
+    if (typeof window === 'undefined') return
+    window.addEventListener('online', () => {
+      if (this.config.autoSyncEnabled && this.hasPendingOfflineChanges) {
+        this.setStatus('syncing', 'Reconnected to network. Syncing pending changes...')
+        void this.syncNow()
+      }
+    })
+    window.addEventListener('offline', () => {
+      this.setStatus('idle', 'Offline. Changes will sync when network is restored.')
+    })
   }
 
   // --- Passphrase & Key Management ---
@@ -227,13 +267,14 @@ class SyncEngine {
     return key
   }
 
-  // --- Provider Account Authentication ---
+  // --- GitHub Authentication & Settings ---
 
   public async connectGitHubWithToken(token: string): Promise<void> {
     const profile = await getGitHubUserProfile(token)
     await setSecureSecret(GITHUB_TOKEN_KEY, token.trim())
 
     this.config.githubAccount = {
+      ...this.config.githubAccount,
       provider: 'github',
       connected: true,
       accountIdentity: profile.login,
@@ -246,11 +287,18 @@ class SyncEngine {
     this.notify()
   }
 
+  public setGitHubStorageType(type: GitHubStorageType): void {
+    this.config.githubAccount.gitHubStorageType = type
+    this.saveConfig()
+    this.notify()
+  }
+
   public async disconnectGitHub(): Promise<void> {
     await removeSecureSecret(GITHUB_TOKEN_KEY)
     this.config.githubAccount = {
       provider: 'github',
       connected: false,
+      gitHubStorageType: 'repo',
     }
     if (this.config.activeProvider === 'github') {
       this.config.activeProvider = this.config.googleAccount.connected ? 'google' : 'none'
@@ -259,15 +307,117 @@ class SyncEngine {
     this.notify()
   }
 
-  public async connectGoogleWithToken(accessToken: string): Promise<void> {
+  // --- Google OAuth PKCE Flow & Lifecycle ---
+
+  public async getValidGoogleAccessToken(): Promise<string> {
+    const token = await getSecureSecret(GOOGLE_TOKEN_KEY)
+    if (!token) throw new Error('Google account is not connected.')
+
+    const expiresAt = this.config.googleAccount.tokenExpiresAt || 0
+    const needsRefresh = Date.now() >= expiresAt - 60_000 // 1 minute buffer
+
+    if (!needsRefresh) {
+      return token
+    }
+
+    // Refresh expired token
+    const refreshToken = await getSecureSecret(GOOGLE_REFRESH_TOKEN_KEY)
+    if (!refreshToken) {
+      // Cannot refresh; throw prompt
+      throw new Error('Google authorization expired. Please reconnect your Google account.')
+    }
+
+    try {
+      const refreshed = await refreshGoogleAccessToken(
+        this.config.googleAccount.googleClientId || DEFAULT_GOOGLE_CLIENT_ID,
+        refreshToken,
+      )
+
+      await setSecureSecret(GOOGLE_TOKEN_KEY, refreshed.accessToken)
+      if (refreshed.refreshToken) {
+        await setSecureSecret(GOOGLE_REFRESH_TOKEN_KEY, refreshed.refreshToken)
+      }
+
+      this.config.googleAccount.tokenExpiresAt = Date.now() + refreshed.expiresIn * 1000
+      this.saveConfig()
+      return refreshed.accessToken
+    } catch (err: any) {
+      // If invalid grant, disconnect and prompt re-auth
+      if (err.message?.includes('expired') || err.message?.includes('revoked')) {
+        await this.disconnectGoogle()
+      }
+      throw err
+    }
+  }
+
+  public async connectGoogleWithOAuth(
+    clientId: string = DEFAULT_GOOGLE_CLIENT_ID,
+  ): Promise<void> {
+    const { verifier, challenge } = await generatePKCECodes()
+    const state = generateOAuthState()
+
+    const desktop = (window as any).evaDesktop
+    if (desktop?.startGoogleOAuth) {
+      // Desktop Loopback Server Flow
+      const redirectUri = 'http://127.0.0.1:54321/oauth2callback'
+      const authUrl = buildGoogleAuthUrl(clientId, redirectUri, state, challenge)
+
+      const result = await desktop.startGoogleOAuth(authUrl, 54321)
+      if (!result?.code) {
+        throw new Error('Failed to obtain authorization code from Google.')
+      }
+
+      if (result.state !== state) {
+        throw new Error('State validation failed. OAuth request may have been intercepted.')
+      }
+
+      const tokens = await exchangeGoogleAuthCode(clientId, result.code, verifier, redirectUri)
+      await setSecureSecret(GOOGLE_TOKEN_KEY, tokens.accessToken)
+      if (tokens.refreshToken) {
+        await setSecureSecret(GOOGLE_REFRESH_TOKEN_KEY, tokens.refreshToken)
+      }
+
+      const profile = await getGoogleUserProfile(tokens.accessToken)
+      this.config.googleAccount = {
+        provider: 'google',
+        connected: true,
+        accountIdentity: profile.email,
+        avatarUrl: profile.picture,
+        googleClientId: clientId,
+        tokenExpiresAt: Date.now() + tokens.expiresIn * 1000,
+      }
+
+      if (this.config.activeProvider === 'none') {
+        this.config.activeProvider = 'google'
+      }
+      this.saveConfig()
+      this.notify()
+    } else {
+      // Web / Fallback flow
+      throw new Error(
+        'On web/mobile, please connect using an authorized Google token or configure your Google Client ID.',
+      )
+    }
+  }
+
+  public async connectGoogleWithToken(
+    accessToken: string,
+    refreshToken?: string,
+    expiresInSeconds: number = 3600,
+  ): Promise<void> {
     const profile = await getGoogleUserProfile(accessToken)
     await setSecureSecret(GOOGLE_TOKEN_KEY, accessToken.trim())
+    if (refreshToken) {
+      await setSecureSecret(GOOGLE_REFRESH_TOKEN_KEY, refreshToken.trim())
+    }
 
     this.config.googleAccount = {
+      ...this.config.googleAccount,
       provider: 'google',
       connected: true,
       accountIdentity: profile.email,
       avatarUrl: profile.picture,
+      tokenExpiresAt: Date.now() + expiresInSeconds * 1000,
     }
     if (this.config.activeProvider === 'none') {
       this.config.activeProvider = 'google'
@@ -278,6 +428,7 @@ class SyncEngine {
 
   public async disconnectGoogle(): Promise<void> {
     await removeSecureSecret(GOOGLE_TOKEN_KEY)
+    await removeSecureSecret(GOOGLE_REFRESH_TOKEN_KEY)
     this.config.googleAccount = {
       provider: 'google',
       connected: false,
@@ -304,21 +455,28 @@ class SyncEngine {
     }
   }
 
-  // --- Auto-Sync Observer ---
+  // --- Auto-Sync Observer with Infinite-Loop Prevention ---
 
   private setupStoreListener(): void {
     if (typeof window === 'undefined') return
     useStore.subscribe((state, prevState) => {
+      // Guard: Ignore mutations triggered by sync merging itself to prevent infinite loop
+      if (this.isApplyingRemoteUpdate) {
+        return
+      }
+
       if (!this.config.autoSyncEnabled || this.config.activeProvider === 'none') {
         return
       }
 
-      // Check if characters, worlds, or conversations changed
+      // Check all mutations
       const charactersChanged = state.characters !== prevState.characters
       const worldsChanged = state.worlds !== prevState.worlds
       const convsChanged = state.conversations !== prevState.conversations
+      const settingsChanged = state.settings !== prevState.settings
 
-      if (charactersChanged || worldsChanged || convsChanged) {
+      if (charactersChanged || worldsChanged || convsChanged || settingsChanged) {
+        this.hasPendingOfflineChanges = true
         this.triggerDebouncedSync()
       }
     })
@@ -331,7 +489,7 @@ class SyncEngine {
     }
     this.autoSyncTimer = setTimeout(() => {
       void this.syncNow()
-    }, 5000) // 5 seconds debounce
+    }, 4000) // 4 seconds debounce
   }
 
   // --- Backup, Sync, and Restore Operations ---
@@ -363,6 +521,8 @@ class SyncEngine {
         bubbleStyle: state.settings.bubbleStyle,
       },
       tombstones,
+      conflicts: this.config.conflicts,
+      deviceId: this.deviceId,
     }
   }
 
@@ -399,20 +559,32 @@ class SyncEngine {
       const salt = generateRandomBytes(16)
       const key = await this.getActiveKey(toBase64(salt))
 
-      const envelope = await encryptBackup(localData, key, salt, meta, this.deviceId)
+      const envelope = await encryptBackup(localData, key, salt, meta, this.deviceId, '2.0.1', {
+        parentEnvelopeId: this.lastEnvelopeId,
+        remoteRevision: this.lastRemoteVersion,
+      })
 
       if (this.config.activeProvider === 'github') {
         const token = await getSecureSecret(GITHUB_TOKEN_KEY)
         if (!token) throw new Error('GitHub token not found.')
-        await uploadToGitHubGist(token, envelope)
+
+        if (this.config.githubAccount.gitHubStorageType === 'gist') {
+          const res = await uploadToGitHubGist(token, envelope, this.lastRemoteVersion)
+          this.lastRemoteVersion = res.sha
+        } else {
+          const sha = await uploadToGitHubRepo(token, envelope, this.lastRemoteVersion)
+          this.lastRemoteVersion = sha
+        }
         this.config.githubAccount.lastBackupTimestamp = Date.now()
       } else if (this.config.activeProvider === 'google') {
-        const token = await getSecureSecret(GOOGLE_TOKEN_KEY)
-        if (!token) throw new Error('Google token not found.')
-        await uploadToGoogleDrive(token, envelope)
+        const token = await this.getValidGoogleAccessToken()
+        const res = await uploadToGoogleDrive(token, envelope, this.lastRemoteVersion)
+        this.lastRemoteVersion = res.version
         this.config.googleAccount.lastBackupTimestamp = Date.now()
       }
 
+      this.lastEnvelopeId = envelope.envelopeId
+      this.hasPendingOfflineChanges = false
       this.saveConfig()
       this.setStatus('success', 'Backup completed successfully.')
       return { success: true, message: 'Backup completed successfully.', timestamp: Date.now() }
@@ -426,10 +598,11 @@ class SyncEngine {
   }
 
   /**
-   * Two-way synchronization: Downloads remote backup, merges with local state,
-   * updates local state, and uploads merged result back to cloud.
+   * Two-way synchronization with concurrent-overwrite protection:
+   * Downloads remote backup, merges with local state, updates local store safely,
+   * and uploads merged snapshot back to cloud using atomic CAS checks.
    */
-  public async syncNow(): Promise<SyncResult> {
+  public async syncNow(retryCount: number = 0): Promise<SyncResult> {
     if (this.isSyncing) {
       return { success: false, message: 'Sync already in progress.', timestamp: Date.now() }
     }
@@ -442,41 +615,63 @@ class SyncEngine {
 
     try {
       let remoteEnvelope: EncryptedBackupEnvelope | null = null
+      let currentRemoteRevision: string | undefined = undefined
 
       if (this.config.activeProvider === 'github') {
         const token = await getSecureSecret(GITHUB_TOKEN_KEY)
         if (!token) throw new Error('GitHub account is not connected.')
-        const found = await findEvaGist(token)
-        if (found) remoteEnvelope = found.envelope
+
+        if (this.config.githubAccount.gitHubStorageType === 'gist') {
+          const found = await findEvaGist(token)
+          if (found) {
+            remoteEnvelope = found.envelope
+            currentRemoteRevision = found.sha
+          }
+        } else {
+          const found = await findEvaRepoFile(token)
+          if (found) {
+            remoteEnvelope = found.envelope
+            currentRemoteRevision = found.sha
+          }
+        }
       } else if (this.config.activeProvider === 'google') {
-        const token = await getSecureSecret(GOOGLE_TOKEN_KEY)
-        if (!token) throw new Error('Google account is not connected.')
+        const token = await this.getValidGoogleAccessToken()
         const found = await findEvaGoogleDriveFile(token)
         if (found) {
-          remoteEnvelope = await downloadFromGoogleDrive(token, found.fileId)
+          remoteEnvelope = found.envelope
+          currentRemoteRevision = found.version
         }
       }
 
       const localData = this.getLocalSyncableData()
 
-      // If no remote backup exists yet, this device initiates the first backup
+      // If no remote backup exists yet, this device creates the initial backup
       if (!remoteEnvelope) {
         this.setStatus('syncing', 'Initializing first cloud backup...')
         const salt = generateRandomBytes(16)
         const key = await this.getActiveKey(toBase64(salt))
         const meta = this.computeMeta(localData)
-        const newEnvelope = await encryptBackup(localData, key, salt, meta, this.deviceId)
+        const newEnvelope = await encryptBackup(localData, key, salt, meta, this.deviceId, '2.0.1')
 
         if (this.config.activeProvider === 'github') {
           const token = (await getSecureSecret(GITHUB_TOKEN_KEY))!
-          await uploadToGitHubGist(token, newEnvelope)
+          if (this.config.githubAccount.gitHubStorageType === 'gist') {
+            const res = await uploadToGitHubGist(token, newEnvelope)
+            this.lastRemoteVersion = res.sha
+          } else {
+            const sha = await uploadToGitHubRepo(token, newEnvelope)
+            this.lastRemoteVersion = sha
+          }
           this.config.githubAccount.lastSyncTimestamp = Date.now()
         } else {
-          const token = (await getSecureSecret(GOOGLE_TOKEN_KEY))!
-          await uploadToGoogleDrive(token, newEnvelope)
+          const token = await this.getValidGoogleAccessToken()
+          const res = await uploadToGoogleDrive(token, newEnvelope)
+          this.lastRemoteVersion = res.version
           this.config.googleAccount.lastSyncTimestamp = Date.now()
         }
 
+        this.lastEnvelopeId = newEnvelope.envelopeId
+        this.hasPendingOfflineChanges = false
         this.saveConfig()
         this.setStatus('success', 'First cloud sync initialized successfully.')
         return {
@@ -497,44 +692,78 @@ class SyncEngine {
       const key = await this.getActiveKey(remoteEnvelope.salt)
       const remoteData = await decryptBackup(remoteEnvelope, key)
 
-      const { merged, stats } = mergeSyncData(localData, remoteData)
+      const { merged, stats, conflicts } = mergeSyncData(localData, remoteData)
+      this.config.conflicts = conflicts
 
-      // Apply merged data to local store
-      useStore.getState().replaceAll({
-        characters: merged.characters,
-        worlds: merged.worlds,
-        conversations: merged.conversations,
-        settings: merged.settings,
-      })
+      // Apply merged data to local store while blocking recursive auto-sync
+      this.isApplyingRemoteUpdate = true
+      try {
+        useStore.getState().replaceAll({
+          characters: merged.characters,
+          worlds: merged.worlds,
+          conversations: merged.conversations,
+          settings: merged.settings,
+        })
+      } finally {
+        setTimeout(() => {
+          this.isApplyingRemoteUpdate = false
+        }, 500)
+      }
 
-      // Upload unified merged state back to cloud
+      // Upload unified merged state back to cloud with concurrency checking
       this.setStatus('syncing', 'Uploading synchronized snapshot...')
       const salt = generateRandomBytes(16)
       const uploadKey = await this.getActiveKey(toBase64(salt))
       const meta = this.computeMeta(merged)
-      const updatedEnvelope = await encryptBackup(merged, uploadKey, salt, meta, this.deviceId)
+      const updatedEnvelope = await encryptBackup(merged, uploadKey, salt, meta, this.deviceId, '2.0.1', {
+        parentEnvelopeId: remoteEnvelope.envelopeId,
+        remoteRevision: currentRemoteRevision,
+      })
 
       if (this.config.activeProvider === 'github') {
         const token = (await getSecureSecret(GITHUB_TOKEN_KEY))!
-        await uploadToGitHubGist(token, updatedEnvelope)
+        if (this.config.githubAccount.gitHubStorageType === 'gist') {
+          const res = await uploadToGitHubGist(token, updatedEnvelope, currentRemoteRevision)
+          this.lastRemoteVersion = res.sha
+        } else {
+          const sha = await uploadToGitHubRepo(token, updatedEnvelope, currentRemoteRevision)
+          this.lastRemoteVersion = sha
+        }
         this.config.githubAccount.lastSyncTimestamp = Date.now()
       } else {
-        const token = (await getSecureSecret(GOOGLE_TOKEN_KEY))!
-        await uploadToGoogleDrive(token, updatedEnvelope)
+        const token = await this.getValidGoogleAccessToken()
+        const res = await uploadToGoogleDrive(token, updatedEnvelope, currentRemoteRevision)
+        this.lastRemoteVersion = res.version
         this.config.googleAccount.lastSyncTimestamp = Date.now()
       }
 
+      this.lastEnvelopeId = updatedEnvelope.envelopeId
+      this.hasPendingOfflineChanges = false
       this.saveConfig()
-      const summaryMsg = `Synchronized (${stats.charactersAdded + stats.charactersUpdated} chars, ${stats.conversationsAdded + stats.conversationsUpdated} convs, ${stats.messagesMerged} msgs).`
-      this.setStatus('success', summaryMsg)
+
+      let summaryMsg = `Synchronized (${stats.charactersAdded + stats.charactersUpdated} chars, ${stats.conversationsAdded + stats.conversationsUpdated} convs, ${stats.messagesMerged} msgs).`
+      if (conflicts.length > 0) {
+        summaryMsg += ` (${conflicts.length} field conflicts preserved).`
+        this.setStatus('conflict', summaryMsg)
+      } else {
+        this.setStatus('success', summaryMsg)
+      }
 
       return {
         success: true,
         message: summaryMsg,
         timestamp: Date.now(),
         mergedStats: stats,
+        conflicts,
       }
     } catch (err: any) {
+      // If concurrent write was detected, automatically re-fetch and retry up to 3 times
+      if (err instanceof ConcurrencyConflictError && retryCount < 3) {
+        this.isSyncing = false
+        await new Promise((resolve) => setTimeout(resolve, 1000 * Math.pow(2, retryCount)))
+        return this.syncNow(retryCount + 1)
+      }
+
       const msg = err instanceof Error ? err.message : String(err)
       this.setStatus('error', `Sync failed: ${msg}`)
       return { success: false, message: msg, timestamp: Date.now() }
@@ -556,25 +785,27 @@ class SyncEngine {
     if (this.config.activeProvider === 'github') {
       const token = await getSecureSecret(GITHUB_TOKEN_KEY)
       if (!token) throw new Error('GitHub account is not connected.')
-      const found = await findEvaGist(token)
-      if (found) envelope = found.envelope
+
+      if (this.config.githubAccount.gitHubStorageType === 'gist') {
+        const found = await findEvaGist(token)
+        if (found) envelope = found.envelope
+      } else {
+        const found = await findEvaRepoFile(token)
+        if (found) envelope = found.envelope
+      }
     } else if (this.config.activeProvider === 'google') {
-      const token = await getSecureSecret(GOOGLE_TOKEN_KEY)
-      if (!token) throw new Error('Google account is not connected.')
+      const token = await this.getValidGoogleAccessToken()
       const found = await findEvaGoogleDriveFile(token)
-      if (found) envelope = await downloadFromGoogleDrive(token, found.fileId)
+      if (found) envelope = found.envelope
     }
 
     if (!envelope) {
       throw new Error('No existing cloud backup found on this account.')
     }
 
-    // If candidate passphrase is provided, verify it
     if (passphraseCandidate) {
       const key = await deriveKey(passphraseCandidate, fromBase64(envelope.salt))
-      // Test decrypt
       await decryptBackup(envelope, key)
-      // If valid, save it
       await this.setPassphrase(passphraseCandidate)
     }
 
@@ -589,7 +820,6 @@ class SyncEngine {
 
   /**
    * Restores application state from cloud backup.
-   * mode: 'merge' (default) merges remote and local; 'replace' replaces local state with backup.
    */
   public async restoreFromCloud(
     mode: 'merge' | 'replace' = 'merge',
@@ -609,32 +839,40 @@ class SyncEngine {
       const key = await this.getActiveKey(envelope.salt)
       const decryptedData = await decryptBackup(envelope, key)
 
-      if (mode === 'replace') {
-        // Create an emergency local JSON backup in localStorage just in case
-        try {
-          const currentStore = window.localStorage.getItem('nexus-chat-store')
-          if (currentStore) {
-            window.localStorage.setItem(`eva_backup_pre_restore_${Date.now()}`, currentStore)
+      this.isApplyingRemoteUpdate = true
+      try {
+        if (mode === 'replace') {
+          // Safety backup of current store in case user wants to rollback
+          try {
+            const currentStore = window.localStorage.getItem('nexus-chat-store')
+            if (currentStore) {
+              window.localStorage.setItem(`eva_backup_pre_restore_${Date.now()}`, currentStore)
+            }
+          } catch {
+            // Ignore
           }
-        } catch {
-          // Ignore
-        }
 
-        useStore.getState().replaceAll({
-          characters: decryptedData.characters,
-          worlds: decryptedData.worlds,
-          conversations: decryptedData.conversations,
-          settings: decryptedData.settings,
-        })
-      } else {
-        const localData = this.getLocalSyncableData()
-        const { merged } = mergeSyncData(localData, decryptedData)
-        useStore.getState().replaceAll({
-          characters: merged.characters,
-          worlds: merged.worlds,
-          conversations: merged.conversations,
-          settings: merged.settings,
-        })
+          useStore.getState().replaceAll({
+            characters: decryptedData.characters,
+            worlds: decryptedData.worlds,
+            conversations: decryptedData.conversations,
+            settings: decryptedData.settings,
+          })
+        } else {
+          const localData = this.getLocalSyncableData()
+          const { merged, conflicts } = mergeSyncData(localData, decryptedData)
+          this.config.conflicts = conflicts
+          useStore.getState().replaceAll({
+            characters: merged.characters,
+            worlds: merged.worlds,
+            conversations: merged.conversations,
+            settings: merged.settings,
+          })
+        }
+      } finally {
+        setTimeout(() => {
+          this.isApplyingRemoteUpdate = false
+        }, 500)
       }
 
       this.setStatus('success', 'Cloud restore completed successfully.')

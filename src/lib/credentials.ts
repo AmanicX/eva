@@ -1,30 +1,43 @@
 /**
- * Cross-Platform Credential & Secret Storage Abstraction
+ * Cross-Platform Credential & Secret Storage Abstraction for Eva
  *
  * Provides a clean interface for securely storing sensitive credentials (AI provider API keys,
- * OAuth tokens) without exposing them in unencrypted backups, Zustand store persistence, or logs.
+ * OAuth tokens, encryption passphrases) without exposing them in unencrypted backups, Zustand
+ * store persistence, or console logs.
  *
  * Supported platforms:
  * - Electron: Backed by Electron's native `safeStorage` (OS Keychain on macOS, Secret Service / libsecret on Linux, DPAPI on Windows).
- * - Web / Android WebView: Memory-cached storage with explicit security boundary metadata.
+ * - Android: Backed by Android hardware Keystore AES-256-GCM via native `SecureStorage` plugin.
+ * - Web / PWA: Memory-only storage by default. Persistent storage requires explicit user consent.
  */
 
 export interface CredentialStorageInfo {
   isHardwareEncrypted: boolean
-  platform: 'electron-safestorage' | 'web-storage'
+  platform: 'electron-safestorage' | 'android-keystore' | 'web-memory' | 'web-persistent'
   description: string
 }
 
 let inMemoryApiKey: string | null = null
 const inMemorySecrets = new Map<string, string>()
 
+const WEB_PERSISTENCE_CONSENT_KEY = 'eva_allow_web_persistence'
+
 function getDesktopApi() {
   if (typeof window === 'undefined') return undefined
   return (window as any).evaDesktop || (window as any).nexusDesktop
 }
 
+function getAndroidSecureStoragePlugin(): any {
+  if (typeof window === 'undefined') return undefined
+  const cap = (window as any).Capacitor
+  if (cap?.isNativePlatform && cap.isNativePlatform() && cap.Plugins?.SecureStorage) {
+    return cap.Plugins.SecureStorage
+  }
+  return undefined
+}
+
 /**
- * Checks whether OS-level credential encryption (safeStorage) is available.
+ * Checks whether OS-level or hardware-backed credential encryption is available.
  */
 export async function isPlatformEncryptionAvailable(): Promise<boolean> {
   const desktop = getDesktopApi()
@@ -35,6 +48,17 @@ export async function isPlatformEncryptionAvailable(): Promise<boolean> {
       return false
     }
   }
+
+  const androidPlugin = getAndroidSecureStoragePlugin()
+  if (androidPlugin) {
+    try {
+      const res = await androidPlugin.isAvailable()
+      return !!res.available
+    } catch {
+      return false
+    }
+  }
+
   return false
 }
 
@@ -42,29 +66,94 @@ export async function isPlatformEncryptionAvailable(): Promise<boolean> {
  * Returns human-readable diagnostic metadata about how secrets are stored on this platform.
  */
 export async function getCredentialStorageInfo(): Promise<CredentialStorageInfo> {
-  const hasSafeStorage = await isPlatformEncryptionAvailable()
-  if (hasSafeStorage) {
-    return {
-      isHardwareEncrypted: true,
-      platform: 'electron-safestorage',
-      description: 'Protected by operating system keychain / credentials manager (Electron safeStorage).',
+  const desktop = getDesktopApi()
+  if (desktop?.isSecureStorageAvailable) {
+    try {
+      const available = await desktop.isSecureStorageAvailable()
+      if (available) {
+        return {
+          isHardwareEncrypted: true,
+          platform: 'electron-safestorage',
+          description: 'Protected by operating system keychain / credentials manager (Electron safeStorage).',
+        }
+      }
+    } catch {
+      // Continue to next check
     }
   }
+
+  const androidPlugin = getAndroidSecureStoragePlugin()
+  if (androidPlugin) {
+    try {
+      const res = await androidPlugin.isAvailable()
+      if (res.available) {
+        return {
+          isHardwareEncrypted: true,
+          platform: 'android-keystore',
+          description: 'Protected by hardware-isolated Android Keystore (AES-256-GCM).',
+        }
+      }
+    } catch {
+      // Continue to next check
+    }
+  }
+
+  if (isWebPersistenceAllowed()) {
+    return {
+      isHardwareEncrypted: false,
+      platform: 'web-persistent',
+      description: 'Stored in browser localStorage (unencrypted). Hardware key isolation is unavailable in browsers.',
+    }
+  }
+
   return {
     isHardwareEncrypted: false,
-    platform: 'web-storage',
-    description: 'Stored in local client storage. Browser environments cannot provide hardware-isolated key protection.',
+    platform: 'web-memory',
+    description: 'Stored in volatile memory for this session only. Credentials will clear upon closing the tab.',
   }
 }
 
 /**
- * Retrieves the stored API key, checking platform secure storage first, then falling back to memory/local.
+ * Checks if browser user has explicitly opted into persistent browser storage.
+ */
+export function isWebPersistenceAllowed(): boolean {
+  if (typeof window === 'undefined') return false
+  return window.localStorage.getItem(WEB_PERSISTENCE_CONSENT_KEY) === 'true'
+}
+
+/**
+ * Sets explicit user consent for persistent browser storage.
+ */
+export function setWebPersistenceAllowed(allowed: boolean): void {
+  if (typeof window === 'undefined') return
+  if (allowed) {
+    window.localStorage.setItem(WEB_PERSISTENCE_CONSENT_KEY, 'true')
+  } else {
+    window.localStorage.removeItem(WEB_PERSISTENCE_CONSENT_KEY)
+    // Clear any stored plaintext web secrets
+    window.localStorage.removeItem('eva_api_key')
+    const keysToRemove: string[] = []
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const k = window.localStorage.key(i)
+      if (k && k.startsWith('eva_sec_')) {
+        keysToRemove.push(k)
+      }
+    }
+    for (const k of keysToRemove) {
+      window.localStorage.removeItem(k)
+    }
+  }
+}
+
+/**
+ * Retrieves the stored API key, prioritizing hardware/secure storage backends.
  */
 export async function getApiKey(): Promise<string> {
-  if (inMemoryApiKey !== null) {
+  if (inMemoryApiKey !== null && inMemoryApiKey !== '') {
     return inMemoryApiKey
   }
 
+  // 1. Check Electron safeStorage
   const desktop = getDesktopApi()
   if (desktop?.getSecureCredential) {
     try {
@@ -74,39 +163,52 @@ export async function getApiKey(): Promise<string> {
         return stored
       }
     } catch {
-      // safeStorage lookup failed, check fallback
+      // SafeStorage read failed
     }
   }
 
-  // Web / fallback: check sessionStorage first, then localStorage
+  // 2. Check Android Keystore
+  const androidPlugin = getAndroidSecureStoragePlugin()
+  if (androidPlugin) {
+    try {
+      const res = await androidPlugin.get({ key: 'api_key' })
+      if (res?.value) {
+        inMemoryApiKey = res.value
+        return res.value
+      }
+    } catch {
+      // Android keystore read failed
+    }
+  }
+
+  // 3. Web: Check explicit persistent storage only if permitted
   if (typeof window !== 'undefined') {
-    const sessionKey = window.sessionStorage.getItem('eva_api_key')
-    if (sessionKey) {
-      inMemoryApiKey = sessionKey
-      return sessionKey
-    }
-    const localKey = window.localStorage.getItem('eva_api_key')
-    if (localKey) {
-      inMemoryApiKey = localKey
-      return localKey
+    if (isWebPersistenceAllowed()) {
+      const localKey = window.localStorage.getItem('eva_api_key')
+      if (localKey) {
+        inMemoryApiKey = localKey
+        return localKey
+      }
     }
   }
 
-  return ''
+  return inMemoryApiKey || ''
 }
 
 /**
  * Stores the API key using platform secure storage whenever available.
  */
 export async function setApiKey(key: string): Promise<void> {
-  inMemoryApiKey = key
+  const cleanKey = (key || '').trim()
+  inMemoryApiKey = cleanKey
 
+  // 1. Electron safeStorage
   const desktop = getDesktopApi()
   if (desktop?.setSecureCredential) {
     try {
-      const ok = await desktop.setSecureCredential('api_key', key)
+      const ok = await desktop.setSecureCredential('api_key', cleanKey)
       if (ok) {
-        // Successfully encrypted in OS keychain; remove unencrypted fallback if present
+        // Remove any plaintext fallback copies
         if (typeof window !== 'undefined') {
           window.localStorage.removeItem('eva_api_key')
           window.sessionStorage.removeItem('eva_api_key')
@@ -114,17 +216,30 @@ export async function setApiKey(key: string): Promise<void> {
         return
       }
     } catch {
-      // safeStorage save failed; fallback to local
+      // SafeStorage write failed
     }
   }
 
-  // Web / fallback storage
+  // 2. Android Keystore
+  const androidPlugin = getAndroidSecureStoragePlugin()
+  if (androidPlugin) {
+    try {
+      await androidPlugin.set({ key: 'api_key', value: cleanKey })
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem('eva_api_key')
+      }
+      return
+    } catch {
+      // Android keystore write failed
+    }
+  }
+
+  // 3. Web storage: Only persist if user explicitly consented
   if (typeof window !== 'undefined') {
-    if (key) {
-      window.localStorage.setItem('eva_api_key', key)
+    if (isWebPersistenceAllowed() && cleanKey) {
+      window.localStorage.setItem('eva_api_key', cleanKey)
     } else {
       window.localStorage.removeItem('eva_api_key')
-      window.sessionStorage.removeItem('eva_api_key')
     }
   }
 }
@@ -134,14 +249,25 @@ export async function setApiKey(key: string): Promise<void> {
  */
 export async function clearApiKey(): Promise<void> {
   inMemoryApiKey = ''
+
   const desktop = getDesktopApi()
   if (desktop?.deleteSecureCredential) {
     try {
       await desktop.deleteSecureCredential('api_key')
     } catch {
-      // ignore
+      // Ignore
     }
   }
+
+  const androidPlugin = getAndroidSecureStoragePlugin()
+  if (androidPlugin) {
+    try {
+      await androidPlugin.delete({ key: 'api_key' })
+    } catch {
+      // Ignore
+    }
+  }
+
   if (typeof window !== 'undefined') {
     window.localStorage.removeItem('eva_api_key')
     window.sessionStorage.removeItem('eva_api_key')
@@ -149,70 +275,147 @@ export async function clearApiKey(): Promise<void> {
 }
 
 /**
- * Stores a named secure secret (e.g. OAuth tokens, sync credentials).
+ * Stores an arbitrary secret string (e.g. OAuth tokens, sync passphrase).
  */
 export async function setSecureSecret(key: string, value: string): Promise<void> {
   inMemorySecrets.set(key, value)
+
   const desktop = getDesktopApi()
   if (desktop?.setSecureCredential) {
     try {
-      const ok = await desktop.setSecureCredential(`secret_${key}`, value)
+      const ok = await desktop.setSecureCredential(`sec_${key}`, value)
       if (ok) return
     } catch {
-      // fallback
+      // safeStorage failed
     }
   }
-  if (typeof window !== 'undefined') {
-    window.sessionStorage.setItem(`eva_secret_${key}`, value)
+
+  const androidPlugin = getAndroidSecureStoragePlugin()
+  if (androidPlugin) {
+    try {
+      await androidPlugin.set({ key: `sec_${key}`, value })
+      return
+    } catch {
+      // Keystore failed
+    }
+  }
+
+  if (typeof window !== 'undefined' && isWebPersistenceAllowed()) {
+    window.localStorage.setItem(`eva_sec_${key}`, value)
   }
 }
 
 /**
- * Retrieves a named secure secret.
+ * Retrieves a stored secret string.
  */
 export async function getSecureSecret(key: string): Promise<string | null> {
   if (inMemorySecrets.has(key)) {
-    return inMemorySecrets.get(key) || null
+    return inMemorySecrets.get(key)!
   }
+
   const desktop = getDesktopApi()
   if (desktop?.getSecureCredential) {
     try {
-      const val = await desktop.getSecureCredential(`secret_${key}`)
+      const val = await desktop.getSecureCredential(`sec_${key}`)
       if (val) {
         inMemorySecrets.set(key, val)
         return val
       }
     } catch {
-      // fallback
+      // safeStorage failed
     }
   }
-  if (typeof window !== 'undefined') {
-    const val = window.sessionStorage.getItem(`eva_secret_${key}`)
+
+  const androidPlugin = getAndroidSecureStoragePlugin()
+  if (androidPlugin) {
+    try {
+      const res = await androidPlugin.get({ key: `sec_${key}` })
+      if (res?.value) {
+        inMemorySecrets.set(key, res.value)
+        return res.value
+      }
+    } catch {
+      // Keystore failed
+    }
+  }
+
+  if (typeof window !== 'undefined' && isWebPersistenceAllowed()) {
+    const val = window.localStorage.getItem(`eva_sec_${key}`)
     if (val) {
       inMemorySecrets.set(key, val)
       return val
     }
   }
+
   return null
 }
 
 /**
- * Removes a named secure secret.
+ * Removes a named secure secret across all backends.
  */
 export async function clearSecureSecret(key: string): Promise<void> {
   inMemorySecrets.delete(key)
+
   const desktop = getDesktopApi()
   if (desktop?.deleteSecureCredential) {
     try {
-      await desktop.deleteSecureCredential(`secret_${key}`)
+      await desktop.deleteSecureCredential(`sec_${key}`)
     } catch {
-      // ignore
+      // Ignore
     }
   }
+
+  const androidPlugin = getAndroidSecureStoragePlugin()
+  if (androidPlugin) {
+    try {
+      await androidPlugin.delete({ key: `sec_${key}` })
+    } catch {
+      // Ignore
+    }
+  }
+
   if (typeof window !== 'undefined') {
-    window.sessionStorage.removeItem(`eva_secret_${key}`)
-    window.localStorage.removeItem(`eva_secret_${key}`)
+    window.localStorage.removeItem(`eva_sec_${key}`)
   }
 }
 
 export const removeSecureSecret = clearSecureSecret
+
+/**
+ * Migrates legacy unencrypted API keys from localStorage into platform secure storage.
+ * Verifies successful migration before purging plaintext copies.
+ */
+export async function migrateLegacyCredentials(): Promise<{ migrated: boolean; error?: string }> {
+  if (typeof window === 'undefined') return { migrated: false }
+
+  const legacyKey = window.localStorage.getItem('eva_api_key')
+  if (!legacyKey || !legacyKey.trim()) {
+    return { migrated: false }
+  }
+
+  const hasEncryption = await isPlatformEncryptionAvailable()
+  if (!hasEncryption) {
+    // Cannot migrate to hardware storage in this environment; retain in memory
+    inMemoryApiKey = legacyKey.trim()
+    return { migrated: false, error: 'Hardware key storage unavailable on this platform.' }
+  }
+
+  try {
+    // 1. Write to secure backend
+    await setApiKey(legacyKey.trim())
+
+    // 2. Verify retrieval
+    inMemoryApiKey = null // Force reload from backend
+    const verified = await getApiKey()
+
+    if (verified === legacyKey.trim()) {
+      // 3. Verified! Safely remove unencrypted copy
+      window.localStorage.removeItem('eva_api_key')
+      return { migrated: true }
+    } else {
+      return { migrated: false, error: 'Verification mismatch during secure storage migration.' }
+    }
+  } catch (err: any) {
+    return { migrated: false, error: err.message || 'Migration to secure storage failed.' }
+  }
+}

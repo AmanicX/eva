@@ -164,7 +164,12 @@ export async function encryptBackup(
   salt: Uint8Array,
   meta: SyncEnvelopeMeta,
   deviceId: string,
-  appVersion: string = '2.0.0',
+  appVersion: string = '2.0.1',
+  options?: {
+    envelopeId?: string
+    parentEnvelopeId?: string
+    remoteRevision?: string
+  },
 ): Promise<EncryptedBackupEnvelope> {
   const iv = generateRandomBytes(12)
   const kdfVerification = await createVerificationToken(key, iv)
@@ -181,10 +186,14 @@ export async function encryptBackup(
 
   const ciphertext = toBase64(new Uint8Array(encryptedData))
   const checksum = await sha256Hex(ciphertext)
+  const envelopeId = options?.envelopeId || `env_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
   return {
-    version: 1,
+    version: 2,
     schemaVersion: 2,
+    envelopeId,
+    parentEnvelopeId: options?.parentEnvelopeId,
+    remoteRevision: options?.remoteRevision,
     deviceId,
     appVersion,
     timestamp: new Date().toISOString(),

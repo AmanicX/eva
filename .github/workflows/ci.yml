@@ -1,0 +1,53 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Lint, Test, and Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Security Check - Verify No Committed Keystores or Private Keys
+        run: |
+          echo "Scanning tracked git files for sensitive key material..."
+          SENSITIVE_FILES=$(git ls-files | grep -E '\.(keystore|jks|p12|pem|key)$' || true)
+          if [ -n "$SENSITIVE_FILES" ]; then
+            echo "::error::Found sensitive key material tracked in git repository:"
+            echo "$SENSITIVE_FILES"
+            exit 1
+          fi
+          echo "No sensitive key material detected in tracked files."
+
+      - name: Run Linter (oxlint)
+        run: npm run lint
+
+      - name: Run Test Suite (vitest)
+        run: npm test
+
+      - name: Build Web / Desktop Assets (tsc + vite)
+        run: npm run build
+
+      - name: Build Electron Assets
+        run: npm run build:electron

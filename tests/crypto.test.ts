@@ -95,9 +95,10 @@ describe('End-to-End Encryption (syncCrypto)', () => {
 
     const envelope = await encryptBackup(sampleData, key, salt, meta, 'device_test_123', '2.0.0')
 
-    expect(envelope.version).toBe(1)
+    expect(envelope.version).toBe(2)
     expect(envelope.schemaVersion).toBe(2)
     expect(envelope.deviceId).toBe('device_test_123')
+    expect(envelope.envelopeId).toBeDefined()
     expect(envelope.ciphertext).toBeDefined()
     expect(envelope.checksum).toBeDefined()
     expect(envelope.meta.characterCount).toBe(1)
