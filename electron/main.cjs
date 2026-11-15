@@ -1,12 +1,22 @@
-const { app, BrowserWindow, session, shell, ipcMain, safeStorage } = require('electron')
+const { app, BrowserWindow, session, shell, ipcMain, safeStorage, nativeTheme } = require('electron')
 const fs = require('node:fs')
 const path = require('node:path')
 const http = require('node:http')
 
 const devServerUrl = process.env.VITE_DEV_SERVER_URL
 
-const iconFile = path.join(__dirname, '..', 'build', 'icon.png')
-const windowIcon = fs.existsSync(iconFile) ? iconFile : undefined
+const iconDark = path.join(__dirname, 'icons', 'icon-dark.png')
+const iconLight = path.join(__dirname, 'icons', 'icon-light.png')
+const defaultIcon = path.join(__dirname, '..', 'build', 'icon.png')
+
+function getThemeIconPath(theme) {
+  if (theme === 'light') {
+    if (fs.existsSync(iconLight)) return iconLight
+  } else {
+    if (fs.existsSync(iconDark)) return iconDark
+  }
+  return fs.existsSync(defaultIcon) ? defaultIcon : undefined
+}
 
 // Ensure consistent application name for window managers and desktop compositors
 app.setName('Eva')
@@ -75,15 +85,18 @@ function applyCsp() {
 }
 
 function createWindow() {
+  const isDark = nativeTheme.shouldUseDarkColors
+  const initialIcon = getThemeIconPath(isDark ? 'dark' : 'light')
+
   const win = new BrowserWindow({
     width: 1280,
     height: 860,
     minWidth: 880,
     minHeight: 600,
     transparent: false,
-    backgroundColor: '#09090b',
+    backgroundColor: isDark ? '#12100E' : '#FAFAFA',
     title: 'Eva - Advanced AI Chatbot',
-    icon: windowIcon,
+    icon: initialIcon,
     show: false,
     frame: false,
     hasShadow: true,
@@ -251,6 +264,35 @@ ipcMain.handle('oauth-google-start', async (event, authUrl, port = 54321) => {
       reject(new Error(`Failed to start OAuth callback listener on port ${port}: ${err.message}`))
     })
   })
+})
+
+// Dynamic Theme Icon Switching: updates window taskbar/titlebar and dock icons
+ipcMain.on('theme-icon-change', (event, theme) => {
+  validateIpcSender(event)
+  const icon = getThemeIconPath(theme)
+  const win = getTargetWindow(event)
+  if (win && !win.isDestroyed() && icon) {
+    try { win.setIcon(icon) } catch {}
+  }
+  if (process.platform === 'darwin' && app.dock && icon) {
+    try { app.dock.setIcon(icon) } catch {}
+  }
+})
+
+// Listen to OS theme change and synchronize windows
+nativeTheme.on('updated', () => {
+  const currentTheme = nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
+  const icon = getThemeIconPath(currentTheme)
+  if (icon) {
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed()) {
+        try { win.setIcon(icon) } catch {}
+      }
+    }
+    if (process.platform === 'darwin' && app.dock) {
+      try { app.dock.setIcon(icon) } catch {}
+    }
+  }
 })
 
 app.whenReady().then(() => {

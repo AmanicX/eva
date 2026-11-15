@@ -10,64 +10,78 @@ export interface AccentPalette {
 
 export const CURATED_PALETTES: AccentPalette[] = [
   {
-    id: 'cobalt',
+    id: 'gold',
+    label: 'Astra Gold',
+    primary: '#D4A359',
+    contrast: '#E5B869',
+    description: 'Signature Astra warm radiant gold with burnished ivory contrast',
+  },
+  {
+    id: 'azure',
     label: 'Azure',
-    primary: '#2563eb',
-    contrast: '#0284c7',
+    primary: '#2563EB',
+    contrast: '#3B82F6',
     description: 'Deep royal sapphire with architectural sky contrast',
   },
   {
-    id: 'amethyst',
+    id: 'iris',
     label: 'Iris',
-    primary: '#7c3aed',
-    contrast: '#e11d48',
-    description: 'Editorial iris violet with refined rose contrast',
+    primary: '#8B5CF6',
+    contrast: '#A78BFA',
+    description: 'Editorial iris violet with refined lavender contrast',
   },
   {
-    id: 'emerald',
+    id: 'verdant',
     label: 'Verdant',
-    primary: '#059669',
-    contrast: '#0d9488',
+    primary: '#10B981',
+    contrast: '#34D399',
     description: 'Deep emerald pine with muted arctic teal',
   },
   {
     id: 'amber',
     label: 'Amber',
-    primary: '#d97706',
-    contrast: '#c2410c',
+    primary: '#F59E0B',
+    contrast: '#FBBF24',
     description: 'Burnished warm gold with terracotta bronze',
+  },
+  {
+    id: 'terracotta',
+    label: 'Terracotta',
+    primary: '#F97316',
+    contrast: '#FB923C',
+    description: 'Sun-baked clay with vibrant burnt copper warmth',
   },
   {
     id: 'crimson',
     label: 'Crimson',
-    primary: '#dc2626',
-    contrast: '#991b1b',
+    primary: '#E11D48',
+    contrast: '#F43F5E',
     description: 'Velvet ruby crimson with rich garnet depth',
   },
   {
     id: 'titanium',
     label: 'Titanium',
-    primary: '#475569',
-    contrast: '#334155',
+    primary: '#64748B',
+    contrast: '#94A3B8',
     description: 'Architectural neutral slate with cold forged steel',
   },
 ]
 
 export const DEFAULT_THEME_PALETTES: Record<ThemeId, { paletteId: string; primary: string; contrast: string }> = {
   chatbot: {
-    paletteId: 'cobalt',
-    primary: '#2563eb',
-    contrast: '#0284c7',
+    paletteId: 'gold',
+    primary: '#D4A359',
+    contrast: '#E5B869',
   },
   anime: {
-    paletteId: 'amethyst',
-    primary: '#7c3aed',
-    contrast: '#e11d48',
+    paletteId: 'iris',
+    primary: '#8B5CF6',
+    contrast: '#A78BFA',
   },
   world: {
-    paletteId: 'emerald',
-    primary: '#059669',
-    contrast: '#0d9488',
+    paletteId: 'verdant',
+    primary: '#10B981',
+    contrast: '#34D399',
   },
 }
 
@@ -123,10 +137,10 @@ export function getContrastRatio(hex1: string, hex2: string): number {
  * Selects whether white (#ffffff) or dark obsidian (#09090b) yields
  * higher contrast according to WCAG contrast ratio calculations.
  */
-export function getContrastForeground(bgHex: string): '#ffffff' | '#09090b' {
-  const whiteRatio = getContrastRatio(bgHex, '#ffffff')
-  const darkRatio = getContrastRatio(bgHex, '#09090b')
-  return whiteRatio >= darkRatio ? '#ffffff' : '#09090b'
+export function getContrastForeground(bgHex: string): '#FFFFFF' | '#111111' {
+  const whiteRatio = getContrastRatio(bgHex, '#FFFFFF')
+  const darkRatio = getContrastRatio(bgHex, '#111111')
+  return whiteRatio >= darkRatio ? '#FFFFFF' : '#111111'
 }
 
 export function adjustBrightness(hex: string, percent: number): string {
@@ -255,67 +269,87 @@ export function applyThemeTokens(
   const cB = contrastRgb.b
 
   if (isDark) {
-    // 60% Deep Obsidian
-    root.style.setProperty('--c-bg', '#09090b')
-    root.style.setProperty('--c-bg-2', '#0f0f12')
-    // 30% Controlled layered surfaces
-    root.style.setProperty('--c-surface', '#151518')
-    root.style.setProperty('--c-surface-2', '#1c1c21')
-    root.style.setProperty('--c-surface-3', '#27272f')
-    root.style.setProperty('--c-surface-elevated', '#22222a')
-    // Borders
-    root.style.setProperty('--c-border', 'rgba(255, 255, 255, 0.08)')
-    root.style.setProperty('--c-border-strong', 'rgba(255, 255, 255, 0.16)')
-    root.style.setProperty('--c-sep', 'rgba(255, 255, 255, 0.06)')
-    // Text: WCAG AA compliant on #09090b
-    root.style.setProperty('--c-fg', '#f4f4f6')
-    root.style.setProperty('--c-muted', '#a1a1aa')
-    root.style.setProperty('--c-faint', '#71717a')
+    // 60% Astra Warm Dark — #12100E primary background
+    root.style.setProperty('--c-bg', '#12100E')
+    root.style.setProperty('--c-bg-2', '#17140F')
+    // 30% Controlled layered warm surfaces
+    root.style.setProperty('--c-surface', '#17140F')
+    root.style.setProperty('--c-surface-2', '#1E1A14')
+    root.style.setProperty('--c-surface-3', '#262019')
+    root.style.setProperty('--c-surface-elevated', '#1E1A14')
+    root.style.setProperty('--c-inset', '#0C0B09')
+    // Borders — warm ivory low opacity
+    root.style.setProperty('--c-border', 'rgba(242, 237, 227, 0.08)')
+    root.style.setProperty('--c-border-strong', 'rgba(242, 237, 227, 0.16)')
+    root.style.setProperty('--c-sep', 'rgba(242, 237, 227, 0.06)')
+    root.style.setProperty('--c-fill', 'rgba(242, 237, 227, 0.08)')
+    root.style.setProperty('--c-fill-2', 'rgba(242, 237, 227, 0.04)')
+    // Text: Astra warm typography
+    root.style.setProperty('--c-fg', '#F2EDE3')
+    root.style.setProperty('--c-muted', '#CEC7B8')
+    root.style.setProperty('--c-faint', '#A79E8D')
+    root.style.setProperty('--c-subtle', '#8A8172')
     // Chat bubbles
     root.style.setProperty('--c-bubble-user', primary)
     root.style.setProperty('--c-bubble-user-fg', primaryFg)
-    root.style.setProperty('--c-bubble-bot', '#18181d')
-    root.style.setProperty('--c-bubble-bot-fg', '#f4f4f6')
-    // Frosted glass (subtle, reserved for overlays & floating layers)
+    root.style.setProperty('--c-bubble-bot', '#1E1A14')
+    root.style.setProperty('--c-bubble-bot-fg', '#F2EDE3')
+    // Frosted glass (warm tinted for Astra depth)
     if (frostedGlass) {
-      root.style.setProperty('--c-glass', 'rgba(13, 16, 23, 0.65)')
-      root.style.setProperty('--c-glass-surface', 'rgba(20, 24, 34, 0.60)')
-      root.style.setProperty('--glass-blur', '20px')
+      root.style.setProperty('--c-glass-sidebar', 'rgba(23, 20, 15, 0.75)')
+      root.style.setProperty('--c-glass-header', 'rgba(23, 20, 15, 0.80)')
+      root.style.setProperty('--c-glass-composer', 'rgba(30, 26, 20, 0.82)')
+      root.style.setProperty('--c-glass-workspace', 'rgba(18, 16, 14, 0.45)')
+      root.style.setProperty('--c-glass-panel', 'rgba(30, 26, 20, 0.85)')
+      root.style.setProperty('--c-glass-modal', 'rgba(23, 20, 15, 0.90)')
+      root.style.setProperty('--c-glass', 'rgba(23, 20, 15, 0.78)')
+      root.style.setProperty('--c-glass-surface', 'rgba(30, 26, 20, 0.80)')
+      root.style.setProperty('--glass-blur', '24px')
     } else {
-      root.style.setProperty('--c-glass', '#0f0f12')
-      root.style.setProperty('--c-glass-surface', '#151518')
+      root.style.setProperty('--c-glass', '#17140F')
+      root.style.setProperty('--c-glass-surface', '#1E1A14')
       root.style.setProperty('--glass-blur', '0px')
     }
   } else {
-    // 60% Sophisticated Soft White / Paper
-    root.style.setProperty('--c-bg', '#f8f9fa')
-    root.style.setProperty('--c-bg-2', '#ffffff')
-    // 30% Controlled layered surfaces
-    root.style.setProperty('--c-surface', '#ffffff')
-    root.style.setProperty('--c-surface-2', '#f1f3f5')
-    root.style.setProperty('--c-surface-3', '#e9ecef')
-    root.style.setProperty('--c-surface-elevated', '#ffffff')
-    // Borders
+    // 60% Bright, Clean, Minimal — #FAFAFA pure neutral background (no yellow/cream)
+    root.style.setProperty('--c-bg', '#FAFAFA')
+    root.style.setProperty('--c-bg-2', '#FFFFFF')
+    // 30% Controlled layered crisp surfaces
+    root.style.setProperty('--c-surface', '#FFFFFF')
+    root.style.setProperty('--c-surface-2', '#F2F2F2')
+    root.style.setProperty('--c-surface-3', '#EAEAEA')
+    root.style.setProperty('--c-surface-elevated', '#F2F2F2')
+    root.style.setProperty('--c-inset', '#F0F0F0')
+    // Borders — subtle crisp neutral
     root.style.setProperty('--c-border', 'rgba(0, 0, 0, 0.08)')
-    root.style.setProperty('--c-border-strong', 'rgba(0, 0, 0, 0.16)')
+    root.style.setProperty('--c-border-strong', 'rgba(0, 0, 0, 0.14)')
     root.style.setProperty('--c-sep', 'rgba(0, 0, 0, 0.06)')
-    // Text: WCAG AA compliant (faint >= 4.5:1 against #f8f9fa)
-    root.style.setProperty('--c-fg', '#0f172a') // 16.6:1
-    root.style.setProperty('--c-muted', '#475569') // 7.2:1 (AAA)
-    root.style.setProperty('--c-faint', '#64748b') // 4.55:1 (AA)
+    root.style.setProperty('--c-fill', 'rgba(0, 0, 0, 0.05)')
+    root.style.setProperty('--c-fill-2', 'rgba(0, 0, 0, 0.03)')
+    // Text: High clarity dark slate
+    root.style.setProperty('--c-fg', '#111111')
+    root.style.setProperty('--c-muted', '#333333')
+    root.style.setProperty('--c-faint', '#666666')
+    root.style.setProperty('--c-subtle', '#888888')
     // Chat bubbles
     root.style.setProperty('--c-bubble-user', primary)
     root.style.setProperty('--c-bubble-user-fg', primaryFg)
-    root.style.setProperty('--c-bubble-bot', '#f1f3f5')
-    root.style.setProperty('--c-bubble-bot-fg', '#0f172a')
-    // Frosted glass
+    root.style.setProperty('--c-bubble-bot', '#F2F2F2')
+    root.style.setProperty('--c-bubble-bot-fg', '#111111')
+    // Frosted glass (clean bright)
     if (frostedGlass) {
-      root.style.setProperty('--c-glass', 'rgba(255, 255, 255, 0.70)')
-      root.style.setProperty('--c-glass-surface', 'rgba(248, 250, 252, 0.65)')
-      root.style.setProperty('--glass-blur', '20px')
+      root.style.setProperty('--c-glass-sidebar', 'rgba(255, 255, 255, 0.75)')
+      root.style.setProperty('--c-glass-header', 'rgba(255, 255, 255, 0.80)')
+      root.style.setProperty('--c-glass-composer', 'rgba(255, 255, 255, 0.85)')
+      root.style.setProperty('--c-glass-workspace', 'rgba(250, 250, 250, 0.45)')
+      root.style.setProperty('--c-glass-panel', 'rgba(255, 255, 255, 0.88)')
+      root.style.setProperty('--c-glass-modal', 'rgba(255, 255, 255, 0.92)')
+      root.style.setProperty('--c-glass', 'rgba(255, 255, 255, 0.75)')
+      root.style.setProperty('--c-glass-surface', 'rgba(250, 250, 250, 0.80)')
+      root.style.setProperty('--glass-blur', '24px')
     } else {
-      root.style.setProperty('--c-glass', '#ffffff')
-      root.style.setProperty('--c-glass-surface', '#f8f9fa')
+      root.style.setProperty('--c-glass', '#FFFFFF')
+      root.style.setProperty('--c-glass-surface', '#FAFAFA')
       root.style.setProperty('--glass-blur', '0px')
     }
   }
@@ -331,13 +365,13 @@ export function applyThemeTokens(
   root.style.setProperty('--c-accent-contrast-fg', contrastFg)
   root.style.setProperty('--c-accent-hover', isDark ? adjustBrightness(primary, 8) : adjustBrightness(primary, -8))
   root.style.setProperty('--c-accent-active', isDark ? adjustBrightness(primary, -12) : adjustBrightness(primary, 12))
-  root.style.setProperty('--c-accent-surface', `rgba(${pR}, ${pG}, ${pB}, ${isDark ? 0.10 : 0.08})`)
-  root.style.setProperty('--c-accent-surface-hover', `rgba(${pR}, ${pG}, ${pB}, ${isDark ? 0.16 : 0.12})`)
-  root.style.setProperty('--c-accent-border', `rgba(${pR}, ${pG}, ${pB}, ${isDark ? 0.22 : 0.18})`)
+  root.style.setProperty('--c-accent-surface', `rgba(${pR}, ${pG}, ${pB}, ${isDark ? 0.12 : 0.08})`)
+  root.style.setProperty('--c-accent-surface-hover', `rgba(${pR}, ${pG}, ${pB}, ${isDark ? 0.18 : 0.12})`)
+  root.style.setProperty('--c-accent-border', `rgba(${pR}, ${pG}, ${pB}, ${isDark ? 0.24 : 0.18})`)
   root.style.setProperty('--c-accent-ring', `rgba(${pR}, ${pG}, ${pB}, 0.35)`)
 
-  root.style.setProperty('--c-contrast-surface', `rgba(${cR}, ${cG}, ${cB}, ${isDark ? 0.10 : 0.08})`)
-  root.style.setProperty('--c-contrast-border', `rgba(${cR}, ${cG}, ${cB}, ${isDark ? 0.22 : 0.18})`)
+  root.style.setProperty('--c-contrast-surface', `rgba(${cR}, ${cG}, ${cB}, ${isDark ? 0.12 : 0.08})`)
+  root.style.setProperty('--c-contrast-border', `rgba(${cR}, ${cG}, ${cB}, ${isDark ? 0.24 : 0.18})`)
 
   root.style.setProperty('--grad-accent', `linear-gradient(135deg, ${primary} 0%, ${contrast} 100%)`)
   root.style.setProperty('--shadow-accent', `0 8px 24px -8px rgba(${pR}, ${pG}, ${pB}, ${isDark ? 0.35 : 0.2})`)
@@ -348,8 +382,20 @@ export function applyThemeTokens(
   root.style.setProperty('--c-danger', '#dc2626')
   root.style.setProperty('--c-info', '#2563eb')
 
-  const metaColor = isDark ? '#09090b' : '#f8f9fa'
+  const metaColor = isDark ? '#12100E' : '#FAFAFA'
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', metaColor)
+
+  // Dynamic theme favicon update
+  const faviconEl = document.querySelector("link[rel*='icon']")
+  if (faviconEl) {
+    faviconEl.setAttribute('href', isDark ? './favicon-dark.svg' : './favicon-light.svg')
+  }
+
+  // Dynamic theme icon update for desktop window / dock
+  if (typeof window !== 'undefined') {
+    const desktopApi = (window as unknown as { evaDesktop?: { setThemeIcon?: (t: string) => void } }).evaDesktop
+    desktopApi?.setThemeIcon?.(isDark ? 'dark' : 'light')
+  }
 
   return { isDark, primary, contrast, primaryFg, contrastFg }
 }

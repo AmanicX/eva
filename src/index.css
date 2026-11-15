@@ -87,98 +87,105 @@
  * ------------------------------------------------------------------ */
 
 :root {
-  /* Neutral Dark (Default 60-30-10 distribution) */
-  --c-bg: #09090b;
-  --c-bg-2: #0f0f12;
-  --c-surface: #151518;
-  --c-surface-2: #1c1c21;
-  --c-surface-3: #27272f;
-  --c-surface-elevated: #22222a;
-  --c-border: rgba(255, 255, 255, 0.08);
-  --c-border-strong: rgba(255, 255, 255, 0.16);
-  --c-sep: rgba(255, 255, 255, 0.06);
-  --c-fill: rgba(255, 255, 255, 0.08);
-  --c-fill-2: rgba(255, 255, 255, 0.04);
+  /* 60% Astra Warm Dark — #12100E primary background (no pure #000000) */
+  --c-bg: #12100E;
+  --c-bg-2: #17140F;
+  --c-surface: #17140F;
+  --c-surface-2: #1E1A14;
+  --c-surface-3: #262019;
+  --c-surface-elevated: #1E1A14;
+  --c-inset: #0C0B09;
+  --c-border: rgba(242, 237, 227, 0.08);
+  --c-border-strong: rgba(242, 237, 227, 0.16);
+  --c-sep: rgba(242, 237, 227, 0.06);
+  --c-fill: rgba(242, 237, 227, 0.08);
+  --c-fill-2: rgba(242, 237, 227, 0.04);
 
-  /* Multi-tier Frosted Glass Tokens (Dark Mode) */
-  --c-glass-sidebar: rgba(11, 13, 18, 0.65);
-  --c-glass-header: rgba(13, 16, 23, 0.68);
-  --c-glass-composer: rgba(14, 17, 24, 0.72);
-  --c-glass-workspace: rgba(9, 10, 14, 0.40);
-  --c-glass-panel: rgba(18, 22, 30, 0.80);
-  --c-glass-modal: rgba(15, 18, 26, 0.85);
-  --c-glass: rgba(13, 16, 23, 0.68);
-  --c-glass-surface: rgba(18, 22, 30, 0.75);
+  /* Multi-tier Frosted Glass Tokens (Astra Warm Dark) */
+  --c-glass-sidebar: rgba(23, 20, 15, 0.75);
+  --c-glass-header: rgba(23, 20, 15, 0.80);
+  --c-glass-composer: rgba(30, 26, 20, 0.82);
+  --c-glass-workspace: rgba(18, 16, 14, 0.45);
+  --c-glass-panel: rgba(30, 26, 20, 0.85);
+  --c-glass-modal: rgba(23, 20, 15, 0.90);
+  --c-glass: rgba(23, 20, 15, 0.78);
+  --c-glass-surface: rgba(30, 26, 20, 0.80);
   --glass-blur: 24px;
 
-  --c-accent-rgb: 37, 99, 235;
-  --c-contrast-rgb: 2, 132, 199;
-  --c-fg: #f4f4f6;
-  --c-muted: #a1a1aa;
-  --c-faint: #71717a;
+  --c-accent-rgb: 212, 163, 89;
+  --c-contrast-rgb: 229, 184, 105;
+  --c-fg: #F2EDE3;
+  --c-muted: #CEC7B8;
+  --c-faint: #A79E8D;
+  --c-subtle: #8A8172;
 
-  /* Accent defaults (Cobalt) */
-  --c-accent: #0a84ff;
-  --c-accent-contrast: #38bdf8;
-  --c-accent-2: #38bdf8;
-  --c-accent-fg: #ffffff;
-  --c-accent-contrast-fg: #09090b;
-  --c-accent-hover: #1f8eff;
-  --c-accent-active: #0077e6;
-  --c-accent-surface: rgba(10, 132, 255, 0.12);
-  --c-accent-surface-hover: rgba(10, 132, 255, 0.18);
-  --c-accent-border: rgba(10, 132, 255, 0.28);
-  --c-accent-ring: rgba(10, 132, 255, 0.35);
+  /* Accent defaults (Astra Gold) */
+  --c-accent: #D4A359;
+  --c-accent-contrast: #E5B869;
+  --c-accent-2: #E5B869;
+  --c-accent-fg: #111111;
+  --c-accent-contrast-fg: #111111;
+  --c-accent-hover: #DDB16C;
+  --c-accent-active: #C49144;
+  --c-accent-surface: rgba(212, 163, 89, 0.12);
+  --c-accent-surface-hover: rgba(212, 163, 89, 0.18);
+  --c-accent-border: rgba(212, 163, 89, 0.24);
+  --c-accent-ring: rgba(212, 163, 89, 0.35);
 
-  --c-contrast-surface: rgba(56, 189, 248, 0.12);
-  --c-contrast-border: rgba(56, 189, 248, 0.28);
+  --c-contrast-surface: rgba(229, 184, 105, 0.12);
+  --c-contrast-border: rgba(229, 184, 105, 0.24);
 
-  --grad-accent: linear-gradient(135deg, #0a84ff 0%, #38bdf8 100%);
-  --shadow-accent: 0 8px 24px -8px rgba(10, 132, 255, 0.45);
+  --grad-accent: linear-gradient(135deg, #D4A359 0%, #E5B869 100%);
+  --shadow-accent: 0 8px 24px -8px rgba(212, 163, 89, 0.35);
 
   /* Semantics */
-  --c-success: #30d158;
-  --c-warning: #ff9f0a;
-  --c-danger: #ff453a;
-  --c-info: #0a84ff;
+  --c-success: #16a34a;
+  --c-warning: #d97706;
+  --c-danger: #dc2626;
+  --c-info: #2563eb;
 
-  --c-bubble-user: #0a84ff;
-  --c-bubble-user-fg: #ffffff;
-  --c-bubble-bot: #18181d;
-  --c-bubble-bot-fg: #f4f4f6;
+  --c-bubble-user: #D4A359;
+  --c-bubble-user-fg: #111111;
+  --c-bubble-bot: #1E1A14;
+  --c-bubble-bot-fg: #F2EDE3;
 }
 
 html.light,
 [data-appearance='light'] {
-  --c-bg: #f8f9fa;
-  --c-bg-2: #ffffff;
-  --c-surface: #ffffff;
-  --c-surface-2: #f1f3f5;
-  --c-surface-3: #e9ecef;
-  --c-surface-elevated: #ffffff;
+  /* 60% Bright, Clean, Minimal — #FAFAFA pure neutral background (no yellow/cream) */
+  --c-bg: #FAFAFA;
+  --c-bg-2: #FFFFFF;
+  --c-surface: #FFFFFF;
+  --c-surface-2: #F2F2F2;
+  --c-surface-3: #EAEAEA;
+  --c-surface-elevated: #F2F2F2;
+  --c-inset: #F0F0F0;
   --c-border: rgba(0, 0, 0, 0.08);
-  --c-border-strong: rgba(0, 0, 0, 0.16);
+  --c-border-strong: rgba(0, 0, 0, 0.14);
   --c-sep: rgba(0, 0, 0, 0.06);
   --c-fill: rgba(0, 0, 0, 0.05);
   --c-fill-2: rgba(0, 0, 0, 0.03);
 
   /* Multi-tier Frosted Glass Tokens (Light Mode) */
-  --c-glass-sidebar: rgba(255, 255, 255, 0.68);
-  --c-glass-header: rgba(255, 255, 255, 0.72);
-  --c-glass-composer: rgba(255, 255, 255, 0.78);
-  --c-glass-workspace: rgba(255, 255, 255, 0.42);
-  --c-glass-panel: rgba(255, 255, 255, 0.84);
-  --c-glass-modal: rgba(255, 255, 255, 0.88);
-  --c-glass: rgba(255, 255, 255, 0.70);
-  --c-glass-surface: rgba(248, 250, 252, 0.80);
+  --c-glass-sidebar: rgba(255, 255, 255, 0.75);
+  --c-glass-header: rgba(255, 255, 255, 0.80);
+  --c-glass-composer: rgba(255, 255, 255, 0.85);
+  --c-glass-workspace: rgba(250, 250, 250, 0.45);
+  --c-glass-panel: rgba(255, 255, 255, 0.88);
+  --c-glass-modal: rgba(255, 255, 255, 0.92);
+  --c-glass: rgba(255, 255, 255, 0.75);
+  --c-glass-surface: rgba(250, 250, 250, 0.80);
   --glass-blur: 24px;
 
-  --c-fg: #0f172a;
-  --c-muted: #475569;
-  --c-faint: #64748b;
+  --c-fg: #111111;
+  --c-muted: #333333;
+  --c-faint: #666666;
+  --c-subtle: #888888;
 
-  --c-bubble-bot: #f1f3f5;
-  --c-bubble-bot-fg: #18181b;
+  --c-bubble-user: #D4A359;
+  --c-bubble-user-fg: #111111;
+  --c-bubble-bot: #F2F2F2;
+  --c-bubble-bot-fg: #111111;
 }
 
 [data-frosted='false'] {
@@ -210,22 +217,22 @@ html.light,
 @media (max-width: 768px), (pointer: coarse) {
   :root {
     --glass-blur: 10px;
-    --c-glass-sidebar: rgba(14, 17, 24, 0.88);
-    --c-glass-header: rgba(15, 18, 26, 0.90);
-    --c-glass-composer: rgba(16, 20, 28, 0.92);
-    --c-glass-workspace: rgba(11, 13, 18, 0.65);
-    --c-glass-panel: rgba(18, 22, 32, 0.92);
-    --c-glass-modal: rgba(16, 19, 28, 0.95);
+    --c-glass-sidebar: rgba(23, 20, 15, 0.90);
+    --c-glass-header: rgba(23, 20, 15, 0.92);
+    --c-glass-composer: rgba(30, 26, 20, 0.94);
+    --c-glass-workspace: rgba(18, 16, 14, 0.65);
+    --c-glass-panel: rgba(30, 26, 20, 0.94);
+    --c-glass-modal: rgba(23, 20, 15, 0.96);
   }
 
   html.light,
   [data-appearance='light'] {
     --glass-blur: 10px;
-    --c-glass-sidebar: rgba(255, 255, 255, 0.88);
-    --c-glass-header: rgba(255, 255, 255, 0.90);
-    --c-glass-composer: rgba(255, 255, 255, 0.92);
-    --c-glass-workspace: rgba(255, 255, 255, 0.65);
-    --c-glass-panel: rgba(255, 255, 255, 0.92);
+    --c-glass-sidebar: rgba(255, 255, 255, 0.90);
+    --c-glass-header: rgba(255, 255, 255, 0.92);
+    --c-glass-composer: rgba(255, 255, 255, 0.94);
+    --c-glass-workspace: rgba(250, 250, 250, 0.65);
+    --c-glass-panel: rgba(255, 255, 255, 0.94);
     --c-glass-modal: rgba(255, 255, 255, 0.96);
   }
 }

@@ -13,6 +13,8 @@ const desktopApi = {
   deleteSecureCredential: (key) => ipcRenderer.invoke('secure-storage-delete', key),
   // Google PKCE Loopback OAuth
   startGoogleOAuth: (authUrl, port) => ipcRenderer.invoke('oauth-google-start', authUrl, port),
+  // Dynamic Theme Icon Switching
+  setThemeIcon: (theme) => ipcRenderer.send('theme-icon-change', theme),
 }
 
 // Expose modern evaDesktop and legacy nexusDesktop for backwards compatibility

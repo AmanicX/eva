@@ -13,6 +13,7 @@ import {
   Moon,
   Palette,
   RefreshCw,
+  RotateCcw,
   Search,
   ShieldCheck,
   Sparkles,
@@ -38,6 +39,7 @@ import { THEMES, THEME_ORDER } from '@/data/themes'
 import { AppLogo } from './AppLogo'
 import {
   CURATED_PALETTES,
+  DEFAULT_THEME_PALETTES,
   applyThemeTokens,
   deriveContrastColor,
   isValidHex,
@@ -231,6 +233,27 @@ export function SettingsModal() {
     handleCustomContrast(contrast)
   }
 
+  const handleResetThemeDefaults = () => {
+    const defaultPalette = DEFAULT_THEME_PALETTES[settings.theme] || DEFAULT_THEME_PALETTES.chatbot
+    const nextAccents = {
+      ...settings.themeAccents,
+      [settings.theme]: { ...defaultPalette },
+    }
+    updateSettings({
+      accentPalette: defaultPalette.paletteId,
+      customAccentColor: defaultPalette.primary,
+      customContrastColor: defaultPalette.contrast,
+      themeAccents: nextAccents,
+    })
+    applyThemeTokens(
+      settings.appearanceMode,
+      settings.theme,
+      defaultPalette.primary,
+      defaultPalette.contrast,
+      settings.frostedGlass,
+    )
+  }
+
   const handleFrostedToggle = (enabled: boolean) => {
     updateSettings({ frostedGlass: enabled })
     applyThemeTokens(
@@ -282,7 +305,7 @@ export function SettingsModal() {
               {/* Appearance Mode */}
               <Section
                 title="Appearance Mode"
-                hint="Deep obsidian black, clean paper light, or follow your operating system."
+                hint="Astra warm dark, clean minimal light, or automatically match your operating system theme."
               >
                 <div className="seg grid w-full grid-cols-3">
                   <button
@@ -417,6 +440,15 @@ export function SettingsModal() {
                       />
                     </div>
                   </div>
+                </div>
+
+                <div className="flex justify-end pt-1">
+                  <button
+                    onClick={handleResetThemeDefaults}
+                    className="flex items-center gap-1.5 text-xs text-muted hover:text-fg rounded-lg px-2.5 py-1.5 hover:bg-surface-2 transition"
+                  >
+                    <RotateCcw size={13} /> Reset to Default Accent
+                  </button>
                 </div>
               </Section>
 

@@ -108,10 +108,10 @@ export const DEFAULT_SETTINGS: Settings = {
   onboarded: false,
   // Appearance & Design System
   appearanceMode: 'dark',
-  accentPalette: 'cobalt',
+  accentPalette: 'gold',
   frostedGlass: true,
-  customAccentColor: '#0a84ff',
-  customContrastColor: '#38bdf8',
+  customAccentColor: '#D4A359',
+  customContrastColor: '#E5B869',
   themeAccents: {
     chatbot: { ...DEFAULT_THEME_PALETTES.chatbot },
     anime: { ...DEFAULT_THEME_PALETTES.anime },
