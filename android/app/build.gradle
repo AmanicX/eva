@@ -18,32 +18,34 @@ android {
     }
     signingConfigs {
         debug {
-            // Standard Android debug signing (uses default ~/.android/debug.keystore)
+            v1SigningEnabled true
+            v2SigningEnabled true
         }
         release {
-            def storePath = System.getenv("ANDROID_KEYSTORE_PATH") ?: project.findProperty("android.injected.signing.store.file") ?: "../eva-release.keystore"
-            def storePass = System.getenv("KEYSTORE_PASSWORD") ?: project.findProperty("android.injected.signing.store.password") ?: "nexusapp2026"
-            def keyId = System.getenv("KEY_ALIAS") ?: project.findProperty("android.injected.signing.key.alias") ?: "nexus"
-            def keyPass = System.getenv("KEY_PASSWORD") ?: project.findProperty("android.injected.signing.key.password") ?: "nexusapp2026"
-
-            if (storePath && file(storePath).exists()) {
-                storeFile file(storePath)
-                storePassword storePass
-                keyAlias keyId
-                keyPassword keyPass
-                v1SigningEnabled true
-                v2SigningEnabled true
-                enableV3Signing = true
-                enableV4Signing = true
+            v1SigningEnabled true
+            v2SigningEnabled true
+            def keystorePath = System.getenv("ANDROID_KEYSTORE_PATH") ?: "../nexus-release.keystore"
+            def keystoreFile = file(keystorePath)
+            if (keystoreFile.exists()) {
+                storeFile keystoreFile
+                storePassword System.getenv("KEYSTORE_PASSWORD") ?: "nexusapp2026"
+                keyAlias System.getenv("KEY_ALIAS") ?: "nexus"
+                keyPassword System.getenv("KEY_PASSWORD") ?: "nexusapp2026"
             }
         }
     }
     buildTypes {
         debug {
-            signingConfig signingConfigs.debug
+            def keystorePath = System.getenv("ANDROID_KEYSTORE_PATH") ?: "../nexus-release.keystore"
+            def keystoreFile = file(keystorePath)
+            if (keystoreFile.exists()) {
+                signingConfig signingConfigs.release
+            }
         }
         release {
-            if (signingConfigs.release.storeFile != null) {
+            def keystorePath = System.getenv("ANDROID_KEYSTORE_PATH") ?: "../nexus-release.keystore"
+            def keystoreFile = file(keystorePath)
+            if (keystoreFile.exists()) {
                 signingConfig signingConfigs.release
             } else {
                 signingConfig signingConfigs.debug

@@ -98,7 +98,7 @@ jobs:
 
       - name: Configure signing credentials
         run: |
-          KEYSTORE_PATH="android/eva-release.keystore"
+          KEYSTORE_PATH="android/nexus-release.keystore"
           if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
             echo "Using custom ANDROID_KEYSTORE_BASE64 secret."
             echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
@@ -107,7 +107,7 @@ jobs:
             echo "$DEFAULT_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
           fi
           chmod 600 "$KEYSTORE_PATH"
-          echo "ANDROID_KEYSTORE_PATH=../eva-release.keystore" >> $GITHUB_ENV
+          echo "ANDROID_KEYSTORE_PATH=../nexus-release.keystore" >> $GITHUB_ENV
           echo "KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD:-nexusapp2026}" >> $GITHUB_ENV
           echo "KEY_ALIAS=${KEY_ALIAS:-nexus}" >> $GITHUB_ENV
           echo "KEY_PASSWORD=${KEY_PASSWORD:-nexusapp2026}" >> $GITHUB_ENV
@@ -173,7 +173,7 @@ jobs:
       - name: Secure cleanup of temporary keystore
         if: always()
         run: |
-          rm -f android/eva-release.keystore
+          rm -f android/nexus-release.keystore
           echo "Temporary keystore file securely destroyed."
 
   release:
