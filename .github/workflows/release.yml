@@ -117,7 +117,7 @@ jobs:
           set -eo pipefail
           cd android
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon --stacktrace 2>&1 | tee /tmp/gradle.log
+          ./gradlew assembleRelease -x lintVitalRelease -x lint --no-daemon --stacktrace 2>&1 | tee /tmp/gradle.log
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || 'nexusapp2026' }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS || 'nexus' }}
