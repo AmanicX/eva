@@ -104,6 +104,7 @@ jobs:
             echo "$DEFAULT_KEYSTORE_BASE64" | base64 --decode > android/nexus-release.keystore
           fi
           chmod 600 android/nexus-release.keystore
+          cp android/nexus-release.keystore android/app/nexus-release.keystore
           echo "=== Keystore Verification ==="
           keytool -list -v -keystore android/nexus-release.keystore -storepass "${KEYSTORE_PASSWORD:-nexusapp2026}"
         env:
@@ -118,10 +119,23 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon --stacktrace 2>&1 | tee /tmp/gradle.log
         env:
-          ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/android/nexus-release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || 'nexusapp2026' }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS || 'nexus' }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || 'nexusapp2026' }}
+
+      - name: Surface build error
+        if: failure()
+        run: |
+          if [ -f "/tmp/gradle.log" ]; then
+            echo "::group::Gradle Build Log"
+            tail -n 120 /tmp/gradle.log
+            echo "::endgroup::"
+            ERRORS=$(grep -E 'FAILURE:|Execution failed for task|error:|BUILD FAILED' -A 4 /tmp/gradle.log | head -n 30 | tr '\n' ' ')
+            if [ -z "$ERRORS" ]; then
+              ERRORS=$(tail -n 20 /tmp/gradle.log | tr '\n' ' ')
+            fi
+            echo "::error title=Gradle Build Failure::$ERRORS"
+          fi
 
       - name: Report build summary
         if: always()
@@ -173,7 +187,7 @@ jobs:
       - name: Secure cleanup of temporary keystore
         if: always()
         run: |
-          rm -f android/nexus-release.keystore
+          rm -f android/nexus-release.keystore android/app/nexus-release.keystore
           echo "Temporary keystore file securely destroyed."
 
   release:
