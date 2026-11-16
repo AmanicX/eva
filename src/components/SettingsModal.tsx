@@ -1416,7 +1416,7 @@ export function SettingsModal() {
                   <div className="flex items-center gap-2">
                     <h2 className="font-display text-lg font-bold text-fg">Eva</h2>
                     <span className="rounded-md bg-accent/15 px-2 py-0.5 text-xs font-semibold text-accent">
-                      v2.0.0
+                      v2.1.0
                     </span>
                   </div>
                   <p className="text-xs text-muted mt-0.5">

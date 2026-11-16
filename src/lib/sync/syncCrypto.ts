@@ -164,7 +164,7 @@ export async function encryptBackup(
   salt: Uint8Array,
   meta: SyncEnvelopeMeta,
   deviceId: string,
-  appVersion: string = '2.0.1',
+  appVersion: string = '2.1.0',
   options?: {
     envelopeId?: string
     parentEnvelopeId?: string
