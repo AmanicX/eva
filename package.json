@@ -1,7 +1,7 @@
 {
   "name": "eva",
   "private": true,
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Eva - Advanced AI Chatbot — a privacy-first, memory-aware AI character and chat studio for any OpenAI-compatible provider (Groq, OpenRouter, Ollama, LM Studio).",
   "author": "Eva",
   "license": "MIT",
@@ -17,6 +17,7 @@
     "dist": "npm run build:electron && electron-builder",
     "pack:win": "npm run build:electron && electron-builder --win",
     "pack:linux": "npm run build:electron && electron-builder --linux",
+    "pack:mac": "npm run build:electron && electron-builder --mac",
     "cap:sync": "npm run build:web && cap sync android",
     "cap:open": "cap open android",
     "android:apk": "npm run cap:sync && cd android && gradlew assembleDebug",
@@ -67,6 +68,18 @@
     },
     "pacman": {
       "artifactName": "eva-${version}.${ext}"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "build/icon.png",
+      "category": "public.app-category.utilities",
+      "identity": null
+    },
+    "dmg": {
+      "artifactName": "Eva-${version}.${ext}"
     }
   },
   "dependencies": {
