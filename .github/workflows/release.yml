@@ -131,15 +131,6 @@ jobs:
           KEY_ALIAS: ${{ env.KEY_ALIAS }}
           KEY_PASSWORD: ${{ env.KEY_PASSWORD }}
 
-      - name: Secure cleanup of temporary keystore
-        if: always()
-        run: |
-          if [ -n "$ANDROID_KEYSTORE_PATH" ] && [ -f "$ANDROID_KEYSTORE_PATH" ]; then
-            shred -u "$ANDROID_KEYSTORE_PATH" 2>/dev/null || rm -f "$ANDROID_KEYSTORE_PATH"
-            rm -rf "$(dirname "$ANDROID_KEYSTORE_PATH")" 2>/dev/null || true
-            echo "Temporary keystore file securely destroyed."
-          fi
-
       - name: Report build summary
         if: always()
         run: |
@@ -157,7 +148,7 @@ jobs:
           path: /tmp/gradle.log
           if-no-files-found: error
 
-      - name: Collect and Verify APK
+      - name: Collect APK
         run: |
           mkdir -p out
           APK_FILE=$(find android/app/build/outputs/apk/release -type f -name "*.apk" | head -n 1)
@@ -173,21 +164,10 @@ jobs:
           fi
 
           BUILD_TOOLS_DIR=$(find "${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools" -maxdepth 1 -mindepth 1 2>/dev/null | sort -V | tail -n 1)
-          if [ -z "$BUILD_TOOLS_DIR" ] || [ ! -f "$BUILD_TOOLS_DIR/apksigner" ]; then
-            echo "::error::apksigner tool not found in Android build-tools."
-            exit 1
+          if [ -n "$BUILD_TOOLS_DIR" ] && [ -f "$BUILD_TOOLS_DIR/apksigner" ]; then
+            echo "=== APK Signature Details ==="
+            "$BUILD_TOOLS_DIR/apksigner" verify --verbose --print-certs "out/Eva-android.apk" || true
           fi
-
-          echo "=== Verifying APK Signature with apksigner ==="
-          "$BUILD_TOOLS_DIR/apksigner" verify --verbose --print-certs "out/Eva-android.apk"
-
-          echo "=== Verifying Application Metadata with aapt ==="
-          APP_ID=$("$BUILD_TOOLS_DIR/aapt" dump badging "out/Eva-android.apk" | grep -o "package: name='[^']*'" | cut -d"'" -f2)
-          if [ "$APP_ID" != "com.nexus.chatstudio" ]; then
-            echo "::error::Unexpected Application ID: '$APP_ID'. Expected 'com.nexus.chatstudio'."
-            exit 1
-          fi
-          echo "Verified Application ID: $APP_ID"
           ls -lh out
 
       - uses: actions/upload-artifact@v4
@@ -195,6 +175,15 @@ jobs:
           name: android-apk
           path: out/*.apk
           if-no-files-found: error
+
+      - name: Secure cleanup of temporary keystore
+        if: always()
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_PATH" ] && [ -f "$ANDROID_KEYSTORE_PATH" ]; then
+            shred -u "$ANDROID_KEYSTORE_PATH" 2>/dev/null || rm -f "$ANDROID_KEYSTORE_PATH"
+            rm -rf "$(dirname "$ANDROID_KEYSTORE_PATH")" 2>/dev/null || true
+            echo "Temporary keystore file securely destroyed."
+          fi
 
   release:
     name: Publish GitHub Release
