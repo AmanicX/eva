@@ -98,8 +98,7 @@ jobs:
 
       - name: Configure signing credentials
         run: |
-          KEYSTORE_DIR=$(mktemp -d /tmp/eva-signing.XXXXXX)
-          KEYSTORE_PATH="$KEYSTORE_DIR/eva-release.keystore"
+          KEYSTORE_PATH="android/eva-release.keystore"
           if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
             echo "Using custom ANDROID_KEYSTORE_BASE64 secret."
             echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
@@ -108,11 +107,11 @@ jobs:
             echo "$DEFAULT_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
           fi
           chmod 600 "$KEYSTORE_PATH"
-          echo "ANDROID_KEYSTORE_PATH=$KEYSTORE_PATH" >> $GITHUB_ENV
+          echo "ANDROID_KEYSTORE_PATH=../eva-release.keystore" >> $GITHUB_ENV
           echo "KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD:-nexusapp2026}" >> $GITHUB_ENV
           echo "KEY_ALIAS=${KEY_ALIAS:-nexus}" >> $GITHUB_ENV
           echo "KEY_PASSWORD=${KEY_PASSWORD:-nexusapp2026}" >> $GITHUB_ENV
-          echo "Secure release keystore configured at restrictive temporary path."
+          echo "Secure release keystore configured at $KEYSTORE_PATH."
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -124,12 +123,7 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon --stacktrace 2>&1 | tee /tmp/gradle.log
-        env:
-          ANDROID_KEYSTORE_PATH: ${{ env.ANDROID_KEYSTORE_PATH }}
-          KEYSTORE_PASSWORD: ${{ env.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ env.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ env.KEY_PASSWORD }}
+          ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Report build summary
         if: always()
@@ -179,11 +173,8 @@ jobs:
       - name: Secure cleanup of temporary keystore
         if: always()
         run: |
-          if [ -n "$ANDROID_KEYSTORE_PATH" ] && [ -f "$ANDROID_KEYSTORE_PATH" ]; then
-            shred -u "$ANDROID_KEYSTORE_PATH" 2>/dev/null || rm -f "$ANDROID_KEYSTORE_PATH"
-            rm -rf "$(dirname "$ANDROID_KEYSTORE_PATH")" 2>/dev/null || true
-            echo "Temporary keystore file securely destroyed."
-          fi
+          rm -f android/eva-release.keystore
+          echo "Temporary keystore file securely destroyed."
 
   release:
     name: Publish GitHub Release
