@@ -109,14 +109,14 @@ export function TitleBar() {
       <div className="flex flex-1 items-center justify-center px-4">
         <button
           onClick={() => setUI({ commandPaletteOpen: true })}
-          className="flex items-center gap-2 rounded-lg border border-border/80 bg-surface/70 px-3 py-1 text-2xs text-muted hover:border-accent/40 hover:bg-surface hover:text-fg transition shadow-xs"
+          className="group flex items-center gap-2 rounded-xl border border-border/80 bg-surface/70 px-3.5 py-1 text-2xs text-muted hover:border-accent/60 hover:bg-surface hover:text-fg hover:shadow-xs active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:border-accent transition-all duration-200"
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           title="Open Command Palette (Ctrl+K / Cmd+K)"
         >
-          <Search size={12} className="text-faint shrink-0" />
+          <Search size={12} className="text-faint group-hover:text-accent shrink-0 transition-colors duration-200" />
           <span className="hidden sm:inline font-sans text-3xs">Search chats, models & commands…</span>
           <span className="sm:hidden font-sans text-3xs">Search…</span>
-          <kbd className="font-mono text-3xs font-semibold bg-surface-3 border border-border rounded px-1.5 py-0.2 text-faint">
+          <kbd className="font-mono text-3xs font-semibold bg-surface-3/80 border border-border/80 rounded px-1.5 py-0.2 text-faint group-hover:text-muted transition-colors">
             Ctrl K
           </kbd>
         </button>

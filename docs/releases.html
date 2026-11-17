@@ -129,18 +129,54 @@
 
     <!-- Version Index -->
     <nav class="container container-narrow rel-index-nav" aria-label="Releases Jump Navigation">
-      <a href="#v210" class="rel-index-chip latest">v2.1.0 (Latest)</a>
+      <a href="#v220" class="rel-index-chip latest">v2.2.0 (Latest)</a>
+      <a href="#v210" class="rel-index-chip">v2.1.0</a>
       <a href="#v200" class="rel-index-chip">v2.0.0</a>
       <a href="#v120" class="rel-index-chip">v1.2.0</a>
       <a href="#v110" class="rel-index-chip">v1.1.0</a>
       <a href="#v100" class="rel-index-chip">v1.0.0</a>
     </nav>
 
+    <!-- v2.2.0 Release -->
+    <article class="container container-narrow rel-article" id="v220">
+      <div class="rel-meta-bar">
+        <span class="rel-tag-version">2.2.0</span>
+        <span class="rel-badge-badge">Latest Release</span>
+        <span class="rel-date">November 2026 · Windows, Linux, Android, Web</span>
+      </div>
+      <h2 class="rel-title-heading">Eva 2.2.0 — A More Refined Experience</h2>
+      <p class="rel-intro">
+        A major UI/UX redesign and frontend experience upgrade. Replaces the cramped desktop settings popup with a dedicated, spacious full-screen section, introduces smooth section navigation with animated tab indicators, establishes a consistent layout system, refines mobile touch interactions, and enforces strict desktop-only separation for local AI inference.
+      </p>
+
+      <div class="rel-grid-changes">
+        <div class="rel-change-card">
+          <div class="rel-change-title">✦ Full-Screen Desktop Settings Experience</div>
+          <div class="rel-change-desc">Settings on desktop and laptop layouts now expands into a dedicated full-screen application section with a grouped two-column navigation hierarchy, generous typography, and spacious card layouts.</div>
+        </div>
+        <div class="rel-change-card">
+          <div class="rel-change-title">✦ Refined Mobile Settings Presentation</div>
+          <div class="rel-change-desc">Mobile settings preserves its familiar bottom-sheet dialog format with horizontal scrolling pill tabs, comfortable 44px+ touch targets, zero horizontal overflow, and safe-area padding.</div>
+        </div>
+        <div class="rel-change-card">
+          <div class="rel-change-title">✦ Fluid Motion &amp; Interaction Animations</div>
+          <div class="rel-change-desc">Added smooth Framer Motion tab transitions, active navigation pill gliding, search bar focus glow, button press feedback (0.97 scale), and accessible reduced-motion support.</div>
+        </div>
+        <div class="rel-change-card">
+          <div class="rel-change-title">✦ Consistent Layout &amp; Symmetrical Cards</div>
+          <div class="rel-change-desc">Eliminated awkward blank areas and disproportionate containers with balanced two-column and three-column grids, aligned top edges, and consistent radii.</div>
+        </div>
+        <div class="rel-change-card">
+          <div class="rel-change-title">✦ Desktop-Only Local AI Provider Separation</div>
+          <div class="rel-change-desc">Local models (Ollama, LM Studio) are strictly reserved for Eva Desktop, preventing nonfunctional loopback errors on mobile while preserving cross-device settings integrity.</div>
+        </div>
+      </div>
+    </article>
+
     <!-- v2.1.0 Release -->
     <article class="container container-narrow rel-article" id="v210">
       <div class="rel-meta-bar">
         <span class="rel-tag-version">2.1.0</span>
-        <span class="rel-badge-badge">Latest Release</span>
         <span class="rel-date">November 2026 · Windows, Linux, Android, Web</span>
       </div>
       <h2 class="rel-title-heading">Astra Redesign, Dynamic Theme-Aware Icons & Setup Guide</h2>

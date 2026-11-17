@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { Capacitor } from '@capacitor/core'
 
 /**
@@ -108,4 +109,34 @@ export function getSupportedProviderPresets<T extends { id: string }>(
   isMobile = isMobilePlatform(),
 ): T[] {
   return presets.filter((p) => isProviderSupportedOnPlatform(p.id, isMobile))
+}
+
+/**
+ * React hook that returns true when the viewport/platform should use the desktop
+ * full-screen layout, and false when it should use the mobile sheet presentation.
+ *
+ * Rules:
+ * - Native Android / iOS Capacitor apps are ALWAYS mobile (false)
+ * - Mobile User-Agent browsers are ALWAYS mobile (false)
+ * - Electron desktop is ALWAYS desktop (true)
+ * - Web browsers use a responsive breakpoint (window.innerWidth >= 768)
+ */
+export function useIsDesktopLayout(): boolean {
+  const [isDesktop, setIsDesktop] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true
+    if (isMobilePlatform()) return false
+    if (isDesktopPlatform()) return true
+    return window.innerWidth >= 768
+  })
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || isMobilePlatform() || isDesktopPlatform()) return
+
+    const mq = window.matchMedia('(min-width: 768px)')
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
+  return isDesktop
 }

@@ -214,7 +214,7 @@ export function Sidebar() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search conversations…"
-              className="field py-1 pl-8 pr-7 text-xs h-8"
+              className="field py-1 pl-8 pr-7 text-xs h-8 focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all duration-200"
             />
             {query && (
               <button

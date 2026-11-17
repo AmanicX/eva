@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   AlertCircle,
+  ArrowLeft,
   Check,
   Cloud,
   Cpu,
@@ -9,14 +10,17 @@ import {
   Eye,
   EyeOff,
   ExternalLink,
+  Globe2,
   KeyRound,
   Laptop,
+  MessageSquare,
   Moon,
   Palette,
   RefreshCw,
   RotateCcw,
   Search,
   ShieldCheck,
+  Sliders,
   Sparkles,
   Sun,
   Terminal,
@@ -24,8 +28,10 @@ import {
   Upload,
   User,
   Wand2,
+  X,
   Zap,
 } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import { useStore } from '@/store/useStore'
 import {
   GROQ_MODELS,
@@ -50,6 +56,8 @@ import {
   isLocalProvider,
   getSupportedProviderPresets,
   isLocalUrl,
+  useIsDesktopLayout,
+  isDesktopPlatform,
 } from '@/lib/platform'
 import { DoneButton } from './DoneButton'
 import { THEMES, THEME_ORDER } from '@/data/themes'
@@ -68,16 +76,87 @@ import { cn, clamp, download } from '@/lib/utils'
 import type { AppearanceMode } from '@/types'
 import type { UIState } from '@/store/useStore'
 
-const TABS: { id: UIState['settingsTab']; label: string; icon: React.ReactNode }[] = [
-  { id: 'appearance', label: 'Appearance', icon: <Palette size={16} /> },
-  { id: 'connection', label: 'Connection', icon: <KeyRound size={16} /> },
-  { id: 'persona', label: 'Persona', icon: <User size={16} /> },
-  { id: 'themes', label: 'Modes', icon: <Sparkles size={16} /> },
-  { id: 'commands', label: 'Commands', icon: <Terminal size={16} /> },
-  { id: 'data', label: 'Data', icon: <Database size={16} /> },
-  { id: 'sync', label: 'Cloud Sync', icon: <Cloud size={16} /> },
-  { id: 'about', label: 'About & Legal', icon: <ShieldCheck size={16} /> },
+export interface SettingsTabItem {
+  id: UIState['settingsTab']
+  label: string
+  desc: string
+  headerDesc: string
+  icon: React.ReactNode
+  category: 'studio' | 'tools' | 'system'
+}
+
+const TABS: SettingsTabItem[] = [
+  {
+    id: 'appearance',
+    label: 'Appearance',
+    desc: 'Themes, accent palettes & glass',
+    headerDesc: 'Customize visual theme, accent colors, contrast ratios, and frosted glass transparency.',
+    icon: <Palette size={16} />,
+    category: 'studio',
+  },
+  {
+    id: 'connection',
+    label: 'Connection',
+    desc: 'AI providers, models & fallback',
+    headerDesc: 'Configure active model endpoint, API credentials, streaming parameters, and automatic fallback failover.',
+    icon: <KeyRound size={16} />,
+    category: 'studio',
+  },
+  {
+    id: 'persona',
+    label: 'Persona',
+    desc: 'User identity, name & tone',
+    headerDesc: 'Define your username, personal backstory, and customized roleplay guidelines for character conversations.',
+    icon: <User size={16} />,
+    category: 'studio',
+  },
+  {
+    id: 'themes',
+    label: 'Modes',
+    desc: 'Chatbot, Anime & World studios',
+    headerDesc: 'Switch active creative studio environment between Chatbot, Anime Character, and Interactive World simulation.',
+    icon: <Sparkles size={16} />,
+    category: 'studio',
+  },
+  {
+    id: 'commands',
+    label: 'Commands',
+    desc: 'Scene syntax & quick reference',
+    headerDesc: 'Reference list for story scene syntax, dice rolling, narration directives, and character prompt commands.',
+    icon: <Terminal size={16} />,
+    category: 'tools',
+  },
+  {
+    id: 'data',
+    label: 'Data',
+    desc: 'Backups, export & storage usage',
+    headerDesc: 'Export zero-knowledge JSON backups, restore saved databases, or reset local application storage.',
+    icon: <Database size={16} />,
+    category: 'tools',
+  },
+  {
+    id: 'sync',
+    label: 'Cloud Sync',
+    desc: 'Zero-knowledge encrypted cloud sync',
+    headerDesc: 'End-to-end encrypted synchronization across devices via Google Drive or GitHub with 24-word recovery passphrase.',
+    icon: <Cloud size={16} />,
+    category: 'tools',
+  },
+  {
+    id: 'about',
+    label: 'About & Legal',
+    desc: 'Eva v2.2.0, terms & license',
+    headerDesc: 'Application version, open-source software licenses, terms of service, and official project links.',
+    icon: <ShieldCheck size={16} />,
+    category: 'system',
+  },
 ]
+
+const CATEGORIES = [
+  { id: 'studio', label: 'Studio & AI', tabs: TABS.filter((t) => t.category === 'studio') },
+  { id: 'tools', label: 'Tools & Data', tabs: TABS.filter((t) => t.category === 'tools') },
+  { id: 'system', label: 'System', tabs: TABS.filter((t) => t.category === 'system') },
+] as const
 
 export function SettingsModal() {
   const settings = useStore((s) => s.settings)
@@ -312,46 +391,32 @@ export function SettingsModal() {
     )
   }
 
-  return (
-    <Modal
-      open={open}
-      onClose={() => setUI({ settingsOpen: false })}
-      title="Settings"
-      subtitle="Configure studio, appearance & AI models"
-      icon={<Zap size={18} />}
-      size="lg"
-      bodyClassName="p-0"
-    >
-      <div className="flex min-h-[58dvh] flex-col sm:flex-row">
-        {/* Navigation Sidebar */}
-        <nav className="scrollbar-none flex gap-1 overflow-x-auto border-b border-border p-2 sm:w-44 sm:shrink-0 sm:flex-col sm:overflow-visible sm:border-r sm:border-b-0 sm:p-3">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setUI({ settingsTab: t.id })}
-              className={cn(
-                'flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium whitespace-nowrap transition',
-                tab === t.id
-                  ? 'bg-surface-3 text-fg'
-                  : 'text-muted hover:bg-surface-2 hover:text-fg',
-              )}
-            >
-              {t.icon}
-              {t.label}
-            </button>
-          ))}
-        </nav>
+  const isDesktopLayout = useIsDesktopLayout()
+  const isDesktop = isDesktopPlatform()
 
-        {/* Content Body */}
-        <div className="scroll-thin max-h-[64dvh] flex-1 overflow-y-auto p-5 sm:p-6">
-          {/* ============================================================== */}
-          {/* APPEARANCE TAB */}
-          {/* ============================================================== */}
-          {tab === 'appearance' && (
+  useEffect(() => {
+    if (!open) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setUI({ settingsOpen: false })
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [open, setUI])
+
+  const currentTab = TABS.find((t) => t.id === tab) || TABS[0]
+
+  const renderTabContent = (currentTabId: UIState['settingsTab']) => {
+    switch (currentTabId) {
+      case 'appearance':
+        return (
             <div className="space-y-6">
               {/* Appearance Mode */}
               <Section
                 title="Appearance Mode"
+                icon={<Sun size={15} />}
                 hint="Astra warm dark, clean minimal light, or automatically match your operating system theme."
               >
                 <div className="seg grid w-full grid-cols-3">
@@ -382,6 +447,7 @@ export function SettingsModal() {
               {/* Accent Themes */}
               <Section
                 title="Accent Palette"
+                icon={<Sparkles size={15} />}
                 hint={`Active for ${THEMES[settings.theme].name} mode. Eva remembers accent colors per mode.`}
               >
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -434,6 +500,7 @@ export function SettingsModal() {
               {/* Custom Accent & Contrast Picker */}
               <Section
                 title="Custom Colors & Contrast"
+                icon={<Palette size={15} />}
                 hint="Fine-tune your 10% primary accent and its complementary secondary contrast."
               >
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -502,6 +569,7 @@ export function SettingsModal() {
               {/* Frosted Glass Setting */}
               <Section
                 title="Material & Frosted Glass"
+                icon={<Wand2 size={15} />}
                 hint="Controlled background blur on floating panels and headers. Disable for solid, high-contrast surfaces."
               >
                 <Toggle
@@ -517,7 +585,7 @@ export function SettingsModal() {
               </Section>
 
               {/* Live Design System Preview Card */}
-              <Section title="Live Preview" hint="How your current combination renders in Eva.">
+              <Section title="Live Preview" icon={<Eye size={15} />} hint="How your current combination renders in Eva.">
                 <div className="rounded-2xl border border-border/80 material p-4 space-y-3">
                   <div className="flex items-center gap-3">
                     <AppLogo className="size-10 shadow-md ring-1 ring-border/80" />
@@ -555,15 +623,14 @@ export function SettingsModal() {
                 </div>
               </Section>
             </div>
-          )}
 
-          {/* ============================================================== */}
-          {/* CONNECTION TAB */}
-          {/* ============================================================== */}
-          {tab === 'connection' && (
+        )
+      case 'connection':
+        return (
             <div className="space-y-5">
               <Section
                 title="Provider"
+                icon={<Globe2 size={15} />}
                 hint={
                   isMobile
                     ? 'Groq, Ollama Cloud (Gemma 4), OpenRouter, Google AI, or custom cloud endpoints.'
@@ -640,6 +707,7 @@ export function SettingsModal() {
 
               <Section
                 title={needsKey ? 'Credentials' : 'API key (optional)'}
+                icon={<KeyRound size={15} />}
                 hint={
                   needsKey
                     ? 'Stored securely on this device and sent only to the provider above.'
@@ -815,6 +883,7 @@ export function SettingsModal() {
 
               <Section
                 title="Model"
+                icon={<Cpu size={15} />}
                 hint={curated?.note ?? 'Type or select any model supported by your provider.'}
               >
                 <div className="flex gap-2">
@@ -883,6 +952,7 @@ export function SettingsModal() {
               {(activePreset?.id === 'google' || activePreset?.id === 'pollinations') && (
                 <Section
                   title={`${activePreset.label} Modalities`}
+                  icon={<Sliders size={15} />}
                   hint="Enable or disable specific capabilities (Chat, Image generation, Voice TTS)."
                 >
                   <div className="space-y-3">
@@ -1021,6 +1091,7 @@ export function SettingsModal() {
               {/* Defaults & Fallback Sequence */}
               <Section
                 title="Capability Defaults & Fallback Sequence"
+                icon={<Zap size={15} />}
                 hint="Configure preferred defaults for each capability and automatic failover handling."
               >
                 <div className="space-y-5">
@@ -1216,7 +1287,7 @@ export function SettingsModal() {
                 </div>
               </Section>
 
-              <Section title="Generation Parameters">
+              <Section title="Generation Parameters" icon={<Sliders size={15} />}>
                 <Slider
                   label="Temperature"
                   value={settings.temperature}
@@ -1253,7 +1324,7 @@ export function SettingsModal() {
                 </label>
               </Section>
 
-              <Section title="Behaviour">
+              <Section title="Behaviour" icon={<MessageSquare size={15} />}>
                 <Toggle
                   label="Stream responses"
                   desc="Display text tokens incrementally as they are generated."
@@ -1268,7 +1339,7 @@ export function SettingsModal() {
                 />
               </Section>
 
-              <Section title="Text-to-Speech (TTS)">
+              <Section title="Text-to-Speech (TTS)" icon={<Sparkles size={15} />}>
                 <Toggle
                   label="Enable Text-to-Speech"
                   desc="Allow listening to spoken assistant dialogue with high-quality synthetic voices."
@@ -1289,15 +1360,14 @@ export function SettingsModal() {
                 />
               </Section>
             </div>
-          )}
 
-          {/* ============================================================== */}
-          {/* PERSONA TAB */}
-          {/* ============================================================== */}
-          {tab === 'persona' && (
+        )
+      case 'persona':
+        return (
             <div className="space-y-5">
               <Section
                 title="Universal system prompt"
+                icon={<Terminal size={15} />}
                 hint="Master instructions applied across every character in every mode."
               >
                 <textarea
@@ -1310,6 +1380,7 @@ export function SettingsModal() {
 
               <Section
                 title="User Persona"
+                icon={<User size={15} />}
                 hint="Defines your identity, preferences, and standing to every character."
               >
                 <textarea
@@ -1324,12 +1395,10 @@ export function SettingsModal() {
                 </p>
               </Section>
             </div>
-          )}
 
-          {/* ============================================================== */}
-          {/* MODES TAB */}
-          {/* ============================================================== */}
-          {tab === 'themes' && (
+        )
+      case 'themes':
+        return (
             <div className="space-y-3">
               <p className="text-sm text-muted">
                 Each mode is an isolated experience. Characters and conversations remain strictly
@@ -1379,26 +1448,22 @@ export function SettingsModal() {
                 )
               })}
             </div>
-          )}
 
-          {/* ============================================================== */}
-          {/* COMMANDS TAB */}
-          {/* ============================================================== */}
-          {tab === 'commands' && (
+        )
+      case 'commands':
+        return (
             <div className="space-y-4">
               <p className="text-sm text-muted leading-relaxed">
                 Direct rich scenes by embedding these command tags inside your messages.
               </p>
               <CommandCheatsheet />
             </div>
-          )}
 
-          {/* ============================================================== */}
-          {/* DATA TAB */}
-          {/* ============================================================== */}
-          {tab === 'data' && (
+        )
+      case 'data':
+        return (
             <div className="space-y-5">
-              <Section title="Local Storage Workspace" hint="All data lives private and local on this device.">
+              <Section title="Local Storage Workspace" icon={<Database size={15} />} hint="All data lives private and local on this device.">
                 <div className="grid grid-cols-3 gap-2">
                   <Stat label="Characters" value={characters.length} />
                   <Stat label="Worlds" value={worlds.length} />
@@ -1406,7 +1471,7 @@ export function SettingsModal() {
                 </div>
               </Section>
 
-              <Section title="Setup Guide & Tour" hint="Reopen the interactive provider setup guide and orientation tour.">
+              <Section title="Setup Guide & Tour" icon={<Sparkles size={15} />} hint="Reopen the interactive provider setup guide and orientation tour.">
                 <button
                   onClick={() => setUI({ settingsOpen: false, welcomeOpen: true })}
                   className="btn"
@@ -1415,7 +1480,7 @@ export function SettingsModal() {
                 </button>
               </Section>
 
-              <Section title="Backup & Restore">
+              <Section title="Backup & Restore" icon={<Upload size={15} />}>
                 <div className="flex flex-wrap gap-2">
                   <button onClick={exportData} className="btn">
                     <Download size={15} /> Export JSON backup
@@ -1437,7 +1502,7 @@ export function SettingsModal() {
                 </div>
               </Section>
 
-              <Section title="Danger Zone">
+              <Section title="Danger Zone" icon={<Trash2 size={15} />}>
                 <button
                   onClick={() => {
                     if (
@@ -1455,14 +1520,12 @@ export function SettingsModal() {
                 </button>
               </Section>
             </div>
-          )}
 
-          {/* ============================================================== */}
-          {/* CLOUD SYNC TAB */}
-          {/* ============================================================== */}
-          {tab === 'sync' && <SyncSettings />}
-
-          {tab === 'about' && (
+        )
+      case 'sync':
+        return <SyncSettings />
+      case 'about':
+        return (
             <div className="space-y-6">
               <div className="flex items-center gap-4 rounded-2xl border border-border bg-surface/50 p-4">
                 <AppLogo className="size-14 shadow-lg ring-1 ring-border/80" />
@@ -1470,7 +1533,7 @@ export function SettingsModal() {
                   <div className="flex items-center gap-2">
                     <h2 className="font-display text-lg font-bold text-fg">Eva</h2>
                     <span className="rounded-md bg-accent/15 px-2 py-0.5 text-xs font-semibold text-accent">
-                      v2.1.0
+                      v2.2.0
                     </span>
                   </div>
                   <p className="text-xs text-muted mt-0.5">
@@ -1482,7 +1545,7 @@ export function SettingsModal() {
                 </div>
               </div>
 
-              <Section title="Privacy & Security" hint="Zero telemetry, local storage only">
+              <Section title="Privacy & Security" icon={<ShieldCheck size={15} />} hint="Zero telemetry, local storage only">
                 <div className="rounded-xl border border-border bg-surface p-3.5 text-xs text-muted leading-relaxed space-y-2">
                   <p>
                     <strong className="text-fg">100% Client-Side:</strong> All chats, characters, memories, and settings are stored locally on your device.
@@ -1496,7 +1559,7 @@ export function SettingsModal() {
                 </div>
               </Section>
 
-              <Section title="Terms & Conditions (T&C)" hint="Core user terms">
+              <Section title="Terms & Conditions (T&C)" icon={<Terminal size={15} />} hint="Core user terms">
                 <div className="rounded-xl border border-border bg-surface p-3.5 text-2xs text-muted leading-relaxed space-y-2 max-h-48 overflow-y-auto">
                   <p><strong>1. Acceptance:</strong> By using Eva, you agree to these terms.</p>
                   <p><strong>2. License:</strong> Eva is distributed under the MIT License.</p>
@@ -1506,7 +1569,7 @@ export function SettingsModal() {
                 </div>
               </Section>
 
-              <Section title="Open Source Licenses" hint="Third-party dependencies and licensing">
+              <Section title="Open Source Licenses" icon={<ShieldCheck size={15} />} hint="Third-party dependencies and licensing">
                 <div className="rounded-xl border border-border bg-surface p-3.5 text-2xs text-muted leading-relaxed space-y-2">
                   <p>
                     <strong className="text-fg">Eva:</strong> MIT License © 2026 AmanicX and Eva contributors.
@@ -1517,7 +1580,7 @@ export function SettingsModal() {
                 </div>
               </Section>
 
-              <Section title="Repository & Links">
+              <Section title="Repository & Links" icon={<ExternalLink size={15} />}>
                 <div className="flex flex-wrap gap-2">
                   <a
                     href="https://github.com/AmanicX/eva"
@@ -1538,32 +1601,256 @@ export function SettingsModal() {
                 </div>
               </Section>
             </div>
-          )}
+
+        )
+      default:
+        return null
+    }
+  }
+
+  if (isDesktopLayout) {
+    return (
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.995 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.995 }}
+            transition={{ duration: 0.16, ease: 'easeOut' }}
+            className="fixed inset-x-0 bottom-0 z-40 flex flex-col bg-bg text-fg select-none overflow-hidden"
+            style={{ top: isDesktop ? '36px' : '0px' }}
+          >
+            {/* Top Bar for Desktop Settings */}
+            <header className="hairline h-14 shrink-0 border-b border-border/80 bg-surface/40 backdrop-blur-md px-6 flex items-center justify-between z-10">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setUI({ settingsOpen: false })}
+                  className="group inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-medium text-muted hover:bg-surface-2 hover:text-fg transition-all active:scale-[0.98]"
+                >
+                  <ArrowLeft size={16} className="text-muted group-hover:text-fg transition-transform group-hover:-translate-x-0.5" />
+                  <span>Back to Studio</span>
+                </button>
+                <div className="h-4 w-px bg-border/60" />
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-muted/70">Settings</span>
+                  <span className="text-muted/40">/</span>
+                  <span className="font-semibold text-fg flex items-center gap-1.5">
+                    <span className="text-accent">{currentTab.icon}</span>
+                    <span>{currentTab.label}</span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <kbd className="hidden sm:inline-flex items-center gap-1 text-2xs font-mono text-muted bg-surface-2 border border-border/80 px-2 py-0.5 rounded-md shadow-2xs">
+                  Esc
+                </kbd>
+                <button
+                  onClick={() => setUI({ settingsOpen: false })}
+                  className="btn btn-ghost size-8 rounded-xl p-0 grid place-items-center text-muted hover:text-fg hover:bg-surface-2 transition active:scale-[0.96]"
+                  aria-label="Close settings"
+                  title="Close (Esc)"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </header>
+
+            {/* 2-Column Application Layout */}
+            <div className="flex min-h-0 flex-1 w-full overflow-hidden">
+              {/* Left Navigation Sidebar */}
+              <aside className="w-72 border-r border-border/80 bg-surface/30 p-4 flex flex-col justify-between overflow-y-auto scrollbar-none shrink-0">
+                <div className="space-y-6">
+                  {CATEGORIES.map((cat) => (
+                    <div key={cat.id} className="space-y-1.5">
+                      <div className="px-3 text-3xs font-bold uppercase tracking-wider text-muted/60">
+                        {cat.label}
+                      </div>
+                      <div className="space-y-0.5">
+                        {cat.tabs.map((t) => {
+                          const isActive = tab === t.id
+                          return (
+                            <button
+                              key={t.id}
+                              onClick={() => setUI({ settingsTab: t.id })}
+                              className={cn(
+                                'group relative flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-150',
+                                isActive
+                                  ? 'bg-surface-3 text-fg font-medium shadow-xs ring-1 ring-border/80'
+                                  : 'text-muted hover:bg-surface-2/60 hover:text-fg',
+                              )}
+                            >
+                              {isActive && (
+                                <motion.div
+                                  layoutId="activeTabIndicator"
+                                  className="absolute left-1 top-2.5 bottom-2.5 w-1 rounded-full bg-accent"
+                                  transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                                />
+                              )}
+                              <span
+                                className={cn(
+                                  'mt-0.5 shrink-0 transition-colors',
+                                  isActive ? 'text-accent' : 'text-muted/70 group-hover:text-fg',
+                                )}
+                              >
+                                {t.icon}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <div className="text-xs font-semibold leading-snug">{t.label}</div>
+                                <div className="text-3xs text-muted/70 leading-normal line-clamp-1 mt-0.5">
+                                  {t.desc}
+                                </div>
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Footer Brand Info */}
+                <div className="pt-4 border-t border-border/50">
+                  <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-surface/40 border border-border/60">
+                    <AppLogo className="size-6 rounded-md shadow-xs ring-1 ring-border/60" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-display text-xs font-bold text-fg">Eva</span>
+                        <span className="text-3xs font-semibold px-1.5 py-0.2 rounded bg-accent/15 text-accent">
+                          v2.2.0
+                        </span>
+                      </div>
+                      <p className="text-3xs text-muted truncate">Client-Side AI Studio</p>
+                    </div>
+                  </div>
+                </div>
+              </aside>
+
+              {/* Right Main Content Area */}
+              <main className="flex-1 overflow-y-auto p-8 lg:p-10 scroll-thin bg-bg/50">
+                <div className="max-w-4xl mx-auto space-y-6">
+                  {/* Current Section Header */}
+                  <div className="border-b border-border/80 pb-5">
+                    <div className="flex items-center gap-3">
+                      <div className="size-10 rounded-xl bg-accent/10 border border-accent/20 grid place-items-center text-accent">
+                        {currentTab.icon}
+                      </div>
+                      <div>
+                        <h1 className="font-display text-2xl font-bold tracking-tight text-fg">
+                          {currentTab.label}
+                        </h1>
+                        <p className="text-xs text-muted mt-0.5 leading-relaxed">
+                          {currentTab.headerDesc}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Animated Tab Body */}
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={tab}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.16, ease: 'easeOut' }}
+                    >
+                      {renderTabContent(tab)}
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+              </main>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    )
+  }
+
+  return (
+    <Modal
+      open={open}
+      onClose={() => setUI({ settingsOpen: false })}
+      title="Settings"
+      subtitle="Configure studio, appearance & AI models"
+      icon={<Zap size={18} />}
+      size="lg"
+      bodyClassName="p-0"
+    >
+      <div className="flex flex-col min-h-[60dvh]">
+        {/* Mobile Horizontal Scrolling Tabs */}
+        <nav
+          aria-label="Settings categories"
+          className="scrollbar-none flex gap-1.5 overflow-x-auto border-b border-border/80 bg-surface/30 px-3 py-2 shrink-0 touch-pan-x"
+        >
+          {TABS.map((t) => {
+            const isActive = tab === t.id
+            return (
+              <button
+                key={t.id}
+                onClick={() => setUI({ settingsTab: t.id })}
+                className={cn(
+                  'flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-medium whitespace-nowrap min-h-[44px] transition-all active:scale-[0.98]',
+                  isActive
+                    ? 'bg-surface-3 text-fg shadow-xs border border-border/80 text-accent font-semibold'
+                    : 'text-muted hover:bg-surface-2 hover:text-fg',
+                )}
+              >
+                <span className={isActive ? 'text-accent' : 'text-muted'}>{t.icon}</span>
+                <span>{t.label}</span>
+              </button>
+            )
+          })}
+        </nav>
+
+        {/* Mobile Content Body */}
+        <div className="scroll-thin max-h-[65dvh] flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={tab}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.14, ease: 'easeOut' }}
+            >
+              {renderTabContent(tab)}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
     </Modal>
   )
 }
 
+
 function Section({
   title,
   hint,
+  icon,
   children,
+  className,
 }: {
   title: string
   hint?: string
+  icon?: React.ReactNode
   children: React.ReactNode
+  className?: string
 }) {
   return (
-    <section className="space-y-2.5">
+    <section
+      className={cn(
+        'rounded-2xl border border-border/80 bg-surface/40 p-5 sm:p-6 space-y-4 shadow-xs hover:border-border transition-colors',
+        className,
+      )}
+    >
       <div>
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-fg">
-          <Cpu size={13} className="text-faint" />
-          {title}
+        <h3 className="flex items-center gap-2 text-sm sm:text-base font-semibold text-fg tracking-tight">
+          {icon && <span className="text-accent shrink-0">{icon}</span>}
+          <span>{title}</span>
         </h3>
-        {hint && <p className="mt-0.5 text-2xs text-faint leading-relaxed">{hint}</p>}
+        {hint && <p className="mt-1 text-2xs sm:text-xs text-muted leading-relaxed">{hint}</p>}
       </div>
-      <div className="space-y-2.5">{children}</div>
+      <div className="space-y-4">{children}</div>
     </section>
   )
 }

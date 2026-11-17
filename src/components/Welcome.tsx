@@ -321,7 +321,7 @@ export function Welcome() {
                 <div className="flex items-center gap-2">
                   <h3 className="font-display text-base font-bold text-fg">Eva AI Studio</h3>
                   <span className="rounded-full bg-accent/15 px-2 py-0.5 text-2xs font-medium text-accent">
-                    v2.0
+                    v2.2.0
                   </span>
                 </div>
                 <p className="mt-0.5 text-xs text-muted">
