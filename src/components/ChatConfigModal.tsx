@@ -5,6 +5,7 @@ import { useStore } from '@/store/useStore'
 import { PROVIDER_PRESETS, MODEL_SUGGESTIONS } from '@/lib/groq'
 import { GOOGLE_TTS_VOICES, POLLINATIONS_TTS_VOICES } from '@/lib/tts'
 import { GOOGLE_IMAGE_MODELS, POLLINATIONS_IMAGE_MODELS } from '@/lib/imageGeneration'
+import { isMobilePlatform, isProviderSupportedOnPlatform, isLocalProvider } from '@/lib/platform'
 import type { PerChatConfig } from '@/types'
 
 interface ChatConfigModalProps {
@@ -84,16 +85,20 @@ export function ChatConfigModal({ open, onClose }: ChatConfigModalProps) {
     onClose()
   }
 
+  const isMobile = isMobilePlatform()
+  const isCurrentLocal = isMobile && isLocalProvider(chatProvider)
+
   // Helper lists
   const availableChatProviders = PROVIDER_PRESETS.filter(
     (p) =>
-      settings.keyedProviders.includes(p.id) ||
-      p.id === 'ollama' ||
-      p.id === 'lmstudio' ||
-      p.id === 'pollinations',
+      isProviderSupportedOnPlatform(p.id, isMobile) &&
+      (settings.keyedProviders.includes(p.id) ||
+        p.id === 'ollama' ||
+        p.id === 'lmstudio' ||
+        p.id === 'pollinations'),
   )
 
-  const chatSuggestions = chatProvider !== 'inherit' ? MODEL_SUGGESTIONS[chatProvider] || [] : []
+  const chatSuggestions = chatProvider !== 'inherit' && !isCurrentLocal ? MODEL_SUGGESTIONS[chatProvider] || [] : []
 
   return (
     <Modal
@@ -144,12 +149,22 @@ export function ChatConfigModal({ open, onClose }: ChatConfigModalProps) {
                 className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-xs text-fg outline-none focus:border-accent"
               >
                 <option value="inherit">Inherit Global Default</option>
+                {isCurrentLocal && (
+                  <option value={chatProvider} disabled>
+                    {PROVIDER_PRESETS.find((p) => p.id === chatProvider)?.label || chatProvider} (Desktop Only)
+                  </option>
+                )}
                 {availableChatProviders.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.label}
                   </option>
                 ))}
               </select>
+              {isCurrentLocal && (
+                <p className="mt-1 text-2xs text-amber-500">
+                  Configured with a local desktop model. On mobile, choose a cloud provider or inherit global settings.
+                </p>
+              )}
             </div>
 
             {chatProvider !== 'inherit' && (

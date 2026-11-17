@@ -11,6 +11,7 @@ import { useStore } from '@/store/useStore'
 import { THEMES } from '@/data/themes'
 import { ANIME_PRESETS, avatarFor, presetToCharacter } from '@/data/anime'
 import { providerNeedsKey } from '@/lib/groq'
+import { isMobilePlatform } from '@/lib/platform'
 import { uid } from '@/lib/utils'
 import { Avatar } from './Avatar'
 import { AppLogo } from './AppLogo'
@@ -132,7 +133,9 @@ export function EmptyState() {
             <span className="min-w-0 flex-1">
               <span className="block text-xs font-semibold text-fg">No AI provider connected</span>
               <span className="block text-2xs text-muted">
-                Configure your API key (Groq, OpenRouter, Ollama, etc.) to start conversations.
+                {isMobilePlatform()
+                  ? 'Configure your API key (Groq, OpenRouter, Google AI, etc.) to start conversations.'
+                  : 'Configure your API key (Groq, OpenRouter, Ollama, etc.) to start conversations.'}
               </span>
             </span>
           </button>

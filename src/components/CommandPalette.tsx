@@ -20,6 +20,7 @@ import {
 import { useStore } from '@/store/useStore'
 import { CURATED_PALETTES, applyThemeTokens } from '@/data/palettes'
 import { PROVIDER_PRESETS } from '@/lib/groq'
+import { getSupportedProviderPresets } from '@/lib/platform'
 import { cn } from '@/lib/utils'
 import { AppLogo } from '@/components/AppLogo'
 
@@ -261,7 +262,7 @@ export function CommandPalette() {
     }
 
     // 4. Providers
-    for (const p of PROVIDER_PRESETS) {
+    for (const p of getSupportedProviderPresets(PROVIDER_PRESETS)) {
       list.push({
         id: `provider-${p.id}`,
         category: 'Providers',

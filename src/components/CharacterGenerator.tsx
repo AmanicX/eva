@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { useStore, MIN_AGE } from '@/store/useStore'
 import { providerNeedsKey, PROVIDER_PRESETS, MODEL_SUGGESTIONS } from '@/lib/groq'
+import { isMobilePlatform, isProviderSupportedOnPlatform } from '@/lib/platform'
 import { lookupOnlineInfo } from '@/lib/lookup'
 import {
   generateCharacterProfile,
@@ -483,7 +484,7 @@ export function CharacterGenerator({
                       className="w-full rounded-lg border border-border bg-surface px-2 py-1 text-2xs text-fg outline-none"
                     >
                       <option value="inherit">Global Default</option>
-                      {PROVIDER_PRESETS.map((p) => (
+                      {PROVIDER_PRESETS.filter((p) => isProviderSupportedOnPlatform(p.id, isMobilePlatform())).map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.label}
                         </option>

@@ -2,6 +2,8 @@ import type { GroqModel } from '@/types'
 
 export const DEFAULT_BASE_URL = 'https://api.groq.com/openai/v1'
 
+import { isMobilePlatform, isLocalUrl } from './platform'
+
 export interface ProviderPreset {
   id: string
   label: string
@@ -233,6 +235,11 @@ function errorFrom(body: string, status: number) {
 
 export async function* streamGroq(opts: GroqChatOptions): AsyncGenerator<string> {
   const resolved = resolveBaseUrl(opts.baseUrl)
+  if (isMobilePlatform() && isLocalUrl(resolved)) {
+    throw new Error(
+      'Local AI inference (localhost / 127.0.0.1) is not supported on mobile devices. Use Eva Desktop to connect to local servers or configure a cloud provider.',
+    )
+  }
   const res = await fetch(`${resolved}/chat/completions`, {
     method: 'POST',
     headers: headers(opts.apiKey, resolved),
@@ -279,6 +286,11 @@ export async function* streamGroq(opts: GroqChatOptions): AsyncGenerator<string>
 
 export async function chatGroq(opts: GroqChatOptions): Promise<string> {
   const resolved = resolveBaseUrl(opts.baseUrl)
+  if (isMobilePlatform() && isLocalUrl(resolved)) {
+    throw new Error(
+      'Local AI inference (localhost / 127.0.0.1) is not supported on mobile devices. Use Eva Desktop to connect to local servers or configure a cloud provider.',
+    )
+  }
   const res = await fetch(`${resolved}/chat/completions`, {
     method: 'POST',
     headers: headers(opts.apiKey, resolved),
@@ -302,6 +314,9 @@ export async function listGroqModels(
   accountId?: string,
 ): Promise<string[]> {
   const resolved = resolveBaseUrl(baseUrl, accountId)
+  if (isMobilePlatform() && isLocalUrl(resolved)) {
+    return []
+  }
 
   // 1. Direct Pollinations text models endpoint
   if (resolved.includes('text.pollinations.ai')) {

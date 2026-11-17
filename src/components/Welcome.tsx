@@ -43,6 +43,11 @@ import {
 } from '@/lib/credentials'
 import { GOOGLE_TTS_VOICES, POLLINATIONS_TTS_VOICES } from '@/lib/tts'
 import { GOOGLE_IMAGE_MODELS, POLLINATIONS_IMAGE_MODELS } from '@/lib/imageGeneration'
+import {
+  isMobilePlatform,
+  isLocalProvider,
+  getSupportedProviderPresets,
+} from '@/lib/platform'
 import { DoneButton } from './DoneButton'
 import { Modal } from './Modal'
 import { cn } from '@/lib/utils'
@@ -114,10 +119,20 @@ export function Welcome() {
   const [savedCfApiToken, setSavedCfApiToken] = useState('')
   const [savedKey, setSavedKey] = useState('')
 
+  const isMobile = isMobilePlatform()
+  const supportedPresets = useMemo(
+    () => getSupportedProviderPresets(PROVIDER_PRESETS, isMobile),
+    [isMobile],
+  )
+
   // Determine active guide based on current baseUrl
   const currentGuide: ProviderGuide = useMemo(() => {
-    return getGuideForBaseUrl(settings.baseUrl)
-  }, [settings.baseUrl])
+    const guide = getGuideForBaseUrl(settings.baseUrl)
+    if (isMobile && isLocalProvider(guide.id)) {
+      return PROVIDER_GUIDES.groq
+    }
+    return guide
+  }, [settings.baseUrl, isMobile])
 
   useEffect(() => {
     if (!open) return
@@ -186,6 +201,7 @@ export function Welcome() {
   }
 
   const selectProviderPreset = (presetId: string) => {
+    if (isMobile && isLocalProvider(presetId)) return
     const guide = PROVIDER_GUIDES[presetId] || PROVIDER_GUIDES.groq
     updateSettings({
       baseUrl: guide.defaultBaseUrl,
@@ -315,10 +331,9 @@ export function Welcome() {
             </div>
 
             <p className="text-sm leading-relaxed text-muted">
-              Eva is designed to give you complete creative freedom. Rather than locking you into
-              a proprietary subscription, Eva connects directly to whichever AI provider you choose:
-              fast cloud inference (Groq, OpenRouter, OpenAI) or 100% private models running locally
-              on your own computer (Ollama, LM Studio).
+              {isMobile
+                ? 'Eva is designed to give you complete creative freedom. Rather than locking you into a proprietary subscription, Eva connects directly to whichever cloud AI provider you choose: fast cloud inference via Groq, OpenRouter, Google AI, or Pollinations. Private offline local models (Ollama, LM Studio) are supported when running Eva Desktop.'
+                : 'Eva is designed to give you complete creative freedom. Rather than locking you into a proprietary subscription, Eva connects directly to whichever AI provider you choose: fast cloud inference (Groq, OpenRouter, OpenAI) or 100% private models running locally on your own computer (Ollama, LM Studio).'}
             </p>
 
             <div className="grid gap-2.5 sm:grid-cols-3">
@@ -328,7 +343,9 @@ export function Welcome() {
                   <h4 className="text-xs font-semibold text-fg">You Bring The Model</h4>
                 </div>
                 <p className="text-2xs text-muted leading-relaxed">
-                  Connect Groq (free tier), OpenRouter, or run models offline via Ollama.
+                  {isMobile
+                    ? 'Connect Groq (free tier), OpenRouter, Google AI, or Pollinations.'
+                    : 'Connect Groq (free tier), OpenRouter, or run models offline via Ollama.'}
                 </p>
               </div>
 
@@ -380,7 +397,7 @@ export function Welcome() {
             </div>
 
             <div className="grid gap-2.5 sm:grid-cols-2">
-              {PROVIDER_PRESETS.map((p) => {
+              {supportedPresets.map((p) => {
                 const guide = PROVIDER_GUIDES[p.id] || PROVIDER_GUIDES.custom
                 const isSelected = currentGuide.id === p.id
                 const isKeyed = settings.keyedProviders.includes(p.id)

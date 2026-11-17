@@ -18,6 +18,7 @@ import {
 } from '@/lib/worldGenerator'
 import { lookupOnlineInfo } from '@/lib/lookup'
 import { PROVIDER_PRESETS, MODEL_SUGGESTIONS } from '@/lib/groq'
+import { isMobilePlatform, isProviderSupportedOnPlatform } from '@/lib/platform'
 import { cn } from '@/lib/utils'
 
 interface WorldGeneratorModalProps {
@@ -150,12 +151,14 @@ export function WorldGeneratorModal({ open, onClose, onApply }: WorldGeneratorMo
     }
   }
 
+  const isMobile = isMobilePlatform()
   const availableProviders = PROVIDER_PRESETS.filter(
     (p) =>
-      settings.keyedProviders.includes(p.id) ||
-      p.id === 'ollama' ||
-      p.id === 'lmstudio' ||
-      p.id === 'pollinations',
+      isProviderSupportedOnPlatform(p.id, isMobile) &&
+      (settings.keyedProviders.includes(p.id) ||
+        p.id === 'ollama' ||
+        p.id === 'lmstudio' ||
+        p.id === 'pollinations'),
   )
 
   const modelsForProvider = providerId !== 'inherit' ? MODEL_SUGGESTIONS[providerId] || [] : []

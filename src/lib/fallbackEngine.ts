@@ -8,6 +8,7 @@
 import type { ChatMessage } from './groq'
 import { chatGroq, PROVIDER_PRESETS, resolveBaseUrl } from './groq'
 import { getProviderKey, getCloudflareCredentials } from './credentials'
+import { isMobilePlatform, isProviderSupportedOnPlatform, isLocalProvider, isLocalUrl } from './platform'
 import type { Settings } from '@/types'
 
 export interface FallbackCandidate {
@@ -119,18 +120,25 @@ export function buildFallbackChain(
 ): FallbackCandidate[] {
   const candidates: FallbackCandidate[] = []
   const seen = new Set<string>()
+  const isMobile = isMobilePlatform()
 
   const addCandidate = (providerId: string, model: string) => {
     if (!providerId || !model) return
+    const preset = PROVIDER_PRESETS.find((p) => p.id === providerId)
+    const baseUrl = preset?.baseUrl || ''
+    // On mobile, local providers (Ollama, LM Studio) or loopback URLs are strictly unsupported
+    if (isMobile && (!isProviderSupportedOnPlatform(providerId, isMobile) || isLocalUrl(baseUrl))) {
+      return
+    }
+
     const key = `${providerId}::${model}`
     if (seen.has(key)) return
     seen.add(key)
 
-    const preset = PROVIDER_PRESETS.find((p) => p.id === providerId)
     candidates.push({
       providerId,
       model,
-      baseUrl: preset?.baseUrl,
+      baseUrl,
     })
   }
 
@@ -240,8 +248,17 @@ export interface ExecuteChatResult {
 export async function executeChatWithFallback(
   opts: ExecuteChatOptions,
 ): Promise<ExecuteChatResult> {
+  const isMobile = isMobilePlatform()
   const candidates = buildFallbackChain('chat', opts.preferredCandidate, opts.settings)
+
   if (candidates.length === 0) {
+    const candidateProvId = opts.preferredCandidate?.providerId || opts.settings.chatDefault?.providerId || opts.settings.fallbackModel?.providerId
+    if (isMobile && candidateProvId && isLocalProvider(candidateProvId)) {
+      const preset = PROVIDER_PRESETS.find((p) => p.id === candidateProvId)
+      throw new Error(
+        `The selected AI provider (${preset?.label || 'Local model'}) runs locally on your computer and is only available in the Eva Desktop application. On mobile, please select or configure a cloud provider (such as Groq, Google AI, OpenRouter, or Pollinations).`,
+      )
+    }
     throw new Error('No AI providers configured or enabled for chat.')
   }
 

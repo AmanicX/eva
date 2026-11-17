@@ -226,7 +226,7 @@ export const PROVIDER_GUIDES: Record<string, ProviderGuide> = {
     id: 'ollama',
     name: 'Ollama (Local)',
     tagline: 'Run powerful models completely offline on your own machine with 100% data privacy.',
-    badge: 'Private & Offline',
+    badge: 'Desktop Only · Offline',
     badgeVariant: 'success',
     isLocal: true,
     needsKey: false,
@@ -235,6 +235,7 @@ export const PROVIDER_GUIDES: Record<string, ProviderGuide> = {
     officialWebsite: 'https://ollama.com',
     requirements: [
       'Ollama installed and running locally on your PC/Mac',
+      'Eva Desktop application (Local inference is desktop-only)',
       'No API key required',
       'Sufficient RAM or VRAM for your chosen model',
     ],
@@ -255,8 +256,8 @@ export const PROVIDER_GUIDES: Record<string, ProviderGuide> = {
       },
       {
         number: 3,
-        title: 'Configure CORS (Web & Android only)',
-        instruction: 'On desktop Electron, no extra config is needed. If using Eva in a web browser, start Ollama with OLLAMA_ORIGINS="*" to allow web requests. On Android phones, replace "localhost" with your computer’s Wi-Fi IP.',
+        title: 'Start Ollama Service',
+        instruction: 'On Eva Desktop, no extra config is needed. If using Eva in a desktop browser, start Ollama with OLLAMA_ORIGINS="*" to allow web requests.',
         copySnippet: 'OLLAMA_ORIGINS="*" ollama serve',
       },
       {
@@ -301,12 +302,6 @@ export const PROVIDER_GUIDES: Record<string, ProviderGuide> = {
         cause: 'Browser security prevented connecting to localhost without CORS headers.',
         resolution: 'Start Ollama with OLLAMA_ORIGINS="*" environment variable, or use the Eva desktop app.',
       },
-      {
-        code: 'MOBILE_IP',
-        title: 'Cannot reach localhost on Android',
-        cause: 'On Android phones, "localhost" refers to the phone itself, not your PC.',
-        resolution: 'Replace "localhost" with your PC\'s local network IP address (e.g. http://192.168.1.150:11434/v1).',
-      },
     ],
   },
 
@@ -314,7 +309,7 @@ export const PROVIDER_GUIDES: Record<string, ProviderGuide> = {
     id: 'lmstudio',
     name: 'LM Studio',
     tagline: 'Visual desktop application for finding, downloading, and serving GGUF models.',
-    badge: 'Visual Local GUI',
+    badge: 'Desktop Only · GUI',
     badgeVariant: 'neutral',
     isLocal: true,
     needsKey: false,
@@ -323,6 +318,7 @@ export const PROVIDER_GUIDES: Record<string, ProviderGuide> = {
     officialWebsite: 'https://lmstudio.ai',
     requirements: [
       'LM Studio installed on your computer',
+      'Eva Desktop application (Local inference is desktop-only)',
       'A downloaded GGUF model loaded in memory',
       'Local server started in LM Studio',
     ],

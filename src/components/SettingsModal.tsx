@@ -10,6 +10,7 @@ import {
   EyeOff,
   ExternalLink,
   KeyRound,
+  Laptop,
   Moon,
   Palette,
   RefreshCw,
@@ -44,6 +45,12 @@ import {
 } from '@/lib/credentials'
 import { GOOGLE_TTS_VOICES, POLLINATIONS_TTS_VOICES } from '@/lib/tts'
 import { GOOGLE_IMAGE_MODELS, POLLINATIONS_IMAGE_MODELS } from '@/lib/imageGeneration'
+import {
+  isMobilePlatform,
+  isLocalProvider,
+  getSupportedProviderPresets,
+  isLocalUrl,
+} from '@/lib/platform'
 import { DoneButton } from './DoneButton'
 import { THEMES, THEME_ORDER } from '@/data/themes'
 import { AppLogo } from './AppLogo'
@@ -99,8 +106,11 @@ export function SettingsModal() {
   const [savedCfApiToken, setSavedCfApiToken] = useState('')
 
   const needsKey = providerNeedsKey(settings.baseUrl)
+  const isMobile = isMobilePlatform()
+  const supportedPresets = getSupportedProviderPresets(PROVIDER_PRESETS, isMobile)
   const activePreset = PROVIDER_PRESETS.find((p) => p.baseUrl === settings.baseUrl.trim())
   const presetId = presetIdFor(settings.baseUrl)
+  const isCurrentLocal = isLocalProvider(presetId || activePreset?.id) || isLocalUrl(settings.baseUrl)
   const curated = GROQ_MODELS.find((m) => m.id === settings.model)
   const hasGoogleKey = settings.keyedProviders.includes('google')
 
@@ -554,10 +564,25 @@ export function SettingsModal() {
             <div className="space-y-5">
               <Section
                 title="Provider"
-                hint="Groq, Ollama Cloud (Gemma 4), OpenRouter, local models or custom endpoints."
+                hint={
+                  isMobile
+                    ? 'Groq, Ollama Cloud (Gemma 4), OpenRouter, Google AI, or custom cloud endpoints.'
+                    : 'Groq, Ollama Cloud (Gemma 4), OpenRouter, local models or custom endpoints.'
+                }
               >
+                {isMobile && isCurrentLocal && (
+                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-fg flex items-start gap-2.5">
+                    <Laptop size={16} className="text-amber-500 shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <div className="font-semibold text-amber-500 text-xs">Desktop-Only Local Provider</div>
+                      <div className="text-2xs text-muted leading-relaxed">
+                        {activePreset?.label || 'Local AI'} is configured on desktop and cannot run on mobile devices. Your desktop configuration remains safely preserved. Please choose a cloud provider (such as Groq, Google AI, or Pollinations) to chat on mobile.
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-1.5">
-                  {PROVIDER_PRESETS.map((p) => {
+                  {supportedPresets.map((p) => {
                     const active = settings.baseUrl.trim() === p.baseUrl
                     const isKeyed = settings.keyedProviders.includes(p.id)
                     return (
@@ -605,6 +630,8 @@ export function SettingsModal() {
                       </a>
                       .
                     </>
+                  ) : isMobile ? (
+                    'Any supported OpenAI-compatible cloud service works. Groq, Ollama Cloud, OpenRouter, Google AI, or Pollinations.'
                   ) : (
                     'Any OpenAI-compatible server works. Groq, Ollama Cloud, OpenRouter, LM Studio, or local Ollama.'
                   )}
@@ -616,7 +643,9 @@ export function SettingsModal() {
                 hint={
                   needsKey
                     ? 'Stored securely on this device and sent only to the provider above.'
-                    : 'Local servers usually ignore the key — leave it blank.'
+                    : isMobile
+                      ? 'No API key required for this cloud service.'
+                      : 'Local servers usually ignore the key — leave it blank.'
                 }
               >
                 {activePreset?.id === 'cloudflare' ? (
@@ -797,10 +826,14 @@ export function SettingsModal() {
                     spellCheck={false}
                   />
                   <button
-                    onClick={testConnection}
-                    disabled={testState === 'testing'}
+                    onClick={isMobile && isCurrentLocal ? undefined : testConnection}
+                    disabled={testState === 'testing' || (isMobile && isCurrentLocal)}
                     className="btn shrink-0"
-                    title="Fetch model list from provider"
+                    title={
+                      isMobile && isCurrentLocal
+                        ? 'Local models run in the Eva Desktop application'
+                        : 'Fetch model list from provider'
+                    }
                   >
                     <RefreshCw size={15} className={cn(testState === 'testing' && 'animate-spin')} />
                   </button>
@@ -840,7 +873,7 @@ export function SettingsModal() {
                 <p className="text-2xs text-faint">
                   {presetId === 'ollamacloud'
                     ? 'Ollama Cloud supports Google Gemma 4 (gemma4, gemma4:e4b, gemma4:31b). Select a model above or fetch live models.'
-                    : presetId === 'ollama'
+                    : !isMobile && presetId === 'ollama'
                       ? 'Local Ollama: run "ollama serve", pull models (e.g. "ollama pull gemma4"), then click ↻.'
                       : 'Providers cap tokens per minute. If you hit a rate limit, wait a few seconds and retry.'}
                 </p>
@@ -1012,12 +1045,22 @@ export function SettingsModal() {
                           }}
                           className="field text-xs h-9 w-full"
                         >
-                          {PROVIDER_PRESETS.map((p) => (
+                          {isMobile && isLocalProvider(settings.chatDefault?.providerId) && (
+                            <option value={settings.chatDefault?.providerId} disabled>
+                              {PROVIDER_PRESETS.find((p) => p.id === settings.chatDefault?.providerId)?.label || 'Local Provider'} (Desktop Only)
+                            </option>
+                          )}
+                          {supportedPresets.map((p) => (
                             <option key={p.id} value={p.id}>
                               {p.label}
                             </option>
                           ))}
                         </select>
+                        {isMobile && isLocalProvider(settings.chatDefault?.providerId) && (
+                          <p className="text-3xs text-amber-500/90 mt-1 leading-tight">
+                            Configured for Eva Desktop. Select a cloud provider for mobile use.
+                          </p>
+                        )}
                       </div>
 
                       {/* Default Image Provider */}
@@ -1125,7 +1168,12 @@ export function SettingsModal() {
                           }}
                           className="field text-xs h-9 w-full"
                         >
-                          {PROVIDER_PRESETS.map((p) => (
+                          {isMobile && isLocalProvider(settings.fallbackModel?.providerId) && (
+                            <option value={settings.fallbackModel?.providerId} disabled>
+                              {PROVIDER_PRESETS.find((p) => p.id === settings.fallbackModel?.providerId)?.label || 'Local Provider'} (Desktop Only)
+                            </option>
+                          )}
+                          {supportedPresets.map((p) => (
                             <option key={p.id} value={p.id}>
                               {p.label}
                             </option>
@@ -1154,6 +1202,12 @@ export function SettingsModal() {
                         />
                       </div>
                     </div>
+
+                    {isMobile && isLocalProvider(settings.fallbackModel?.providerId) && (
+                      <p className="text-3xs text-amber-500/90 mt-1 leading-tight">
+                        Fallback to local AI is available in Eva Desktop.
+                      </p>
+                    )}
 
                     <p className="text-3xs text-faint leading-relaxed">
                       Queried automatically if primary provider encounters 401/403, 429 rate limit, 5xx outages, or model refusal.
