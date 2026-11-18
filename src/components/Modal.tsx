@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { AnimatePresence, motion } from 'motion/react'
+import { AnimatePresence, motion, useDragControls } from 'motion/react'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -14,6 +14,7 @@ interface ModalProps {
   size?: 'sm' | 'md' | 'lg' | 'xl'
   footer?: ReactNode
   bodyClassName?: string
+  hideCloseButton?: boolean
 }
 
 const SIZES: Record<NonNullable<ModalProps['size']>, string> = {
@@ -33,7 +34,10 @@ export function Modal({
   size = 'md',
   footer,
   bodyClassName,
+  hideCloseButton = false,
 }: ModalProps) {
+  const dragControls = useDragControls()
+
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
@@ -63,22 +67,53 @@ export function Modal({
           <motion.div
             role="dialog"
             aria-modal="true"
-            initial={{ opacity: 0, transform: 'scale(0.96) translateY(24px)' }}
-            animate={{ opacity: 1, transform: 'scale(1) translateY(0px)' }}
-            exit={{ opacity: 0, transform: 'scale(0.97) translateY(18px)' }}
+            drag="y"
+            dragControls={dragControls}
+            dragListener={false}
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0, bottom: 0.8 }}
+            onDragEnd={(_e, info) => {
+              if (info.offset.y > 60 || info.velocity.y > 250) {
+                onClose()
+              }
+            }}
+            initial={{ opacity: 0, y: 32 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 32 }}
             transition={{ type: 'spring', stiffness: 400, damping: 36 }}
             className={cn(
               'modal-glass relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl shadow-2xl sm:my-auto sm:max-h-[88dvh] sm:rounded-2xl border border-border/80',
               SIZES[size],
             )}
           >
-            {/* Mobile drag handle */}
-            <div className="flex justify-center pt-2.5 pb-1 sm:hidden">
-              <span className="h-1.5 w-10 rounded-full bg-border-strong" />
+            {/* Mobile drag handle / tap to go back */}
+            <div
+              onPointerDown={(e) => dragControls.start(e)}
+              onClick={onClose}
+              className="group flex flex-col items-center justify-center pt-3 pb-2 px-6 cursor-pointer sm:hidden select-none touch-none active:opacity-70 transition-opacity"
+              role="button"
+              aria-label="Tap or drag down to dismiss"
+              title="Tap or drag down to dismiss"
+            >
+              <span className="h-1.5 w-12 rounded-full bg-border-strong group-hover:bg-fg/50 group-active:bg-accent transition-colors" />
             </div>
 
             {(title || icon) && (
-              <div className="flex items-start gap-3 border-b border-border px-5 py-3.5 sm:px-6">
+              <div
+                onPointerDown={(e) => {
+                  const target = e.target as HTMLElement
+                  if (!target.closest('button, a, input, select')) {
+                    dragControls.start(e)
+                  }
+                }}
+                onClick={(e) => {
+                  const target = e.target as HTMLElement
+                  if (!target.closest('button, a, input, select') && window.innerWidth < 640) {
+                    onClose()
+                  }
+                }}
+                className="flex items-start gap-3 border-b border-border px-5 py-3 sm:px-6 cursor-pointer sm:cursor-auto select-none sm:select-auto touch-none sm:touch-auto"
+              >
                 {icon && (
                   <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent-grad text-accent-fg shadow-md">
                     {icon}
@@ -92,13 +127,15 @@ export function Modal({
                   )}
                   {subtitle && <p className="mt-0.5 text-xs text-muted">{subtitle}</p>}
                 </div>
-                <button
-                  onClick={onClose}
-                  className="btn btn-ghost -mr-1.5 -mt-1 grid size-8 shrink-0 place-items-center rounded-lg p-0 text-faint hover:text-fg"
-                  aria-label="Close"
-                >
-                  <X size={16} />
-                </button>
+                {!hideCloseButton && (
+                  <button
+                    onClick={onClose}
+                    className="btn btn-ghost -mr-1.5 -mt-1 hidden sm:grid size-8 shrink-0 place-items-center rounded-lg p-0 text-faint hover:text-fg"
+                    aria-label="Close"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
               </div>
             )}
 

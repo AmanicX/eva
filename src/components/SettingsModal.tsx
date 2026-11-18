@@ -583,45 +583,6 @@ export function SettingsModal() {
                   onChange={handleFrostedToggle}
                 />
               </Section>
-
-              {/* Live Design System Preview Card */}
-              <Section title="Live Preview" icon={<Eye size={15} />} hint="How your current combination renders in Eva.">
-                <div className="rounded-2xl border border-border/80 material p-4 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <AppLogo className="size-10 shadow-md ring-1 ring-border/80" />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-fg">Component Tokens</span>
-                        <span className="rounded-full bg-accent/15 px-2.5 py-0.5 text-2xs font-semibold text-accent border border-accent/25">
-                          Accent Active
-                        </span>
-                      </div>
-                      <p className="text-2xs text-muted">
-                        Eva balances a 60% neutral foundation with 30% structured typography and 10%
-                        accent highlights.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 pt-1">
-                    <button className="btn btn-accent text-xs px-3.5 py-2">
-                      Primary Action
-                    </button>
-                    <button className="btn text-xs px-3.5 py-2">
-                      Secondary Surface
-                    </button>
-                    <span
-                      className="rounded-lg px-2.5 py-1.5 text-xs font-semibold"
-                      style={{
-                        backgroundColor: 'var(--c-contrast-surface)',
-                        color: 'var(--c-accent-contrast)',
-                        border: '1px solid var(--c-contrast-border)',
-                      }}
-                    >
-                      Contrast Highlight
-                    </span>
-                  </div>
-                </div>
-              </Section>
             </div>
 
         )
