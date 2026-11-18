@@ -15,6 +15,7 @@ import { useStore } from '@/store/useStore'
 import { THEMES } from '@/data/themes'
 import { AppLogo } from './AppLogo'
 import { isAndroidPlatform } from '@/lib/platform'
+import { cn } from '@/lib/utils'
 
 declare global {
   interface Window {
@@ -80,7 +81,10 @@ export function TitleBar() {
 
   return (
     <header
-      className="titlebar-drag relative z-50 flex h-9 w-full select-none items-center justify-between border-b border-border/70 material-header px-3 text-xs text-muted"
+      className={cn(
+        'titlebar-drag relative z-50 flex h-9 w-full select-none items-center justify-between border-b border-border/70 material-header pl-3 text-xs text-muted',
+        isDesktop ? 'pr-0' : 'pr-3',
+      )}
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
       {/* Left: Brand Identity */}
@@ -122,64 +126,80 @@ export function TitleBar() {
         </button>
       </div>
 
-      {/* Right Controls: Theme Switcher & Actions */}
+      {/* Right Controls: Actions & Window Controls */}
       <div
-        className="flex items-center gap-1"
+        className="flex h-full items-center"
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
       >
         {/* Quick Appearance Toggle */}
         <button
           onClick={toggleAppearance}
-          className="grid size-7.5 place-items-center rounded-lg text-muted hover:bg-surface-2 hover:text-fg transition"
-          title={`Appearance: ${appearanceMode.toUpperCase()} (click to change)`}
+          className="group grid size-7 place-items-center rounded-lg text-muted/80 hover:bg-surface-2 hover:text-fg active:scale-95 transition-all duration-150 mx-0.5"
+          title={`Appearance: ${appearanceMode.toUpperCase()} (click to cycle)`}
           aria-label={`Toggle appearance mode, current: ${appearanceMode}`}
         >
           {isLight ? (
-            <Sun size={14} className="text-accent transition-transform hover:rotate-45" />
+            <Sun size={14} className="text-accent transition-transform duration-300 group-hover:rotate-45" />
           ) : (
-            <Moon size={14} className="text-accent transition-transform hover:-rotate-12" />
+            <Moon size={14} className="text-accent transition-transform duration-300 group-hover:-rotate-12" />
           )}
         </button>
 
-        {!isDesktop && (
-          <button
-            onClick={() => setUI({ settingsOpen: true })}
-            className="grid size-7.5 place-items-center rounded-lg text-muted hover:bg-surface-2 hover:text-fg transition"
-            title="Settings"
-            aria-label="Settings"
-          >
-            <SettingsIcon size={14} />
-          </button>
-        )}
+        {/* Quick Settings Button */}
+        <button
+          onClick={() => setUI({ settingsOpen: true })}
+          className="group grid size-7 place-items-center rounded-lg text-muted/80 hover:bg-surface-2 hover:text-fg active:scale-95 transition-all duration-150 mx-0.5"
+          title="Settings (Esc to exit)"
+          aria-label="Open settings"
+        >
+          <SettingsIcon size={14} className="transition-transform duration-300 group-hover:rotate-45" />
+        </button>
 
-        {/* Window Controls for Desktop */}
+        {/* Window Controls for Desktop (Electron) */}
         {isDesktop && (
-          <div className="flex h-full items-center ml-1">
-            <button
-              onClick={handleMinimize}
-              className="flex h-full w-9 items-center justify-center text-muted hover:bg-surface-2 hover:text-fg transition-colors"
-              title="Minimize"
-              aria-label="Minimize"
-            >
-              <Minus size={13} />
-            </button>
-            <button
-              onClick={handleMaximize}
-              className="flex h-full w-9 items-center justify-center text-muted hover:bg-surface-2 hover:text-fg transition-colors"
-              title={isMax ? 'Restore' : 'Maximize'}
-              aria-label="Maximize"
-            >
-              <Square size={11} className={isMax ? 'stroke-[2.5]' : ''} />
-            </button>
-            <button
-              onClick={handleClose}
-              className="flex h-full w-9 items-center justify-center text-muted hover:bg-danger hover:text-white transition-colors"
-              title="Close"
-              aria-label="Close"
-            >
-              <X size={14} />
-            </button>
-          </div>
+          <>
+            <div className="h-4 w-px bg-border/60 mx-1 shrink-0" />
+            <div className="flex h-full items-stretch">
+              <button
+                onClick={handleMinimize}
+                className="group flex h-full w-11 items-center justify-center text-muted/80 hover:bg-surface-2/80 hover:text-fg active:bg-surface-3 transition-colors duration-150"
+                title="Minimize"
+                aria-label="Minimize"
+              >
+                <Minus size={13} className="transition-transform group-active:scale-90" />
+              </button>
+              <button
+                onClick={handleMaximize}
+                className="group flex h-full w-11 items-center justify-center text-muted/80 hover:bg-surface-2/80 hover:text-fg active:bg-surface-3 transition-colors duration-150"
+                title={isMax ? 'Restore' : 'Maximize'}
+                aria-label={isMax ? 'Restore' : 'Maximize'}
+              >
+                {isMax ? (
+                  <svg
+                    width="11"
+                    height="11"
+                    viewBox="0 0 11 11"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="stroke-current stroke-[1.25] transition-transform group-active:scale-90"
+                  >
+                    <rect x="2.5" y="0.5" width="8" height="8" rx="0.5" />
+                    <path d="M0.5 3.5V9.5C0.5 10.0523 0.947715 10.5 1.5 10.5H7.5" />
+                  </svg>
+                ) : (
+                  <Square size={11} className="stroke-[1.5] transition-transform group-active:scale-90" />
+                )}
+              </button>
+              <button
+                onClick={handleClose}
+                className="group flex h-full w-12 items-center justify-center text-muted/80 hover:bg-[#e81123] hover:text-white active:bg-[#c4101e] transition-colors duration-150"
+                title="Close"
+                aria-label="Close"
+              >
+                <X size={15} className="transition-transform group-active:scale-90" />
+              </button>
+            </div>
+          </>
         )}
       </div>
     </header>
