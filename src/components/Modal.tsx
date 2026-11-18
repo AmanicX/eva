@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion, useDragControls } from 'motion/react'
 import { X } from 'lucide-react'
@@ -37,6 +37,18 @@ export function Modal({
   hideCloseButton = false,
 }: ModalProps) {
   const dragControls = useDragControls()
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.innerWidth < 640
+  })
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia('(max-width: 639px)')
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   useEffect(() => {
     if (!open) return
@@ -67,20 +79,24 @@ export function Modal({
           <motion.div
             role="dialog"
             aria-modal="true"
-            drag="y"
+            drag={isMobile ? 'y' : false}
             dragControls={dragControls}
             dragListener={false}
             dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={{ top: 0, bottom: 0.8 }}
+            dragElastic={{ top: 0, bottom: 0.6 }}
             onDragEnd={(_e, info) => {
-              if (info.offset.y > 60 || info.velocity.y > 250) {
+              if (info.offset.y > 60 || info.velocity.y > 200) {
                 onClose()
               }
             }}
-            initial={{ opacity: 0, y: 32 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 32 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 36 }}
+            initial={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.96 }}
+            animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1 }}
+            exit={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.96 }}
+            transition={
+              isMobile
+                ? { type: 'spring', damping: 30, stiffness: 320 }
+                : { type: 'spring', stiffness: 400, damping: 36 }
+            }
             className={cn(
               'modal-glass relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl shadow-2xl sm:my-auto sm:max-h-[88dvh] sm:rounded-2xl border border-border/80',
               SIZES[size],
