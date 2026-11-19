@@ -3,19 +3,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Eva Studio — Characters with a world of their own | AmanicX</title>
+  <title>Eva Studio - Characters with a world of their own | AmanicX</title>
   <meta name="description" content="Eva is an advanced client studio for chatting with and designing multi-dimensional AI characters. Unlike typical single-prompt web interfaces, Eva gives you a complete creative canvas: design deep personas across 14 distinct psychological fields with independent section regeneration, drop them into evolving worlds with dynamic reputation and lore tracking, and connect to any model (Groq, OpenRouter, OpenAI, or offline Ollama/LM Studio) with 100% local privacy and zero telemetry.">
   <link rel="canonical" href="https://amanicx.github.io/eva/">
   <meta name="theme-color" content="#0B0D12">
 
   <!-- OpenGraph -->
-  <meta property="og:title" content="Eva Studio — Characters with a world of their own | AmanicX">
+  <meta property="og:title" content="Eva Studio - Characters with a world of their own | AmanicX">
   <meta property="og:description" content="Eva is an advanced client studio for chatting with and designing multi-dimensional AI characters. Unlike typical single-prompt web interfaces, Eva gives you a complete creative canvas: design deep personas across 14 distinct psychological fields with independent section regeneration, drop them into evolving worlds with dynamic reputation and lore tracking, and connect to any model (Groq, OpenRouter, OpenAI, or offline Ollama/LM Studio) with 100% local privacy and zero telemetry.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://amanicx.github.io/eva/">
   <meta property="og:image" content="https://amanicx.github.io/eva/assets/icon.png">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Eva Studio — Characters with a world of their own | AmanicX">
+  <meta name="twitter:title" content="Eva Studio - Characters with a world of their own | AmanicX">
   <meta name="twitter:description" content="Eva is an advanced client studio for chatting with and designing multi-dimensional AI characters. Unlike typical single-prompt web interfaces, Eva gives you a complete creative canvas: design deep personas across 14 distinct psychological fields with independent section regeneration, drop them into evolving worlds with dynamic reputation and lore tracking, and connect to any model (Groq, OpenRouter, OpenAI, or offline Ollama/LM Studio) with 100% local privacy and zero telemetry.">
   <meta name="twitter:image" content="https://amanicx.github.io/eva/assets/icon.png">
 
@@ -84,7 +84,10 @@
     <div class="ambient-flare flare-crimson" style="top:-80px; left:50%; width:600px; height:600px; transform:translateX(-50%);"></div>
     <div class="container" style="text-align:center; position:relative; z-index:2;">
       <div style="display:inline-flex; align-items:center; gap:0.75rem; margin-bottom:1.5rem;" class="reveal">
-        <img src="../eva/assets/icon.png" alt="Eva Icon" width="48" height="48" style="border-radius:12px; box-shadow:0 4px 16px rgba(0,0,0,0.4);">
+        <div style="width:48px; height:48px; position:relative; flex-shrink:0;">
+          <img class="icon-theme-dark" src="../shared/assets/icons/eva-dark.png" alt="Eva Icon" width="48" height="48" style="border-radius:12px; box-shadow:0 4px 16px rgba(0,0,0,0.4);">
+          <img class="icon-theme-light" src="../shared/assets/icons/eva-light.png" alt="Eva Icon" width="48" height="48" style="border-radius:12px; box-shadow:0 4px 16px rgba(0,0,0,0.1);">
+        </div>
         <span class="badge badge-stable" style="font-size:0.8125rem;">v2.2.2 Stable</span>
       </div>
 
@@ -113,7 +116,7 @@
             <span class="mockup-dot"></span>
             <span class="mockup-dot"></span>
           </div>
-          <span style="font-size:0.8125rem; color:var(--text-muted); font-family:var(--font-mono);">Eva AI Character Studio — v2.2.2</span>
+          <span style="font-size:0.8125rem; color:var(--text-muted); font-family:var(--font-mono);">Eva AI Character Studio - v2.2.2</span>
           <span class="badge badge-dev" style="padding:0.15rem 0.5rem; font-size:0.7rem;">OBSIDIAN & FROSTED GLASS</span>
         </div>
         <div style="background:var(--bg-surface-0); padding:0.5rem; display:flex; justify-content:center;">
@@ -165,8 +168,36 @@
               <li style="display:flex; align-items:center; gap:0.5rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Persistent conversational memory in local SQLite</li>
             </ul>
           </div>
-          <div style="border-radius:var(--radius-lg); overflow:hidden; border:1px solid var(--border-medium);">
-            <img src="../eva/assets/photo-canopy.jpg" alt="Companion Studio Atmosphere" style="width:100%; height:320px; object-fit:cover;">
+          <div>
+            <div class="mockup-window" style="background:var(--bg-surface-1); border:1px solid var(--border-medium); border-radius:var(--radius-lg); overflow:hidden; box-shadow:0 16px 40px rgba(0,0,0,0.5);">
+              <div style="padding:0.75rem 1rem; background:var(--bg-surface-2); border-bottom:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between; font-size:0.75rem;">
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <span style="width:10px; height:10px; border-radius:50%; background:#EF4444; display:inline-block;"></span>
+                  <span style="width:10px; height:10px; border-radius:50%; background:#F59E0B; display:inline-block;"></span>
+                  <span style="width:10px; height:10px; border-radius:50%; background:#10B981; display:inline-block;"></span>
+                  <span style="font-weight:600; color:var(--text-secondary); margin-left:0.5rem;">Eva Companion &bull; Session #14</span>
+                </div>
+                <span class="badge badge-stable" style="font-size:0.6875rem; padding:0.15rem 0.5rem;">Groq Llama 3.3 70B &bull; 240ms</span>
+              </div>
+              <div style="padding:1.25rem; display:flex; flex-direction:column; gap:1rem; font-size:0.875rem;">
+                <div style="align-self:flex-end; max-width:85%; background:var(--accent-surface); border:1px solid var(--border-accent); border-radius:14px 14px 2px 14px; padding:0.75rem 1rem; color:var(--text-primary);">
+                  Eva, sync current conversation milestones to persistent SQLite and summarize memory state.
+                </div>
+                <div style="align-self:flex-start; max-width:90%; background:var(--bg-surface-0); border:1px solid var(--border-medium); border-radius:14px 14px 14px 2px; padding:0.85rem 1rem;">
+                  <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem;">
+                    <span style="width:6px; height:6px; border-radius:50%; background:var(--accent-primary);"></span>
+                    <strong style="color:var(--accent-primary); font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Eva Memory Engine</strong>
+                  </div>
+                  <p style="color:var(--text-secondary); font-size:0.875rem; line-height:1.5; margin:0;">
+                    Memory commit complete. 14 psychological vectors synced to encrypted local database. Context affinity: 96.4%. Zero external telemetry recorded.
+                  </p>
+                </div>
+                <div style="display:flex; gap:0.5rem; margin-top:0.25rem;">
+                  <span class="badge badge-dev" style="font-size:0.6875rem;">Ollama Offline Ready</span>
+                  <span class="badge badge-dev" style="font-size:0.6875rem;">Local DB: eva_store.db</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -186,8 +217,36 @@
               <li style="display:flex; align-items:center; gap:0.5rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Complete uncensored creative canvas on your local machine</li>
             </ul>
           </div>
-          <div style="border-radius:var(--radius-lg); overflow:hidden; border:1px solid var(--border-medium);">
-            <img src="../eva/assets/sky-figure.jpg" alt="Anime Roleplay Atmosphere" style="width:100%; height:320px; object-fit:cover;">
+          <div>
+            <div class="mockup-window" style="background:var(--bg-surface-1); border:1px solid var(--border-medium); border-radius:var(--radius-lg); overflow:hidden; box-shadow:0 16px 40px rgba(0,0,0,0.5);">
+              <div style="padding:0.75rem 1rem; background:var(--bg-surface-2); border-bottom:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between; font-size:0.75rem;">
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <span style="color:var(--accent-primary); font-weight:700;">ARC III</span>
+                  <span style="color:var(--text-muted);">&bull;</span>
+                  <span style="color:var(--text-secondary); font-weight:500;">Scenario: Neo-Tokyo Command Outpost</span>
+                </div>
+                <span class="badge badge-preview" style="font-size:0.6875rem; padding:0.15rem 0.5rem;">Affection: 88% (+6)</span>
+              </div>
+              <div style="padding:1.25rem; display:flex; flex-direction:column; gap:1rem;">
+                <div style="display:flex; gap:1rem; align-items:center; background:var(--bg-surface-0); border:1px solid var(--border-subtle); padding:0.75rem 1rem; border-radius:var(--radius-md);">
+                  <div style="width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg, #E11D48, #881337); display:flex; align-items:center; justify-content:center; color:#FFF; font-weight:700; font-size:0.9375rem; flex-shrink:0;">
+                    AL
+                  </div>
+                  <div>
+                    <div style="font-size:0.875rem; font-weight:700; color:var(--text-primary);">Asuka &bull; Neural Sync Pilot</div>
+                    <div style="font-size:0.75rem; color:var(--text-muted);">Mood: Defiant &bull; Expression: Flustered &bull; Voice: Neural JA</div>
+                  </div>
+                </div>
+                <div style="background:var(--bg-surface-0); border-left:3px solid var(--accent-primary); padding:0.85rem 1rem; border-radius:0 var(--radius-md) var(--radius-md) 0; font-size:0.875rem; color:var(--text-secondary); line-height:1.6;">
+                  <span style="color:var(--accent-hover); font-weight:600;">"Don't get the wrong idea!</span> I only routed auxiliary power to your workstation because your system crash would slow down the entire defensive grid. Don't make me repeat myself, idiot!"
+                </div>
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                  <span class="badge badge-dev" style="font-size:0.6875rem;">14-Field Persona</span>
+                  <span class="badge badge-dev" style="font-size:0.6875rem;">Speech Habit: Tsundere</span>
+                  <span class="badge badge-dev" style="font-size:0.6875rem;">Lore Lock: Persistent</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -207,8 +266,38 @@
               <li style="display:flex; align-items:center; gap:0.5rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Long-term memory injection across multi-turn story arcs</li>
             </ul>
           </div>
-          <div style="border-radius:var(--radius-lg); overflow:hidden; border:1px solid var(--border-medium);">
-            <img src="../eva/assets/photo-ridge.jpg" alt="World Simulator Atmosphere" style="width:100%; height:320px; object-fit:cover;">
+          <div>
+            <div class="mockup-window" style="background:var(--bg-surface-1); border:1px solid var(--border-medium); border-radius:var(--radius-lg); overflow:hidden; box-shadow:0 16px 40px rgba(0,0,0,0.5);">
+              <div style="padding:0.75rem 1rem; background:var(--bg-surface-2); border-bottom:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between; font-size:0.75rem;">
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <span style="color:var(--accent-primary); font-weight:700;">WORLD SANDBOX</span>
+                  <span style="color:var(--text-muted);">&bull;</span>
+                  <span style="color:var(--text-secondary); font-weight:500;">Sector 9: Nightfall</span>
+                </div>
+                <span class="badge badge-dev" style="font-size:0.6875rem; padding:0.15rem 0.5rem;">Tick Rate: 1.0x &bull; Cycle 42</span>
+              </div>
+              <div style="padding:1.25rem; display:flex; flex-direction:column; gap:0.875rem; font-size:0.8125rem;">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+                  <div style="background:var(--bg-surface-0); border:1px solid var(--border-subtle); padding:0.625rem 0.85rem; border-radius:var(--radius-sm);">
+                    <div style="color:var(--text-muted); font-size:0.6875rem; margin-bottom:0.25rem;">FACTION TENSION</div>
+                    <div style="font-weight:700; color:#F43F5E;">High &bull; 78% Escalation</div>
+                  </div>
+                  <div style="background:var(--bg-surface-0); border:1px solid var(--border-subtle); padding:0.625rem 0.85rem; border-radius:var(--radius-sm);">
+                    <div style="color:var(--text-muted); font-size:0.6875rem; margin-bottom:0.25rem;">PLAYER REPUTATION</div>
+                    <div style="font-weight:700; color:#10B981;">Revered &bull; 92 Affinity</div>
+                  </div>
+                </div>
+                <div style="background:var(--bg-surface-0); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:0.75rem 0.875rem; font-family:var(--font-mono); font-size:0.75rem; line-height:1.6; color:var(--text-secondary);">
+                  <div style="color:var(--accent-hover);">&gt; [18:42:01] EVENT: Blackout triggered across Sector 9 power grid.</div>
+                  <div style="color:var(--text-muted);">&gt; [18:42:05] LORE: The Cyber Syndicate confirms diplomatic pact.</div>
+                  <div style="color:var(--text-primary);">&gt; [18:42:10] PERSIST: Story state variables written to local session.</div>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.75rem; color:var(--text-muted);">
+                  <span>Multi-turn memory retention</span>
+                  <span style="color:var(--accent-primary); font-weight:600;">3 Active Characters</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -224,7 +313,7 @@
         <h2 class="title-section reveal delay-100">Every Detail Built for Control</h2>
       </div>
 
-      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:2rem;">
+      <div class="grid-2x2">
         <div class="card reveal delay-100">
           <div class="badge badge-dev" style="margin-bottom:1rem;">14-FIELD GENERATOR</div>
           <h3 class="title-card" style="margin-bottom:0.75rem;">Independent Persona Section Regeneration</h3>
