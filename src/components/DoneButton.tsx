@@ -6,7 +6,6 @@ import {
   type DoneState,
   type DoneSuccessAction,
 } from '@/lib/doneStateMachine'
-import { validateKeyFormat } from '@/lib/keyValidation'
 import { cn } from '@/lib/utils'
 
 interface DoneButtonProps {
@@ -20,7 +19,6 @@ interface DoneButtonProps {
 }
 
 export function DoneButton({
-  providerId,
   currentKey,
   savedKey,
   currentExtra,
@@ -30,13 +28,12 @@ export function DoneButton({
 }: DoneButtonProps) {
   const [status, setStatus] = useState<DoneState>('IDLE_DISABLED')
   const [successAction, setSuccessAction] = useState<DoneSuccessAction>('inserted')
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Re-evaluate state when inputs change
   useEffect(() => {
     setStatus((prev) => {
-      const next = computeDoneState(
+      return computeDoneState(
         {
           currentKey,
           savedKey,
@@ -45,11 +42,6 @@ export function DoneButton({
         },
         prev,
       )
-      // If user altered input while in SUCCESS or error was showing, reset error
-      if (next !== 'SUCCESS' && errorMsg) {
-        setErrorMsg(null)
-      }
-      return next
     })
   }, [currentKey, savedKey, currentExtra, savedExtra])
 
@@ -61,28 +53,14 @@ export function DoneButton({
   }, [])
 
   const handleClick = async () => {
-    setErrorMsg(null)
-
     const cleanKey = currentKey.trim()
-    const isClearing = !cleanKey && !!savedKey.trim()
 
-    // 1. If not clearing, validate format
-    if (!isClearing) {
-      const validation = validateKeyFormat(providerId, cleanKey, {
-        accountId: currentExtra?.trim(),
-      })
-      if (!validation.valid) {
-        setErrorMsg(validation.error || 'Invalid key format.')
-        return
-      }
-    }
-
-    // 2. Perform save
+    // 1. Perform save directly without restrictive format validation
     const action = computeSuccessAction(cleanKey, savedKey)
     setSuccessAction(action)
     await onSave(cleanKey, currentExtra?.trim())
 
-    // 3. Transition to SUCCESS
+    // 2. Transition to SUCCESS
     setStatus('SUCCESS')
 
     if (timerRef.current) clearTimeout(timerRef.current)
@@ -134,15 +112,6 @@ export function DoneButton({
           <span>Done</span>
         )}
       </button>
-
-      {errorMsg && (
-        <span
-          className="text-3xs text-danger flex items-center gap-1 mt-0.5"
-          role="alert"
-        >
-          {errorMsg}
-        </span>
-      )}
     </div>
   )
 }

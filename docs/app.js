@@ -289,12 +289,12 @@
   function detectOS() {
     const userAgent = window.navigator.userAgent.toLowerCase();
     let os = 'Linux';
-    let dlUrl = 'https://github.com/AmanicX/eva/releases/latest/download/Eva-2.2.0.AppImage';
+    let dlUrl = 'https://github.com/AmanicX/eva/releases/latest/download/Eva-2.2.1.AppImage';
     let btnLabel = 'Download for Linux (AppImage)';
 
     if (userAgent.indexOf('win') !== -1) {
       os = 'Windows';
-      dlUrl = 'https://github.com/AmanicX/eva/releases/latest/download/Eva.Setup.2.2.0.exe';
+      dlUrl = 'https://github.com/AmanicX/eva/releases/latest/download/Eva.Setup.2.2.1.exe';
       btnLabel = 'Download for Windows (64-bit)';
     } else if (userAgent.indexOf('android') !== -1) {
       os = 'Android';

@@ -71,6 +71,7 @@ import {
 import { Modal } from './Modal'
 import { CommandCheatsheet } from './CommandCheatsheet'
 import { cn, clamp, download } from '@/lib/utils'
+import { APP_VERSION } from '@/lib/version'
 import type { AppearanceMode } from '@/types'
 import type { UIState } from '@/store/useStore'
 
@@ -135,7 +136,7 @@ const TABS: SettingsTabItem[] = [
   {
     id: 'about',
     label: 'About & Legal',
-    desc: 'Eva v2.2.0, terms & license',
+    desc: `Eva v${APP_VERSION}, terms & license`,
     headerDesc: 'Application version, open-source software licenses, terms of service, and official project links.',
     icon: <ShieldCheck size={16} />,
     category: 'system',
@@ -195,12 +196,12 @@ export function SettingsModal() {
       })
     } else {
       void getProviderKey(provId).then((k) => {
-        const keyVal = k || (provId === 'groq' ? settings.apiKey : '')
+        const keyVal = k || (provId === 'groq' ? useStore.getState().settings.apiKey : '')
         setProviderKeys((prev) => ({ ...prev, [provId]: keyVal }))
         setSavedKeys((prev) => ({ ...prev, [provId]: keyVal }))
       })
     }
-  }, [open, activePreset?.id, settings.apiKey])
+  }, [open, activePreset?.id])
 
   const modelOptions = Array.from(
     new Set([
@@ -742,12 +743,11 @@ export function SettingsModal() {
                       <div className="relative flex-1">
                         <input
                           type={showKey ? 'text' : 'password'}
-                          value={providerKeys[activePreset?.id || 'groq'] ?? settings.apiKey}
+                          value={providerKeys[activePreset?.id || 'groq'] ?? ''}
                           onChange={(e) => {
                             const val = e.target.value
                             const pid = activePreset?.id || 'groq'
                             setProviderKeys((prev) => ({ ...prev, [pid]: val }))
-                            if (pid === 'groq') updateSettings({ apiKey: val })
                           }}
                           placeholder={activePreset?.keyHint ?? 'your key'}
                           className="field pr-12 font-mono text-xs sm:pr-9"
@@ -764,7 +764,7 @@ export function SettingsModal() {
                       </div>
                       <DoneButton
                         providerId={activePreset?.id || 'groq'}
-                        currentKey={providerKeys[activePreset?.id || 'groq'] ?? settings.apiKey}
+                        currentKey={providerKeys[activePreset?.id || 'groq'] ?? ''}
                         savedKey={savedKeys[activePreset?.id || 'groq'] ?? ''}
                         onSave={async (key) => {
                           const pid = activePreset?.id || 'groq'
@@ -1482,7 +1482,7 @@ export function SettingsModal() {
                   <div className="flex items-center gap-2">
                     <h2 className="font-display text-lg font-bold text-fg">Eva</h2>
                     <span className="rounded-md bg-accent/15 px-2 py-0.5 text-xs font-semibold text-accent">
-                      v2.2.0
+                      v{APP_VERSION}
                     </span>
                   </div>
                   <p className="text-xs text-muted mt-0.5">
@@ -1666,7 +1666,7 @@ export function SettingsModal() {
                       <div className="flex items-center gap-1.5">
                         <span className="font-display text-xs font-bold text-fg">Eva</span>
                         <span className="text-3xs font-semibold px-1.5 py-0.2 rounded bg-accent/15 text-accent">
-                          v2.2.0
+                          v{APP_VERSION}
                         </span>
                       </div>
                       <p className="text-3xs text-muted truncate">Client-Side AI Studio</p>

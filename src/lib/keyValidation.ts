@@ -105,69 +105,13 @@ export const PROVIDER_KEY_RULES: Record<string, ProviderValidationRule> = {
 
 /**
  * Validates the format of an API key for a given provider.
- * Does not perform any network requests.
+ * Format checking system has been disabled to allow any custom, proxy,
+ * or direct provider keys without blocking the user.
  */
 export function validateKeyFormat(
-  providerId: string,
-  key: string,
-  extra?: { accountId?: string },
+  _providerId: string,
+  _key: string,
+  _extra?: { accountId?: string },
 ): { valid: boolean; error?: string } {
-  const cleanKey = (key ?? '').trim()
-  const rule = PROVIDER_KEY_RULES[providerId]
-
-  // If local server or no rule, allow empty or loose string
-  if (providerId === 'ollama' || providerId === 'lmstudio') {
-    return { valid: true }
-  }
-
-  // Pollinations key is optional; empty is valid (free tier)
-  if (providerId === 'pollinations' && !cleanKey) {
-    return { valid: true }
-  }
-
-  if (!cleanKey && providerId !== 'cloudflare') {
-    return { valid: false, error: 'API key cannot be empty.' }
-  }
-
-  if (!rule) {
-    // Custom endpoint: loose validation
-    if (cleanKey.length < 3) {
-      return { valid: false, error: 'Key must be at least 3 characters.' }
-    }
-    return { valid: true }
-  }
-
-  if (rule.validate) {
-    return rule.validate(cleanKey, extra)
-  }
-
-  if (rule.startsWith && !rule.startsWith.some((prefix) => cleanKey.startsWith(prefix))) {
-    return {
-      valid: false,
-      error: `Invalid format: ${rule.name} key must start with ${rule.startsWith.map((s) => `"${s}"`).join(' or ')}.`,
-    }
-  }
-
-  if (rule.fixedLength && cleanKey.length !== rule.fixedLength) {
-    return {
-      valid: false,
-      error: `Invalid length: ${rule.name} key must be exactly ${rule.fixedLength} characters (currently ${cleanKey.length}).`,
-    }
-  }
-
-  if (rule.minLength && cleanKey.length < rule.minLength) {
-    return {
-      valid: false,
-      error: `Key too short: ${rule.name} key must be at least ${rule.minLength} characters.`,
-    }
-  }
-
-  if (rule.pattern && !rule.pattern.test(cleanKey)) {
-    return {
-      valid: false,
-      error: `Invalid characters or structure for ${rule.name} key. ${rule.hint}`,
-    }
-  }
-
   return { valid: true }
 }

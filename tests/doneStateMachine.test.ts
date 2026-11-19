@@ -49,4 +49,34 @@ describe('doneStateMachine', () => {
     expect(computeSuccessAction('updated_key', 'old_key')).toBe('inserted')
     expect(computeSuccessAction('', 'old_key')).toBe('removed')
   })
+
+  it('correctly handles full user typing lifecycle for any key without locking or disabling', () => {
+    let savedKey = ''
+    let state = computeDoneState({ currentKey: '', savedKey }, 'IDLE_DISABLED')
+    expect(state).toBe('IDLE_DISABLED')
+
+    // User types first character
+    let currentKey = 'A'
+    state = computeDoneState({ currentKey, savedKey }, state)
+    expect(state).toBe('IDLE_ENABLED')
+
+    // User types full key
+    currentKey = 'AIza1234567890abcdef'
+    state = computeDoneState({ currentKey, savedKey }, state)
+    expect(state).toBe('IDLE_ENABLED')
+
+    // User clicks Done -> onSave commits currentKey into savedKey
+    savedKey = currentKey
+    state = 'SUCCESS'
+    expect(state).toBe('SUCCESS')
+
+    // After success timer, returns to IDLE_DISABLED because currentKey matches savedKey
+    state = computeDoneState({ currentKey, savedKey }, 'IDLE_DISABLED')
+    expect(state).toBe('IDLE_DISABLED')
+
+    // User deletes key to clear it
+    currentKey = ''
+    state = computeDoneState({ currentKey, savedKey }, state)
+    expect(state).toBe('IDLE_ENABLED')
+  })
 })

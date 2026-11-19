@@ -24,6 +24,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { useStore } from '@/store/useStore'
+import { APP_VERSION } from '@/lib/version'
 import {
   PROVIDER_PRESETS,
   listGroqModels,
@@ -117,6 +118,7 @@ export function Welcome() {
   const [cfApiToken, setCfApiToken] = useState('')
   const [savedCfAccountId, setSavedCfAccountId] = useState('')
   const [savedCfApiToken, setSavedCfApiToken] = useState('')
+  const [inputKey, setInputKey] = useState('')
   const [savedKey, setSavedKey] = useState('')
 
   const isMobile = isMobilePlatform()
@@ -146,11 +148,12 @@ export function Welcome() {
       })
     } else {
       void getProviderKey(provId).then((k) => {
-        const val = k || (provId === 'groq' ? settings.apiKey : '')
+        const val = k || (provId === 'groq' ? useStore.getState().settings.apiKey : '')
         setSavedKey(val)
+        setInputKey(val)
       })
     }
-  }, [open, currentGuide.id, settings.apiKey])
+  }, [open, currentGuide.id])
 
   const needsKey = providerNeedsKey(settings.baseUrl)
   const currentStepInfo = STEPS[step]
@@ -321,7 +324,7 @@ export function Welcome() {
                 <div className="flex items-center gap-2">
                   <h3 className="font-display text-base font-bold text-fg">Eva AI Studio</h3>
                   <span className="rounded-full bg-accent/15 px-2 py-0.5 text-2xs font-medium text-accent">
-                    v2.2.0
+                    v{APP_VERSION}
                   </span>
                 </div>
                 <p className="mt-0.5 text-xs text-muted">
@@ -742,8 +745,8 @@ export function Welcome() {
                     <div className="relative flex-1">
                       <input
                         type={showKey ? 'text' : 'password'}
-                        value={settings.apiKey}
-                        onChange={(e) => updateSettings({ apiKey: e.target.value })}
+                        value={inputKey}
+                        onChange={(e) => setInputKey(e.target.value)}
                         placeholder={currentGuide.keyPlaceholder}
                         className="field pr-12 font-mono text-xs sm:pr-9"
                         spellCheck={false}
@@ -758,7 +761,7 @@ export function Welcome() {
                     </div>
                     <DoneButton
                       providerId={currentGuide.id}
-                      currentKey={settings.apiKey}
+                      currentKey={inputKey}
                       savedKey={savedKey}
                       onSave={async (key) => {
                         await setProviderKey(currentGuide.id, key)
@@ -767,7 +770,10 @@ export function Welcome() {
                         const next = has
                           ? Array.from(new Set([...settings.keyedProviders, currentGuide.id]))
                           : settings.keyedProviders.filter((p) => p !== currentGuide.id)
-                        updateSettings({ keyedProviders: next })
+                        updateSettings({
+                          keyedProviders: next,
+                          apiKey: currentGuide.id === 'groq' ? key : settings.apiKey,
+                        })
                       }}
                     />
                   </div>
