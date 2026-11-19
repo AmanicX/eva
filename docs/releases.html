@@ -90,7 +90,7 @@
         <a class="head-cta" href="./#download">
           <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 15.5h12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span>Get Eva</span>
-          <em>v2.2.1</em>
+          <em>v2.2.2</em>
         </a>
 
         <!-- Mobile Drawer Hamburger -->
@@ -125,7 +125,8 @@
 
     <!-- Version Index -->
     <nav class="container container-narrow rel-index-nav" aria-label="Releases Jump Navigation">
-      <a href="#v221" class="rel-index-chip latest">v2.2.1 (Latest)</a>
+      <a href="#v222" class="rel-index-chip latest">v2.2.2 (Latest)</a>
+      <a href="#v221" class="rel-index-chip">v2.2.1</a>
       <a href="#v220" class="rel-index-chip">v2.2.0</a>
       <a href="#v210" class="rel-index-chip">v2.1.0</a>
       <a href="#v200" class="rel-index-chip">v2.0.0</a>
@@ -134,11 +135,40 @@
       <a href="#v100" class="rel-index-chip">v1.0.0</a>
     </nav>
 
+    <!-- v2.2.2 Release -->
+    <article class="container container-narrow rel-article" id="v222">
+      <div class="rel-meta-bar">
+        <span class="rel-tag-version">2.2.2</span>
+        <span class="rel-badge-badge">Latest Release</span>
+        <span class="rel-date">November 2026 · Windows, Linux, Android, Web</span>
+      </div>
+      <h2 class="rel-title-heading">Eva 2.2.2 — Key Verification System Removal &amp; State Machine Hardening</h2>
+      <p class="rel-intro">
+        Eva 2.2.2 ensures fully unrestricted credential storage across custom proxy routers, Google AI Studio, and enterprise gateways by completely removing client-side format checking, while decoupling keystrokes from global settings mutation.
+      </p>
+
+      <ul class="rel-bullet-list">
+        <li><strong>Zero Key Validation Blockers:</strong> Removed all rigid format checking and prefix constraints. Users can enter any API key, custom gateway token, or proxy endpoint without experiencing false-positive "Invalid format" errors.</li>
+        <li><strong>Typing State Machine Isolation:</strong> Keystroke entries in credential fields no longer trigger premature settings writes or disrupt the Done button's animated state machine.</li>
+        <li><strong>Pure Local-First Stability:</strong> Stripped cloud sync code and UI options to deliver guaranteed offline privacy, zero network latency on boot, and rock-solid local storage.</li>
+      </ul>
+
+      <div class="rel-downloads-card">
+        <h3 class="rel-downloads-title">Downloads for v2.2.2</h3>
+        <div class="rel-downloads-grid">
+          <a class="rel-dl-link" href="https://github.com/AmanicX/eva/releases/download/v2.2.2/Eva-Setup-2.2.2.exe">Windows Installer (.exe)</a>
+          <a class="rel-dl-link" href="https://github.com/AmanicX/eva/releases/download/v2.2.2/Eva-2.2.2.AppImage">Linux AppImage</a>
+          <a class="rel-dl-link" href="https://github.com/AmanicX/eva/releases/download/v2.2.2/eva_2.2.2_amd64.deb">Linux .deb</a>
+          <a class="rel-dl-link" href="https://github.com/AmanicX/eva/releases/download/v2.2.2/eva-2.2.2.x86_64.rpm">Linux .rpm</a>
+          <a class="rel-dl-link" href="https://github.com/AmanicX/eva/releases/download/v2.2.2/Eva-android.apk">Android (.apk)</a>
+        </div>
+      </div>
+    </article>
+
     <!-- v2.2.1 Release -->
     <article class="container container-narrow rel-article" id="v221">
       <div class="rel-meta-bar">
         <span class="rel-tag-version">2.2.1</span>
-        <span class="rel-badge-badge">Latest Release</span>
         <span class="rel-date">November 2026 · Windows, Linux, Android, Web</span>
       </div>
       <h2 class="rel-title-heading">Eva 2.2.1 — Key Checking Removal &amp; Seamless Credential Saving</h2>
