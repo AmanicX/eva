@@ -1,8 +1,9 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { AnimatePresence, motion, useDragControls } from 'motion/react'
+import { AnimatePresence, motion, useDragControls, useReducedMotion } from 'motion/react'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { springDrawer, springModal } from '@/lib/motion'
 
 interface ModalProps {
   open: boolean
@@ -41,6 +42,7 @@ export function Modal({
   const previousActiveElementRef = useRef<HTMLElement | null>(null)
   const titleId = useId()
   const subtitleId = useId()
+  const prefersReduced = useReducedMotion()
 
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window === 'undefined') return false
@@ -127,11 +129,11 @@ export function Modal({
       {open && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center overflow-hidden sm:items-center sm:p-6">
           <motion.div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/65 sm:bg-black/60 sm:backdrop-blur-xs"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
+            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
             onClick={onClose}
           />
           <motion.div
@@ -141,23 +143,43 @@ export function Modal({
             aria-modal="true"
             aria-labelledby={title ? titleId : undefined}
             aria-describedby={subtitle ? subtitleId : undefined}
-            drag={isMobile ? 'y' : false}
+            drag={isMobile && !prefersReduced ? 'y' : false}
             dragControls={dragControls}
             dragListener={false}
             dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={{ top: 0, bottom: 0.6 }}
+            dragElastic={{ top: 0, bottom: 0.4 }}
             onDragEnd={(_e, info) => {
-              if (info.offset.y > 60 || info.velocity.y > 200) {
+              if (info.offset.y > 80 || info.velocity.y > 300) {
                 onClose()
               }
             }}
-            initial={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.96 }}
-            animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1 }}
-            exit={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.96 }}
+            initial={
+              prefersReduced
+                ? { opacity: 0 }
+                : isMobile
+                  ? { y: '100%' }
+                  : { opacity: 0, scale: 0.96 }
+            }
+            animate={
+              prefersReduced
+                ? { opacity: 1 }
+                : isMobile
+                  ? { y: 0 }
+                  : { opacity: 1, scale: 1 }
+            }
+            exit={
+              prefersReduced
+                ? { opacity: 0 }
+                : isMobile
+                  ? { y: '100%' }
+                  : { opacity: 0, scale: 0.96 }
+            }
             transition={
-              isMobile
-                ? { type: 'spring', damping: 30, stiffness: 320 }
-                : { type: 'spring', stiffness: 400, damping: 36 }
+              prefersReduced
+                ? { duration: 0.15 }
+                : isMobile
+                  ? springDrawer
+                  : springModal
             }
             className={cn(
               'modal-glass relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl shadow-2xl sm:my-auto sm:max-h-[88dvh] sm:rounded-2xl border border-border/80 outline-none',

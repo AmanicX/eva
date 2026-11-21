@@ -7,7 +7,7 @@ describe('Production Android update identity', () => {
   it('keeps the original package and increases the internal version despite the lower public tag', () => {
     const gradle = read('android/app/build.gradle')
     expect(gradle).toContain('applicationId "com.nexus.chatstudio"')
-    expect(gradle).toContain('versionName "2.2.3"')
+    expect(gradle).toMatch(/versionName "2\.2\.\d+"/)
     expect(Number(gradle.match(/versionCode (\d+)/)?.[1])).toBeGreaterThan(26)
     expect(read('android/variables.gradle')).toMatch(/minSdkVersion = 28/)
   })

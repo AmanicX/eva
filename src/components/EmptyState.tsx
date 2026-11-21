@@ -211,7 +211,7 @@ export function EmptyState() {
                 <div
                   key={p.name}
                   onClick={() => handleStartPreset(p.name)}
-                  className="group flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-surface p-2.5 transition hover:border-accent/40 hover:bg-surface-2 shadow-xs"
+                  className="group flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-surface p-2.5 transition hover:border-accent/40 hover:bg-surface-2 shadow-xs active:scale-[0.98]"
                 >
                   <Avatar
                     name={p.name}
@@ -250,7 +250,7 @@ export function EmptyState() {
                     <button
                       key={c.id}
                       onClick={() => focus(c.id)}
-                      className="group flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-left hover:border-accent/40 hover:bg-surface-2 transition shadow-xs"
+                      className="group flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-left hover:border-accent/40 hover:bg-surface-2 transition shadow-xs active:scale-[0.98]"
                     >
                       <Avatar
                         name={c.name}
@@ -277,7 +277,7 @@ export function EmptyState() {
                     <button
                       key={bot.name}
                       onClick={() => handleStartStarterBot(bot)}
-                      className="group flex flex-col items-start rounded-xl border border-border bg-surface p-3 text-left transition hover:border-accent/50 hover:bg-surface-2 shadow-xs"
+                      className="group flex flex-col items-start rounded-xl border border-border bg-surface p-3 text-left transition hover:border-accent/50 hover:bg-surface-2 shadow-xs active:scale-[0.98]"
                     >
                       <span
                         className="mb-2 size-2.5 rounded-full shrink-0"

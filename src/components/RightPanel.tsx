@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { motion } from 'motion/react'
 import { Plus, X, Brain, Heart, BookOpen, Clock } from 'lucide-react'
 import type { Conversation, World } from '@/types'
 import { clamp } from '@/lib/utils'
@@ -38,17 +39,44 @@ export function RightPanel({
     setMemoryDraft(conversation.memory)
   }
 
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.innerWidth < 1024
+  })
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia('(max-width: 1023px)')
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
   const setRep = (name: string, value: number) =>
     onReputationChange({ ...reputation, [name]: clamp(Math.round(value), -100, 100) })
 
   return (
     <>
-      <button
-        className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm lg:hidden"
+      <motion.button
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.18 }}
+        className="fixed inset-0 z-30 bg-black/65 sm:bg-black/60 sm:backdrop-blur-xs lg:hidden"
         onClick={onClose}
         aria-label="Close panel overlay"
       />
-      <aside className="pad-top safe-right fixed inset-y-0 right-0 z-40 flex w-[88%] max-w-sm flex-col border-l border-border/80 panel-glass lg:static lg:z-auto lg:w-80">
+      <motion.aside
+        initial={isMobile ? { x: '100%' } : { opacity: 0, x: 16 }}
+        animate={isMobile ? { x: 0 } : { opacity: 1, x: 0 }}
+        exit={isMobile ? { x: '100%' } : { opacity: 0, x: 16 }}
+        transition={
+          isMobile
+            ? { type: 'spring', damping: 32, stiffness: 320 }
+            : { duration: 0.18, ease: [0.16, 1, 0.3, 1] }
+        }
+        className="pad-top safe-right fixed inset-y-0 right-0 z-40 flex w-[88%] max-w-sm flex-col border-l border-border/80 panel-glass lg:static lg:z-auto lg:w-80"
+      >
         {/* Header */}
         <div className="hairline flex items-center justify-between px-4 py-3">
           <h3 className="flex items-center gap-2 font-display text-sm font-semibold text-fg">
@@ -205,7 +233,7 @@ export function RightPanel({
             </p>
           </section>
         </div>
-      </aside>
+      </motion.aside>
     </>
   )
 }

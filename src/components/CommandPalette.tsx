@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 import {
   Check,
   Cpu,
@@ -23,6 +24,7 @@ import { PROVIDER_PRESETS } from '@/lib/groq'
 import { getSupportedProviderPresets } from '@/lib/platform'
 import { cn } from '@/lib/utils'
 import { AppLogo } from '@/components/AppLogo'
+import { modalVariants, springModal } from '@/lib/motion'
 
 interface CommandItem {
   id: string
@@ -410,23 +412,32 @@ export function CommandPalette() {
     }
   }
 
-  if (!open) return null
-
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center p-3 pt-12 sm:p-6 sm:pt-20">
-      <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
-        onClick={close}
-      />
+    <AnimatePresence>
+      {open && (
+        <div className="fixed inset-0 z-[100] flex items-start justify-center p-3 pt-12 sm:p-6 sm:pt-20">
+          <motion.div
+            className="fixed inset-0 bg-black/65 sm:bg-black/60 sm:backdrop-blur-xs"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+            onClick={close}
+          />
 
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Command Palette"
-        className="modal-glass relative z-10 flex max-h-[80dvh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border/80 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
-      >
-        {/* Search Input bar */}
-        <div className="flex items-center gap-3 border-b border-border px-4 py-3 sm:px-5">
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Command Palette"
+            variants={modalVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={springModal}
+            className="modal-glass relative z-10 flex max-h-[80dvh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border/80 shadow-2xl"
+          >
+            {/* Search Input bar */}
+            <div className="flex items-center gap-3 border-b border-border px-4 py-3 sm:px-5">
           <Search size={18} className="text-muted shrink-0" />
           <input
             ref={inputRef}
@@ -527,7 +538,9 @@ export function CommandPalette() {
             <span>Eva Command Palette</span>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
+      )}
+    </AnimatePresence>
   )
 }

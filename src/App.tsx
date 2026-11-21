@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Command, Menu, Terminal } from 'lucide-react'
+import { MotionConfig } from 'motion/react'
 import { useStore } from '@/store/useStore'
 import { Sidebar } from '@/components/Sidebar'
 import { ChatView } from '@/components/ChatView'
@@ -90,82 +91,84 @@ function App() {
   }, [setUI])
 
   return (
-    <div className="app-bg relative flex h-full w-full flex-col overflow-hidden text-fg">
-      <div className="relative z-10 flex h-full w-full flex-col overflow-hidden">
-        {!isAndroid && <TitleBar />}
+    <MotionConfig reducedMotion="user">
+      <div className="app-bg relative flex h-full w-full flex-col overflow-hidden text-fg">
+        <div className="relative z-10 flex h-full w-full flex-col overflow-hidden">
+          {!isAndroid && <TitleBar />}
 
-        <div className="flex min-h-0 flex-1 w-full overflow-hidden">
-          <Sidebar />
+          <div className="flex min-h-0 flex-1 w-full overflow-hidden">
+            <Sidebar />
 
-          <main className="flex min-w-0 flex-1 flex-col">
-            {conversation ? (
-              <ChatView onShowCommands={() => setShowCommands(true)} />
-            ) : (
-              <div className="flex h-full min-w-0 flex-1 flex-col material-workspace">
-                <header
-                  className={cn(
-                    'hairline material-header pad-top flex items-center px-3 py-2.5 lg:hidden',
-                    isAndroid ? 'gap-2.5' : 'justify-between',
-                  )}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    <button
-                      onClick={() => setUI({ sidebarOpen: true })}
-                      className="btn btn-ghost grid size-10 place-items-center rounded-xl p-0 shrink-0"
-                      aria-label="Open sidebar"
-                    >
-                      <Menu size={18} />
-                    </button>
-                    <AppLogo className="size-7 rounded-lg ring-1 ring-border/80 shadow-xs shrink-0" />
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="font-display text-sm font-semibold tracking-tight text-fg">
-                        Eva
-                      </span>
-                      {isAndroid && (
-                        <>
-                          <span className="text-3xs text-faint">·</span>
-                          <span className="text-2xs text-muted font-medium truncate">
-                            {THEMES[settings.theme]?.name ?? 'Chatbot'}
-                          </span>
-                        </>
-                      )}
+            <main className="flex min-w-0 flex-1 flex-col">
+              {conversation ? (
+                <ChatView onShowCommands={() => setShowCommands(true)} />
+              ) : (
+                <div className="flex h-full min-w-0 flex-1 flex-col material-workspace">
+                  <header
+                    className={cn(
+                      'hairline material-header pad-top flex items-center px-3 py-2.5 lg:hidden',
+                      isAndroid ? 'gap-2.5' : 'justify-between',
+                    )}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <button
+                        onClick={() => setUI({ sidebarOpen: true })}
+                        className="btn btn-ghost grid size-10 place-items-center rounded-xl p-0 shrink-0"
+                        aria-label="Open sidebar"
+                      >
+                        <Menu size={18} />
+                      </button>
+                      <AppLogo className="size-7 rounded-lg ring-1 ring-border/80 shadow-xs shrink-0" />
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="font-display text-sm font-semibold tracking-tight text-fg">
+                          Eva
+                        </span>
+                        {isAndroid && (
+                          <>
+                            <span className="text-3xs text-faint">·</span>
+                            <span className="text-2xs text-muted font-medium truncate">
+                              {THEMES[settings.theme]?.name ?? 'Chatbot'}
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  {!isAndroid && (
-                    <button
-                      onClick={() => setUI({ commandPaletteOpen: true })}
-                      className="btn btn-ghost flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs text-muted shrink-0"
-                      aria-label="Open command palette"
-                    >
-                      <Command size={14} />
-                      <span className="text-2xs">Commands</span>
-                    </button>
-                  )}
-                </header>
-                <EmptyState />
-              </div>
-            )}
-          </main>
+                    {!isAndroid && (
+                      <button
+                        onClick={() => setUI({ commandPaletteOpen: true })}
+                        className="btn btn-ghost flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs text-muted shrink-0"
+                        aria-label="Open command palette"
+                      >
+                        <Command size={14} />
+                        <span className="text-2xs">Commands</span>
+                      </button>
+                    )}
+                  </header>
+                  <EmptyState />
+                </div>
+              )}
+            </main>
+          </div>
         </div>
+
+        <SettingsModal />
+        <CharacterModal />
+        <WorldModal />
+        <Welcome />
+        <CommandPalette />
+
+        <Modal
+          open={showCommands}
+          onClose={() => setShowCommands(false)}
+          title="Command syntax"
+          subtitle="Write richer scenes with these. They work in every theme."
+          icon={<Terminal size={18} />}
+          size="md"
+        >
+          <CommandCheatsheet />
+        </Modal>
       </div>
-
-      <SettingsModal />
-      <CharacterModal />
-      <WorldModal />
-      <Welcome />
-      <CommandPalette />
-
-      <Modal
-        open={showCommands}
-        onClose={() => setShowCommands(false)}
-        title="Command syntax"
-        subtitle="Write richer scenes with these. They work in every theme."
-        icon={<Terminal size={18} />}
-        size="md"
-      >
-        <CommandCheatsheet />
-      </Modal>
-    </div>
+    </MotionConfig>
   )
 }
 

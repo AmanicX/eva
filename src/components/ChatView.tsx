@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 import {
+  ArrowDown,
   Brain,
   ChevronLeft,
   Cpu,
@@ -58,15 +60,46 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
   const [configModalOpen, setConfigModalOpen] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const isAtBottomRef = useRef(true)
+  const [showScrollBottom, setShowScrollBottom] = useState(false)
   const streamRef = useRef(false)
+  const [lastConvId, setLastConvId] = useState(conversation?.id)
+  const [historicMessageIds, setHistoricMessageIds] = useState<Set<string>>(
+    () => new Set(conversation?.messages.map((m) => m.id) ?? []),
+  )
+
+  if (conversation?.id !== lastConvId) {
+    setLastConvId(conversation?.id)
+    setHistoricMessageIds(new Set(conversation?.messages.map((m) => m.id) ?? []))
+    setShowScrollBottom(false)
+  }
 
   const scrollToBottom = (smooth: boolean) => {
     bottomRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' })
   }
 
+  // Instant scroll to bottom on conversation switch
   useEffect(() => {
-    scrollToBottom(!streamRef.current)
-  }, [conversation?.messages, conversation?.id])
+    isAtBottomRef.current = true
+    bottomRef.current?.scrollIntoView({ behavior: 'auto' })
+  }, [conversation?.id])
+
+  const handleScroll = () => {
+    const el = scrollContainerRef.current
+    if (!el) return
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+    const atBottom = distanceFromBottom <= 80
+    isAtBottomRef.current = atBottom
+    setShowScrollBottom(!atBottom)
+  }
+
+  useEffect(() => {
+    // Only auto-scroll during streaming or incoming messages if the user is anchored at bottom
+    if (isAtBottomRef.current) {
+      scrollToBottom(!streamRef.current)
+    }
+  }, [conversation?.messages])
 
   useEffect(() => {
     streamRef.current = streaming
@@ -472,8 +505,12 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
 
       {/* Main Chat Area */}
       <div className="flex min-h-0 flex-1 material-workspace">
-        <div className="flex min-w-0 flex-1 flex-col">
-          <div className="scroll-thin flex-1 overflow-y-auto px-3 py-6 sm:px-6">
+        <div className="relative flex min-w-0 flex-1 flex-col">
+          <div
+            ref={scrollContainerRef}
+            onScroll={handleScroll}
+            className="scroll-thin flex-1 overflow-y-auto px-3 py-6 sm:px-6"
+          >
             <div className="mx-auto flex max-w-3xl flex-col gap-5">
               {/* Empty state presentation tailored per mode */}
               {messages.length === 0 && (
@@ -562,6 +599,7 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
                   key={m.id}
                   message={m}
                   character={character}
+                  animate={!historicMessageIds.has(m.id)}
                   streaming={
                     streaming &&
                     m.id === messages[messages.length - 1]?.id &&
@@ -577,6 +615,27 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
             </div>
           </div>
 
+          <AnimatePresence>
+            {showScrollBottom && (
+              <motion.button
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+                onClick={() => {
+                  isAtBottomRef.current = true
+                  setShowScrollBottom(false)
+                  scrollToBottom(true)
+                }}
+                className="btn absolute bottom-24 right-4 sm:right-8 z-20 flex items-center gap-1.5 rounded-full border border-border/80 bg-surface/90 px-3 py-1.5 text-xs font-medium text-fg shadow-lg backdrop-blur-md hover:bg-surface active:scale-95"
+                aria-label="Scroll to bottom"
+              >
+                <ArrowDown size={14} className="text-accent" />
+                <span>Latest</span>
+              </motion.button>
+            )}
+          </AnimatePresence>
+
           {/* Composer */}
           <Composer
             value={input}
@@ -591,15 +650,17 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
         </div>
 
         {/* Right contextual panel */}
-        {rightPanel !== 'none' && (
-          <RightPanel
-            conversation={conversation}
-            world={world}
-            onClose={() => setUI({ rightPanel: 'none' })}
-            onMemoryChange={(v) => setMemory(conversation.id, v)}
-            onReputationChange={(next) => updateWorldState(conversation.id, { reputation: next })}
-          />
-        )}
+        <AnimatePresence>
+          {rightPanel !== 'none' && (
+            <RightPanel
+              conversation={conversation}
+              world={world}
+              onClose={() => setUI({ rightPanel: 'none' })}
+              onMemoryChange={(v) => setMemory(conversation.id, v)}
+              onReputationChange={(next) => updateWorldState(conversation.id, { reputation: next })}
+            />
+          )}
+        </AnimatePresence>
       </div>
 
       <SceneModal open={sceneModalOpen} onClose={() => setSceneModalOpen(false)} />
