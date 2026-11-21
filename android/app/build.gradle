@@ -36,7 +36,9 @@ android {
     }
     buildTypes {
         debug {
-            // Uses standard local Android debug keystore
+            // Debug keys differ across machines/runners; never replace a production install.
+            applicationIdSuffix ".testing"
+            versionNameSuffix "-testing"
         }
         release {
             def ksPath = System.getenv("ANDROID_KEYSTORE_PATH") ?: '../nexus-release.keystore'
