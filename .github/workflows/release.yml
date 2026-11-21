@@ -96,21 +96,33 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Configure signing keystore
+      - name: Validate Release Signing Secrets
         run: |
-          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
-            echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/nexus-release.keystore
-          else
-            echo "$DEFAULT_KEYSTORE_BASE64" | base64 --decode > android/nexus-release.keystore
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "::error title=Missing Android Signing Secrets::Production release APK signing requires ANDROID_KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, and KEY_PASSWORD secrets to be configured in GitHub repository secrets. Embedded fallbacks are forbidden."
+            exit 1
           fi
-          chmod 600 android/nexus-release.keystore
-          cp android/nexus-release.keystore android/app/nexus-release.keystore
-          echo "=== Keystore Verification ==="
-          keytool -list -v -keystore android/nexus-release.keystore -storepass "${KEYSTORE_PASSWORD:-nexusapp2026}"
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          DEFAULT_KEYSTORE_BASE64: "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"
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || 'nexusapp2026' }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Configure signing keystore
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/nexus-release.keystore
+          chmod 600 android/nexus-release.keystore
+          cp android/nexus-release.keystore android/app/nexus-release.keystore
+          echo "=== Keystore Verification (Validating Alias without Leaking Secrets) ==="
+          keytool -list -keystore android/nexus-release.keystore -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" > /dev/null 2>&1 || {
+            echo "::error::Keystore validation failed: unable to open keystore or alias does not match."
+            exit 1
+          }
+          echo "Keystore verified successfully."
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
 
       - name: Build release APK
         run: |
@@ -119,9 +131,10 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease -x lintVitalRelease -x lint --no-daemon --stacktrace 2>&1 | tee /tmp/gradle.log
         env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || 'nexusapp2026' }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS || 'nexus' }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || 'nexusapp2026' }}
+          ANDROID_KEYSTORE_PATH: nexus-release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Surface build error
         if: failure()

@@ -33,6 +33,11 @@ import {
   type RoleplayFocus,
 } from '@/lib/characterGenerator'
 import { cn } from '@/lib/utils'
+import {
+  resolveProviderCredentials,
+  resolveProviderIdFromUrl,
+  getPresetForId,
+} from '@/lib/providerResolution'
 
 interface CharacterGeneratorProps {
   onApplyToForm: (profile: GeneratedCharacterProfile) => void
@@ -147,18 +152,31 @@ export function CharacterGenerator({
         }
       }
 
+      const provId =
+        selectedProvider !== 'inherit'
+          ? selectedProvider
+          : resolveProviderIdFromUrl(settings.baseUrl)
+      const creds = await resolveProviderCredentials({
+        providerId: provId,
+        baseUrl:
+          selectedProvider !== 'inherit'
+            ? getPresetForId(provId)?.baseUrl
+            : settings.baseUrl,
+      })
+      const model =
+        selectedProvider !== 'inherit' && selectedModel
+          ? selectedModel
+          : settings.model
+
       const generated = await generateCharacterProfile({
         description: finalDescription,
         complexity,
         writingStyle,
         roleplayFocus,
         provider: {
-          apiKey: settings.apiKey,
-          baseUrl: settings.baseUrl,
-          model:
-            selectedProvider !== 'inherit' && selectedModel
-              ? selectedModel
-              : settings.model,
+          apiKey: creds.apiKey,
+          baseUrl: creds.baseUrl,
+          model,
         },
         signal: controller.signal,
       })
@@ -193,15 +211,31 @@ export function CharacterGenerator({
 
     try {
       const customInstruction = sectionInstructions[sectionKey] || ''
+      const provId =
+        selectedProvider !== 'inherit'
+          ? selectedProvider
+          : resolveProviderIdFromUrl(settings.baseUrl)
+      const creds = await resolveProviderCredentials({
+        providerId: provId,
+        baseUrl:
+          selectedProvider !== 'inherit'
+            ? getPresetForId(provId)?.baseUrl
+            : settings.baseUrl,
+      })
+      const model =
+        selectedProvider !== 'inherit' && selectedModel
+          ? selectedModel
+          : settings.model
+
       const updatedValue = await regenerateCharacterSection({
         currentProfile: profile,
         sectionKey,
         originalDescription: description.trim() || profile.personality,
         customInstruction,
         provider: {
-          apiKey: settings.apiKey,
-          baseUrl: settings.baseUrl,
-          model: settings.model,
+          apiKey: creds.apiKey,
+          baseUrl: creds.baseUrl,
+          model,
         },
         signal: controller.signal,
       })

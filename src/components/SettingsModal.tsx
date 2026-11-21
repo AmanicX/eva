@@ -73,6 +73,9 @@ import { CommandCheatsheet } from './CommandCheatsheet'
 import { cn, clamp, download } from '@/lib/utils'
 import { APP_VERSION } from '@/lib/version'
 import type { AppearanceMode } from '@/types'
+import { resolveProviderCredentials, resolveProviderIdFromUrl } from '@/lib/providerResolution'
+import { validateAndSanitizeBackup } from '@/lib/backupValidation'
+import { eraseEverything } from '@/lib/reset'
 import type { UIState } from '@/store/useStore'
 
 export interface SettingsTabItem {
@@ -163,8 +166,17 @@ export function SettingsModal() {
   const open = ui.settingsOpen
   const tab = ui.settingsTab
   const [showKey, setShowKey] = useState(false)
-  const [testState, setTestState] = useState<'idle' | 'testing' | 'ok' | 'fail'>('idle')
-  const [testMsg, setTestMsg] = useState('')
+  const [testResult, setTestResult] = useState<{
+    targetBaseUrl: string
+    targetProvId: string
+    state: 'idle' | 'testing' | 'ok' | 'fail'
+    msg: string
+  }>({
+    targetBaseUrl: '',
+    targetProvId: '',
+    state: 'idle',
+    msg: '',
+  })
   const [modelFilter, setModelFilter] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -215,22 +227,67 @@ export function SettingsModal() {
     m.toLowerCase().includes(modelFilter.trim().toLowerCase()),
   )
 
+  const testProvId = activePreset?.id || resolveProviderIdFromUrl(settings.baseUrl)
+  const isTargetCurrent = testResult.targetBaseUrl === settings.baseUrl && testResult.targetProvId === testProvId
+  const testState = isTargetCurrent ? testResult.state : 'idle'
+  const testMsg = isTargetCurrent ? testResult.msg : ''
+
   const testConnection = async () => {
-    if (needsKey && !settings.apiKey.trim()) {
-      setTestState('fail')
-      setTestMsg('Add an API key first.')
+    const provId = testProvId
+    const effectiveKey = (providerKeys[provId] ?? savedKeys[provId] ?? '').trim()
+
+    if (provId === 'cloudflare') {
+      const accountId = (cfAccountId || savedCfAccountId || '').trim()
+      const token = (cfApiToken || savedCfApiToken || '').trim()
+      if (!accountId || !token) {
+        setTestResult({
+          targetBaseUrl: settings.baseUrl,
+          targetProvId: provId,
+          state: 'fail',
+          msg: 'Enter both Cloudflare Account ID and API Token.',
+        })
+        return
+      }
+    } else if (needsKey && !effectiveKey) {
+      setTestResult({
+        targetBaseUrl: settings.baseUrl,
+        targetProvId: provId,
+        state: 'fail',
+        msg: 'Add an API key first.',
+      })
       return
     }
-    setTestState('testing')
-    setTestMsg('')
+
+    setTestResult({
+      targetBaseUrl: settings.baseUrl,
+      targetProvId: provId,
+      state: 'testing',
+      msg: '',
+    })
     try {
-      const list = await listGroqModels(settings.apiKey, settings.baseUrl)
+      const creds = await resolveProviderCredentials({
+        providerId: provId,
+        baseUrl: settings.baseUrl,
+        formKey: effectiveKey,
+        formAccountId: cfAccountId || savedCfAccountId,
+        formApiToken: cfApiToken || savedCfApiToken,
+      })
+
+      const list = await listGroqModels(creds.apiKey, creds.baseUrl, creds.accountId)
       updateSettings({ cachedModels: list })
-      setTestState('ok')
-      setTestMsg(`Connected successfully · ${list.length} models available`)
+      setTestResult({
+        targetBaseUrl: settings.baseUrl,
+        targetProvId: provId,
+        state: 'ok',
+        msg: `Connected successfully · ${list.length} models available`,
+      })
     } catch (e) {
-      setTestState('fail')
-      setTestMsg(e instanceof Error ? e.message : 'Connection failed')
+      setTestResult({
+        targetBaseUrl: settings.baseUrl,
+        targetProvId: provId,
+        state: 'fail',
+        msg: e instanceof Error ? e.message : 'Connection failed',
+      })
     }
   }
 
@@ -247,23 +304,26 @@ export function SettingsModal() {
     try {
       const text = await file.text()
       const parsed = JSON.parse(text)
-      if (parsed?.settings) {
-        if (!parsed.settings.apiKey) {
-          // Preserve existing active API key if backup does not contain one
-          parsed.settings.apiKey = settings.apiKey
-        } else if (settings.apiKey && parsed.settings.apiKey !== settings.apiKey) {
-          // If backup contains a different API key, confirm with user before overwriting
-          const shouldOverwrite = window.confirm(
-            'The backup file contains an API key. Would you like to overwrite your active API key with the one from the backup?'
-          )
-          if (!shouldOverwrite) {
-            parsed.settings.apiKey = settings.apiKey
-          }
+      const validation = validateAndSanitizeBackup(parsed)
+      if (!validation.valid || !validation.data) {
+        alert(validation.error || 'Invalid backup file structure.')
+        return
+      }
+
+      // If backup has explicit API key, prompt user
+      if (parsed?.settings?.apiKey && parsed.settings.apiKey.trim()) {
+        const shouldOverwrite = window.confirm(
+          'The backup file contains an API key. Would you like to overwrite your active API key with the one from the backup?'
+        )
+        if (shouldOverwrite) {
+          validation.data.settings.apiKey = parsed.settings.apiKey.trim()
         }
       }
-      replaceAll(parsed)
+
+      replaceAll(validation.data)
+      alert('Backup imported successfully!')
     } catch {
-      alert('Could not read that backup file.')
+      alert('Could not parse that backup file. Ensure it is valid JSON.')
     }
   }
 
@@ -1455,13 +1515,16 @@ export function SettingsModal() {
 
               <Section title="Danger Zone" icon={<Trash2 size={15} />}>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     if (
                       confirm(
-                        'Erase ALL characters, worlds, chats and custom settings? This action is irreversible.',
+                        'Permanently erase all characters, worlds, chats, stored API keys, cached images, and custom settings across all storage backends? This action is irreversible.',
                       )
                     ) {
-                      localStorage.removeItem('nexus-chat-store')
+                      const res = await eraseEverything()
+                      if (!res.success) {
+                        alert(`Notice: Some items could not be erased: ${res.errors.join(', ')}`)
+                      }
                       location.reload()
                     }
                   }}

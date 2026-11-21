@@ -2,13 +2,14 @@
  * Fallback & Judge Engine for Eva
  *
  * Implements capability-aware fallback chains, attempt tracking, per-attempt timeouts,
- * refusal classification (regex pre-check + judge model), and graceful degradation.
+ * refusal classification (regex pre-check + judge model), streaming support, and graceful degradation.
  */
 
 import type { ChatMessage } from './groq'
-import { chatGroq, PROVIDER_PRESETS, resolveBaseUrl } from './groq'
+import { chatGroq, streamGroq, PROVIDER_PRESETS, resolveBaseUrl } from './groq'
 import { getProviderKey, getCloudflareCredentials } from './credentials'
-import { isMobilePlatform, isProviderSupportedOnPlatform, isLocalProvider, isLocalUrl } from './platform'
+import { isMobilePlatform, isLocalProvider } from './platform'
+import { buildResolvedFallbackChain, isCloudJudgePermitted, isLocal } from './providerResolution'
 import type { Settings } from '@/types'
 
 export interface FallbackCandidate {
@@ -49,19 +50,42 @@ export function isObviousRefusal(text: string): boolean {
 
 /**
  * Sends reply and user prompt to judge model to classify refusals.
+ * Strictly respects local-only privacy: if primary inference is local and cloud fallback
+ * is not explicitly enabled, zero external requests are made.
  */
 export async function judgeReplyRefusal(
   userPrompt: string,
   replyText: string,
   judge: { providerId: string; model: string },
   signal?: AbortSignal,
+  settings?: Settings,
+  isPrimaryLocal?: boolean,
 ): Promise<{ refusal: boolean; reason: string }> {
   // 1. Fast local regex pre-check
   if (isObviousRefusal(replyText)) {
     return { refusal: true, reason: 'Obvious refusal phrase detected by local heuristics.' }
   }
 
-  // 2. Query judge model with strict short prompt and JSON output
+  // 2. Enforce privacy policy
+  if (settings) {
+    const permitted = isCloudJudgePermitted({
+      isPrimaryLocal: !!isPrimaryLocal,
+      judgeProviderId: judge.providerId,
+      settings,
+    })
+    if (!permitted) {
+      return {
+        refusal: false,
+        reason: 'Refusal judge bypassed to preserve local-only privacy.',
+      }
+    }
+  }
+
+  // 3. Query judge model with strict short prompt and JSON output
+  const timeoutCtrl = new AbortController()
+  const timer = setTimeout(() => timeoutCtrl.abort(), 10000)
+  const judgeSignal = signal ? anySignal([signal, timeoutCtrl.signal]) : timeoutCtrl.signal
+
   try {
     const preset = PROVIDER_PRESETS.find((p) => p.id === judge.providerId)
     let apiKey = await getProviderKey(judge.providerId)
@@ -92,16 +116,21 @@ export async function judgeReplyRefusal(
       messages: judgeMessages,
       temperature: 0.1,
       maxTokens: 80,
-      signal,
+      signal: judgeSignal,
     })
 
+    clearTimeout(timer)
     const parsed = JSON.parse(response.replace(/```json|```/g, '').trim())
     return {
       refusal: !!parsed.refusal,
       reason: parsed.reason || (parsed.refusal ? 'Classified as refusal by judge model.' : ''),
     }
   } catch {
-    // If the judge itself fails, fall back to regex heuristics only
+    clearTimeout(timer)
+    if (signal?.aborted) {
+      throw new DOMException('Chat generation stopped by user.', 'AbortError')
+    }
+    // If the judge call timed out or failed, fall back to regex heuristics only
     return {
       refusal: isObviousRefusal(replyText),
       reason: 'Judge call failed; evaluated via regex fallback.',
@@ -112,116 +141,14 @@ export async function judgeReplyRefusal(
 /**
  * Builds the ordered sequence of fallback candidates for a given capability.
  * Never includes duplicate (providerId, model) pairs.
+ * Strictly respects local-only zero-leak privacy policy.
  */
 export function buildFallbackChain(
   capability: 'chat' | 'image' | 'tts',
   preferred: { providerId?: string; model?: string } | null | undefined,
   settings: Settings,
 ): FallbackCandidate[] {
-  const candidates: FallbackCandidate[] = []
-  const seen = new Set<string>()
-  const isMobile = isMobilePlatform()
-
-  const addCandidate = (providerId: string, model: string) => {
-    if (!providerId || !model) return
-    const preset = PROVIDER_PRESETS.find((p) => p.id === providerId)
-    const baseUrl = preset?.baseUrl || ''
-    // On mobile, local providers (Ollama, LM Studio) or loopback URLs are strictly unsupported
-    if (isMobile && (!isProviderSupportedOnPlatform(providerId, isMobile) || isLocalUrl(baseUrl))) {
-      return
-    }
-
-    const key = `${providerId}::${model}`
-    if (seen.has(key)) return
-    seen.add(key)
-
-    candidates.push({
-      providerId,
-      model,
-      baseUrl,
-    })
-  }
-
-  // 1. Preferred candidate if keyed and enabled
-  if (preferred?.providerId && preferred?.model) {
-    const isKeyed =
-      settings.keyedProviders.includes(preferred.providerId) ||
-      preferred.providerId === 'ollama' ||
-      preferred.providerId === 'lmstudio' ||
-      preferred.providerId === 'pollinations'
-    const isEnabled = settings.providerCapabilities[preferred.providerId]?.[capability] !== false
-
-    if (isKeyed && isEnabled) {
-      addCandidate(preferred.providerId, preferred.model)
-    }
-  }
-
-  // 2. Default for this capability
-  const capDefault =
-    capability === 'chat'
-      ? settings.chatDefault
-      : capability === 'image'
-        ? settings.imageDefault
-        : settings.ttsDefault
-
-  if (capDefault?.providerId) {
-    const isKeyed =
-      settings.keyedProviders.includes(capDefault.providerId) ||
-      capDefault.providerId === 'ollama' ||
-      capDefault.providerId === 'lmstudio' ||
-      capDefault.providerId === 'pollinations'
-    const isEnabled = settings.providerCapabilities[capDefault.providerId]?.[capability] !== false
-
-    const defaultModel = 'model' in capDefault ? capDefault.model : capDefault.voice
-    if (defaultModel && isKeyed && isEnabled) {
-      addCandidate(capDefault.providerId, defaultModel)
-    }
-  }
-
-  // 3. Fallback order configured by user
-  const orderList =
-    capability === 'chat'
-      ? settings.chatProviderOrder
-      : capability === 'image'
-        ? settings.imageProviderOrder
-        : settings.ttsProviderOrder
-
-  for (const provId of orderList) {
-    const isKeyed =
-      settings.keyedProviders.includes(provId) ||
-      provId === 'ollama' ||
-      provId === 'lmstudio' ||
-      provId === 'pollinations'
-    const isEnabled = settings.providerCapabilities[provId]?.[capability] !== false
-    if (!isKeyed || !isEnabled) continue
-
-    const provModel =
-      capability === 'chat'
-        ? settings.providerModels[provId]?.chatModel || (provId === 'groq' ? settings.model : '')
-        : capability === 'image'
-          ? settings.providerModels[provId]?.imageModel || 'flux'
-          : settings.providerModels[provId]?.ttsVoice || 'alloy'
-
-    if (provModel) {
-      addCandidate(provId, provModel)
-    }
-  }
-
-  // 4. Last resort: Fallback model
-  if (capability === 'chat' && settings.fallbackModel?.providerId && settings.fallbackModel?.model) {
-    const isKeyed =
-      settings.keyedProviders.includes(settings.fallbackModel.providerId) ||
-      settings.fallbackModel.providerId === 'ollama' ||
-      settings.fallbackModel.providerId === 'lmstudio' ||
-      settings.fallbackModel.providerId === 'pollinations'
-    const isEnabled = settings.providerCapabilities[settings.fallbackModel.providerId]?.[capability] !== false
-
-    if (isKeyed && isEnabled) {
-      addCandidate(settings.fallbackModel.providerId, settings.fallbackModel.model)
-    }
-  }
-
-  return candidates
+  return buildResolvedFallbackChain(capability, preferred, settings)
 }
 
 export interface ExecuteChatOptions {
@@ -230,8 +157,10 @@ export interface ExecuteChatOptions {
   settings: Settings
   temperature?: number
   maxTokens?: number
+  topP?: number
   signal?: AbortSignal
   onStatusUpdate?: (status: string) => void
+  onDelta?: (delta: string) => void
 }
 
 export interface ExecuteChatResult {
@@ -242,8 +171,7 @@ export interface ExecuteChatResult {
 }
 
 /**
- * Executes chat generation with robust fallback and refusal handling.
- * Atomically returns complete response without streaming text chunks to UI.
+ * Executes chat generation with robust fallback, refusal handling, and streaming.
  */
 export async function executeChatWithFallback(
   opts: ExecuteChatOptions,
@@ -252,7 +180,10 @@ export async function executeChatWithFallback(
   const candidates = buildFallbackChain('chat', opts.preferredCandidate, opts.settings)
 
   if (candidates.length === 0) {
-    const candidateProvId = opts.preferredCandidate?.providerId || opts.settings.chatDefault?.providerId || opts.settings.fallbackModel?.providerId
+    const candidateProvId =
+      opts.preferredCandidate?.providerId ||
+      opts.settings.chatDefault?.providerId ||
+      opts.settings.fallbackModel?.providerId
     if (isMobile && candidateProvId && isLocalProvider(candidateProvId)) {
       const preset = PROVIDER_PRESETS.find((p) => p.id === candidateProvId)
       throw new Error(
@@ -298,15 +229,57 @@ export async function executeChatWithFallback(
       : timeoutCtrl.signal
 
     try {
-      const reply = await chatGroq({
-        apiKey,
-        baseUrl,
-        model: candidate.model,
-        messages: opts.messages,
-        temperature: opts.temperature ?? opts.settings.temperature ?? 0.85,
-        maxTokens: opts.maxTokens ?? opts.settings.maxTokens ?? 2048,
-        signal: attemptSignal,
-      })
+      let reply = ''
+      const isCandidateLocal = isLocal(candidate.providerId, candidate.baseUrl)
+
+      if (opts.settings.streaming && opts.onDelta) {
+        try {
+          for await (const chunk of streamGroq({
+            apiKey,
+            baseUrl,
+            model: candidate.model,
+            messages: opts.messages,
+            temperature: opts.temperature ?? opts.settings.temperature ?? 0.85,
+            maxTokens: opts.maxTokens ?? opts.settings.maxTokens ?? 2048,
+            topP: opts.topP ?? opts.settings.topP ?? 1,
+            signal: attemptSignal,
+          })) {
+            reply += chunk
+            opts.onDelta(chunk)
+          }
+        } catch (streamErr: any) {
+          if (opts.signal?.aborted) {
+            throw new DOMException('Chat generation stopped by user.', 'AbortError')
+          }
+          // If stream failed before any chunks were received, fall back to atomic chatGroq
+          if (!reply.trim()) {
+            reply = await chatGroq({
+              apiKey,
+              baseUrl,
+              model: candidate.model,
+              messages: opts.messages,
+              temperature: opts.temperature ?? opts.settings.temperature ?? 0.85,
+              maxTokens: opts.maxTokens ?? opts.settings.maxTokens ?? 2048,
+              topP: opts.topP ?? opts.settings.topP ?? 1,
+              signal: attemptSignal,
+            })
+            if (opts.onDelta) opts.onDelta(reply)
+          } else {
+            throw streamErr
+          }
+        }
+      } else {
+        reply = await chatGroq({
+          apiKey,
+          baseUrl,
+          model: candidate.model,
+          messages: opts.messages,
+          temperature: opts.temperature ?? opts.settings.temperature ?? 0.85,
+          maxTokens: opts.maxTokens ?? opts.settings.maxTokens ?? 2048,
+          topP: opts.topP ?? opts.settings.topP ?? 1,
+          signal: attemptSignal,
+        })
+      }
 
       clearTimeout(attemptTimeout)
       const durationMs = Date.now() - start
@@ -328,12 +301,14 @@ export async function executeChatWithFallback(
         bestNonEmptyCandidate = { content: cleanReply, candidate }
       }
 
-      // Check refusal via judge / regex
+      // Check refusal via judge / regex with local privacy awareness
       const refusalCheck = await judgeReplyRefusal(
         userMessage,
         cleanReply,
         opts.settings.fallbackModel,
         opts.signal,
+        opts.settings,
+        isCandidateLocal,
       )
 
       if (refusalCheck.refusal) {

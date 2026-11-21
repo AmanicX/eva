@@ -136,13 +136,20 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
           }
         : null
 
+      let streamed = ''
       const result = await executeChatWithFallback({
         messages,
         preferredCandidate: preferred,
         settings: state.settings,
         temperature: state.settings.temperature,
         maxTokens: state.settings.maxTokens,
+        topP: state.settings.topP,
         signal: controller.signal,
+        onDelta: (chunk) => {
+          streamed += chunk
+          const { clean } = extractState(streamed)
+          updateMessage(convId, assistantId, { content: clean || '…' })
+        },
       })
 
       const { clean, update } = extractState(result.content)
@@ -247,7 +254,7 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
   return (
     <div className="flex h-full min-w-0 flex-1 flex-col">
       {/* Universal Header with Mode Nuances */}
-      <header className="hairline material-header pad-top flex items-center justify-between gap-2 px-3 py-2.5 sm:px-5">
+      <header className="relative z-20 hairline material-header pad-top flex items-center justify-between gap-2 px-3 py-2.5 sm:px-5">
         <div className="flex items-center gap-2.5 min-w-0">
           <button
             onClick={() => setUI({ sidebarOpen: true })}
@@ -364,17 +371,27 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
           {/* Menu popover */}
           <div className="relative">
             <button
+              id="chat-actions-menu-btn"
               onClick={() => setMenuOpen((v) => !v)}
               className="btn btn-ghost size-9 rounded-xl p-0"
               title="More actions"
               aria-label="More actions"
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
             >
               <MoreVertical size={16} />
             </button>
             {menuOpen && (
               <>
                 <div className="fixed inset-0 z-20" onClick={() => setMenuOpen(false)} />
-                <div className="panel anim-pop scroll-thin absolute right-0 z-30 mt-1 max-h-[70dvh] w-52 overflow-y-auto rounded-xl p-1.5 shadow-2xl">
+                <div
+                  role="menu"
+                  aria-labelledby="chat-actions-menu-btn"
+                  className="panel anim-pop scroll-thin absolute right-0 z-30 mt-1 max-h-[70dvh] w-52 overflow-y-auto rounded-xl p-1.5 shadow-2xl"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') setMenuOpen(false)
+                  }}
+                >
                   <MenuItem
                     icon={<Pencil size={14} />}
                     onClick={() => {
@@ -604,6 +621,7 @@ function MenuItem({
 }) {
   return (
     <button
+      role="menuitem"
       onClick={onClick}
       className={cn(
         'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs transition hover:bg-surface-2',

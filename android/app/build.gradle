@@ -17,29 +17,41 @@ android {
         }
     }
     signingConfigs {
-        debug {
-            v1SigningEnabled true
-            v2SigningEnabled true
-            storeFile file(System.getenv("ANDROID_KEYSTORE_PATH") ?: '../nexus-release.keystore')
-            storePassword System.getenv("KEYSTORE_PASSWORD") ?: 'nexusapp2026'
-            keyAlias System.getenv("KEY_ALIAS") ?: 'nexus'
-            keyPassword System.getenv("KEY_PASSWORD") ?: 'nexusapp2026'
-        }
         release {
-            v1SigningEnabled true
-            v2SigningEnabled true
-            storeFile file(System.getenv("ANDROID_KEYSTORE_PATH") ?: '../nexus-release.keystore')
-            storePassword System.getenv("KEYSTORE_PASSWORD") ?: 'nexusapp2026'
-            keyAlias System.getenv("KEY_ALIAS") ?: 'nexus'
-            keyPassword System.getenv("KEY_PASSWORD") ?: 'nexusapp2026'
+            def ksPath = System.getenv("ANDROID_KEYSTORE_PATH") ?: '../nexus-release.keystore'
+            def ksFile = file(ksPath)
+            def ksPass = System.getenv("KEYSTORE_PASSWORD")
+            def kAlias = System.getenv("KEY_ALIAS")
+            def kPass = System.getenv("KEY_PASSWORD")
+
+            if (ksPass && kAlias && kPass && ksFile.exists()) {
+                v1SigningEnabled true
+                v2SigningEnabled true
+                storeFile ksFile
+                storePassword ksPass
+                keyAlias kAlias
+                keyPassword kPass
+            }
         }
     }
     buildTypes {
         debug {
-            signingConfig signingConfigs.release
+            // Uses standard local Android debug keystore
         }
         release {
-            signingConfig signingConfigs.release
+            def ksPath = System.getenv("ANDROID_KEYSTORE_PATH") ?: '../nexus-release.keystore'
+            def ksFile = file(ksPath)
+            if (System.getenv("KEYSTORE_PASSWORD") && ksFile.exists()) {
+                signingConfig signingConfigs.release
+            } else {
+                gradle.taskGraph.whenReady { taskGraph ->
+                    if (taskGraph.hasTask(":app:assembleRelease") || taskGraph.hasTask(":app:bundleRelease")) {
+                        if (!ksFile.exists() || !System.getenv("KEYSTORE_PASSWORD")) {
+                            throw new GradleException("Release build failed: ANDROID_KEYSTORE_PATH and KEYSTORE_PASSWORD environment variables are required for release signing. Hardcoded fallback credentials have been removed for security.")
+                        }
+                    }
+                }
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

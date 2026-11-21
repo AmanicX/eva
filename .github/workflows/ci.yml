@@ -29,7 +29,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Security Check - Verify No Committed Keystores or Private Keys
+      - name: Security Check - Verify No Committed Keystores, Private Keys, or Embedded Secrets
         run: |
           echo "Scanning tracked git files for sensitive key material..."
           SENSITIVE_FILES=$(git ls-files | grep -E '\.(keystore|jks|p12|pem|key)$' || true)
@@ -38,7 +38,15 @@ jobs:
             echo "$SENSITIVE_FILES"
             exit 1
           fi
-          echo "No sensitive key material detected in tracked files."
+
+          echo "Scanning tracked files for embedded private keys, default keystore payloads, or hardcoded passwords..."
+          EMBEDDED_SECRETS=$(git grep -rnE "BEGIN (RSA |EC |DSA )?PRIVATE KEY|MIIKggIBAz|nexusapp2026" ':!docs/KEY_ROTATION.md' ':!.github/workflows/ci.yml' . || true)
+          if [ -n "$EMBEDDED_SECRETS" ]; then
+            echo "::error::Found embedded secrets or hardcoded key credentials in repository:"
+            echo "$EMBEDDED_SECRETS"
+            exit 1
+          fi
+          echo "No sensitive key material or embedded secrets detected in tracked files."
 
       - name: Run Linter (oxlint)
         run: npm run lint

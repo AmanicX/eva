@@ -299,6 +299,7 @@ export async function chatGroq(opts: GroqChatOptions): Promise<string> {
       messages: opts.messages,
       temperature: opts.temperature ?? 0.4,
       max_tokens: opts.maxTokens ?? 1024,
+      top_p: opts.topP ?? 1,
       stream: false,
     }),
     signal: opts.signal,

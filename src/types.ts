@@ -182,6 +182,8 @@ export interface Settings {
   ttsEnabled: boolean
   ttsAutoRead: boolean
   ttsReadNarration: boolean
+  // Privacy & Cloud Fallback Opt-in
+  allowCloudFallback?: boolean
 }
 
 export interface GroqModel {

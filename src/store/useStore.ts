@@ -15,6 +15,7 @@ import { uid } from '@/lib/utils'
 import { DEFAULT_THEME_PALETTES } from '@/data/palettes'
 import { getApiKey, getCloudflareCredentials, getProviderKey, setApiKey } from '@/lib/credentials'
 import { PROVIDER_PRESETS } from '@/lib/groq'
+import { isLocalUrl } from '@/lib/platform'
 
 export const MIN_AGE = 18
 
@@ -146,6 +147,7 @@ export const DEFAULT_SETTINGS: Settings = {
   ttsEnabled: true,
   ttsAutoRead: false,
   ttsReadNarration: false,
+  allowCloudFallback: false,
 }
 
 const defaultUI: UIState = {
@@ -183,7 +185,21 @@ export const useStore = create<State>()(
         if (patch.apiKey !== undefined) {
           void setApiKey(patch.apiKey)
         }
-        set((s) => ({ settings: { ...s.settings, ...patch } }))
+        set((s) => {
+          const nextSettings = { ...s.settings, ...patch }
+          // If patch updates baseUrl or model, synchronize chatDefault so main controls take effect
+          if (patch.baseUrl !== undefined || patch.model !== undefined) {
+            const effectiveUrl = (nextSettings.baseUrl || '').trim()
+            const preset = PROVIDER_PRESETS.find((p) => p.baseUrl === effectiveUrl)
+            const providerId = preset?.id || (isLocalUrl(effectiveUrl) ? 'local-custom' : (nextSettings.chatDefault?.providerId || 'custom'))
+            const model = nextSettings.model || nextSettings.chatDefault?.model || 'llama-3.1-8b-instant'
+            nextSettings.chatDefault = {
+              providerId,
+              model,
+            }
+          }
+          return { settings: nextSettings }
+        })
       },
 
       setTheme: (theme) =>
@@ -594,6 +610,7 @@ export const useStore = create<State>()(
           if (persisted.settings.ttsEnabled === undefined) persisted.settings.ttsEnabled = true
           if (persisted.settings.ttsAutoRead === undefined) persisted.settings.ttsAutoRead = false
           if (persisted.settings.ttsReadNarration === undefined) persisted.settings.ttsReadNarration = false
+          if (persisted.settings.allowCloudFallback === undefined) persisted.settings.allowCloudFallback = false
         }
         // Version 7 conversation migration: old chats get null for chatConfig, imageConfig, ttsConfig
         if (Array.isArray(persisted?.conversations)) {

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion, useDragControls } from 'motion/react'
 import { X } from 'lucide-react'
@@ -37,6 +37,11 @@ export function Modal({
   hideCloseButton = false,
 }: ModalProps) {
   const dragControls = useDragControls()
+  const modalRef = useRef<HTMLDivElement>(null)
+  const previousActiveElementRef = useRef<HTMLElement | null>(null)
+  const titleId = useId()
+  const subtitleId = useId()
+
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window === 'undefined') return false
     return window.innerWidth < 640
@@ -52,15 +57,68 @@ export function Modal({
 
   useEffect(() => {
     if (!open) return
+    previousActiveElementRef.current = document.activeElement as HTMLElement | null
+
+    const timer = setTimeout(() => {
+      if (modalRef.current) {
+        const focusable = modalRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        )
+        if (focusable.length > 0) {
+          focusable[0].focus()
+        } else {
+          modalRef.current.focus()
+        }
+      }
+    }, 50)
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+        return
+      }
+
+      if (e.key === 'Tab' && modalRef.current) {
+        const focusable = Array.from(
+          modalRef.current.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+          ),
+        ).filter((el) => el.offsetParent !== null)
+
+        if (focusable.length === 0) {
+          e.preventDefault()
+          return
+        }
+
+        const first = focusable[0]
+        const last = focusable[focusable.length - 1]
+
+        if (e.shiftKey) {
+          if (document.activeElement === first || document.activeElement === modalRef.current) {
+            e.preventDefault()
+            last.focus()
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault()
+            first.focus()
+          }
+        }
+      }
     }
+
     document.addEventListener('keydown', onKey)
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
+
     return () => {
+      clearTimeout(timer)
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = prev
+      if (previousActiveElementRef.current) {
+        previousActiveElementRef.current.focus()
+      }
     }
   }, [open, onClose])
 
@@ -77,8 +135,12 @@ export function Modal({
             onClick={onClose}
           />
           <motion.div
+            ref={modalRef}
+            tabIndex={-1}
             role="dialog"
             aria-modal="true"
+            aria-labelledby={title ? titleId : undefined}
+            aria-describedby={subtitle ? subtitleId : undefined}
             drag={isMobile ? 'y' : false}
             dragControls={dragControls}
             dragListener={false}
@@ -98,7 +160,7 @@ export function Modal({
                 : { type: 'spring', stiffness: 400, damping: 36 }
             }
             className={cn(
-              'modal-glass relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl shadow-2xl sm:my-auto sm:max-h-[88dvh] sm:rounded-2xl border border-border/80',
+              'modal-glass relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl shadow-2xl sm:my-auto sm:max-h-[88dvh] sm:rounded-2xl border border-border/80 outline-none',
               SIZES[size],
             )}
           >
@@ -137,11 +199,18 @@ export function Modal({
                 )}
                 <div className="min-w-0 flex-1">
                   {title && (
-                    <h2 className="font-display text-base font-semibold tracking-tight text-fg">
+                    <h2
+                      id={titleId}
+                      className="font-display text-base font-semibold tracking-tight text-fg"
+                    >
                       {title}
                     </h2>
                   )}
-                  {subtitle && <p className="mt-0.5 text-xs text-muted">{subtitle}</p>}
+                  {subtitle && (
+                    <p id={subtitleId} className="mt-0.5 text-xs text-muted">
+                      {subtitle}
+                    </p>
+                  )}
                 </div>
                 {!hideCloseButton && (
                   <button

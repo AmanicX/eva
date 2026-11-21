@@ -67,14 +67,45 @@ export function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n))
 }
 
-export function download(filename: string, text: string) {
-  const blob = new Blob([text], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
+export async function download(filename: string, content: string | Blob, mimeType?: string) {
+  let url = ''
+  let revoke = false
+
+  if (content instanceof Blob) {
+    url = URL.createObjectURL(content)
+    revoke = true
+  } else if (typeof content === 'string') {
+    if (
+      content.startsWith('blob:') ||
+      content.startsWith('data:') ||
+      content.startsWith('http:') ||
+      content.startsWith('https:')
+    ) {
+      try {
+        const res = await fetch(content)
+        const blob = await res.blob()
+        url = URL.createObjectURL(blob)
+        revoke = true
+      } catch {
+        url = content
+      }
+    } else {
+      const type = mimeType || (filename.endsWith('.json') ? 'application/json' : 'text/plain;charset=utf-8')
+      const blob = new Blob([content], { type })
+      url = URL.createObjectURL(blob)
+      revoke = true
+    }
+  }
+
   const a = document.createElement('a')
   a.href = url
   a.download = filename
+  document.body.appendChild(a)
   a.click()
-  URL.revokeObjectURL(url)
+  document.body.removeChild(a)
+  if (revoke) {
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
 }
 
 export function readFileAsDataURL(file: File): Promise<string> {

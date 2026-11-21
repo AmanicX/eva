@@ -15,6 +15,7 @@ import { Avatar } from './Avatar'
 import { MarkdownText, RawText } from './RichText'
 import { cn, copyText, download, formatTime } from '@/lib/utils'
 import { generateSpeechAudio, ttsPlayer } from '@/lib/tts'
+import { getImageBlob } from '@/lib/imageStorage'
 
 interface Props {
   message: Message
@@ -38,6 +39,23 @@ export function MessageBubble({
   const [copied, setCopied] = useState(false)
   const [ttsLoading, setTtsLoading] = useState(false)
   const [isPlaying, setIsPlaying] = useState(() => ttsPlayer.isPlaying(message.id))
+  const [resolvedImageUrl, setResolvedImageUrl] = useState<string>(message.image?.url || '')
+
+  useEffect(() => {
+    const img = message.image
+    if (!img?.id) return
+    let active = true
+
+    getImageBlob(img.id).then((restored) => {
+      if (active && restored) {
+        setResolvedImageUrl(restored)
+      }
+    })
+
+    return () => {
+      active = false
+    }
+  }, [message.image])
   const [ttsNotice, setTtsNotice] = useState<string | null>(null)
 
   const bubbleStyle = useStore((s) => s.settings.bubbleStyle)
@@ -151,10 +169,17 @@ export function MessageBubble({
 
           <div className="overflow-hidden rounded-2xl border border-border/80 bg-surface/60 max-w-lg shadow-lg">
             <img
-              src={message.image.url}
+              src={resolvedImageUrl || message.image.url}
               alt={message.image.prompt}
               className="w-full h-auto max-h-[460px] object-cover transition-transform duration-300 hover:scale-[1.01]"
               loading="lazy"
+              onError={() => {
+                if (message.image?.id) {
+                  void getImageBlob(message.image.id).then((restored) => {
+                    if (restored) setResolvedImageUrl(restored)
+                  })
+                }
+              }}
             />
             <div className="p-3 border-t border-border/60">
               <p className="text-xs text-muted leading-relaxed select-text italic">
@@ -168,7 +193,10 @@ export function MessageBubble({
               {formatTime(message.timestamp)}
             </span>
             <button
-              onClick={() => download(message.image!.url, `eva-scene-${message.id}.png`)}
+              onClick={() => {
+                const targetUrl = resolvedImageUrl || message.image!.url
+                void download(`eva-scene-${message.id}.png`, targetUrl, 'image/png')
+              }}
               className="grid size-7 place-items-center rounded-lg text-faint transition hover:bg-surface-2 hover:text-fg"
               aria-label="Download image"
               title="Download image"

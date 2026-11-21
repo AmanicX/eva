@@ -125,7 +125,7 @@ function App() {
                         <>
                           <span className="text-3xs text-faint">·</span>
                           <span className="text-2xs text-muted font-medium truncate">
-                            {THEMES[settings.theme].name}
+                            {THEMES[settings.theme]?.name ?? 'Chatbot'}
                           </span>
                         </>
                       )}
