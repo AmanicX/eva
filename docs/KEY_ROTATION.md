@@ -2,9 +2,10 @@
 
 ## 1. Overview & Security Assessment
 
-The initial repository contained a committed keystore (`android/nexus-release.keystore`) with default credentials (`nexusapp2026`). In accordance with security best practices:
-- **Status:** The old signing key is treated as **compromised**.
-- **Remediation:** The committed keystore has been removed from git tracking, `.gitignore` updated to strictly exclude all keystores (`*.keystore`, `*.jks`, `*.p12`), and hardcoded password fallbacks eliminated.
+The initial repository contained a committed keystore (`android/nexus-release.keystore`) and hardcoded fallback passwords in workflow and build configurations. In accordance with security best practices:
+- **Status:** The old signing key is treated as **permanently compromised**.
+- **Important Security Notice:** Deleting the key and passwords from the current files does **not** revoke the certificate nor remove it from Git history. Anyone with clone access to past commits can extract the private key.
+- **Remediation in Code:** All embedded base64 keystores and password fallbacks have been eliminated from `release.yml`, `ci.yml`, and `build.gradle`. Release signing now strictly fails if required repository secrets are missing.
 - **Application ID:** Preserved as `com.nexus.chatstudio` to maintain application identity and ecosystem compatibility.
 
 ---
@@ -23,6 +24,30 @@ The initial repository contained a committed keystore (`android/nexus-release.ke
 - **Key Algorithm:** RSA 4096-bit (or EC P-256)
 - **Key Alias:** `eva`
 - **Storage:** Kept exclusively in GitHub Actions Encrypted Secrets (`ANDROID_KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`). Never committed to source control.
+
+---
+
+## 3. Operator Checklist: Determining Affected Published APKs
+
+To audit which historical GitHub releases or distributed APKs were signed with the compromised identity:
+
+1. **Download Published Release APKs:**
+   Download the APK assets from GitHub Releases (e.g. `v1.0.0` through `v2.2.1`).
+
+2. **Verify Signature Certificate Fingerprint:**
+   Run `apksigner` on each downloaded APK:
+   ```bash
+   apksigner verify --verbose --print-certs Eva-android.apk
+   ```
+3. **Compare SHA-256 Fingerprint:**
+   - If the certificate fingerprint matches `5D:1C:55:63:2B:69:70:D0:99:7A:AC:23:F3:80:FA:20:DE:8F:E5:A4:6B:B3:26:05:C2:0E:B3:B9:EC:DF:76:AE`, the APK was signed with the compromised legacy key.
+   - Any APK signed with this key can theoretically be impersonated by an attacker who extracted the key from repository history.
+
+4. **Operator Action Items (Pending Owner Action):**
+   - [ ] **Generate Fresh Keystore:** Create a new production keystore offline using `keytool -genkeypair -v -keystore eva-release.keystore -alias eva -keyalg RSA -keysize 4096 -validity 10000`.
+   - [ ] **Configure GitHub Secrets:** Add `ANDROID_KEYSTORE_BASE64` (base64-encoded keystore), `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD` to GitHub repository secrets in `AmanicX/eva`.
+   - [ ] **History Scrubbing (Optional / Disruptive):** If Git history must be purged of the compromised commit, run `git filter-repo` or BFG Repo-Cleaner across all branches and force-push. Note that this rewrites all commit SHAs and requires coordination with all contributors.
+
 
 ---
 

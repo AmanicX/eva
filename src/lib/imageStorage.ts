@@ -76,3 +76,19 @@ export async function getImageBlob(id: string): Promise<string | null> {
 
   return null
 }
+
+export async function clearAllImages(): Promise<void> {
+  memoryImages.clear()
+  try {
+    const db = await openDB()
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite')
+      const store = tx.objectStore(STORE_NAME)
+      const req = store.clear()
+      req.onsuccess = () => resolve()
+      req.onerror = () => reject(req.error)
+    })
+  } catch {
+    /* ignore */
+  }
+}

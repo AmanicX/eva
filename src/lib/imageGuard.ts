@@ -4,10 +4,13 @@
  * Enforces strict safety checks for image generation prompts.
  * TEXT CHAT REMAINS COMPLETELY UNCENSORED AND UNFILTERED.
  * Only image prompts are checked here.
+ *
+ * Respects local-only privacy: zero external requests are made if running in local mode.
  */
 
 import { chatGroq, PROVIDER_PRESETS, resolveBaseUrl } from './groq'
 import { getProviderKey, getCloudflareCredentials } from './credentials'
+import { isCloudJudgePermitted, isLocal, getPresetForId } from './providerResolution'
 import type { Settings } from '@/types'
 
 export const EXPLICIT_KEYWORDS = [
@@ -35,9 +38,23 @@ export async function checkImageExplicitContent(
     }
   }
 
-  // 2. Judge model evaluation
+  // 2. Privacy verification: Check if cloud judge is permitted
+  const judge = settings.fallbackModel || settings.chatDefault
+  const isImageLocal = isLocal(
+    settings.imageDefault?.providerId,
+    getPresetForId(settings.imageDefault?.providerId)?.baseUrl,
+  )
+
+  if (!isCloudJudgePermitted({ isPrimaryLocal: isImageLocal, judgeProviderId: judge.providerId, settings })) {
+    return { explicit: false }
+  }
+
+  // 3. Judge model evaluation
+  const timeoutCtrl = new AbortController()
+  const timer = setTimeout(() => timeoutCtrl.abort(), 10000)
+  const judgeSignal = signal ? anySignal([signal, timeoutCtrl.signal]) : timeoutCtrl.signal
+
   try {
-    const judge = settings.fallbackModel || settings.chatDefault
     const preset = PROVIDER_PRESETS.find((p) => p.id === judge.providerId)
     let apiKey = await getProviderKey(judge.providerId)
     let baseUrl = preset?.baseUrl || ''
@@ -67,16 +84,33 @@ export async function checkImageExplicitContent(
       messages,
       temperature: 0.1,
       maxTokens: 60,
-      signal,
+      signal: judgeSignal,
     })
 
+    clearTimeout(timer)
     const parsed = JSON.parse(response.replace(/```json|```/g, '').trim())
     return {
       explicit: !!parsed.explicit,
       reason: parsed.reason || (parsed.explicit ? 'Prompt classified as explicit content.' : undefined),
     }
   } catch {
-    // If judge fails, rely strictly on local keywords
+    clearTimeout(timer)
+    if (signal?.aborted) {
+      throw new DOMException('Image safety check aborted.', 'AbortError')
+    }
+    // If judge fails or times out, rely strictly on local keywords
     return { explicit: false }
   }
+}
+
+function anySignal(signals: AbortSignal[]): AbortSignal {
+  const controller = new AbortController()
+  for (const s of signals) {
+    if (s.aborted) {
+      controller.abort()
+      return controller.signal
+    }
+    s.addEventListener('abort', () => controller.abort(), { once: true })
+  }
+  return controller.signal
 }

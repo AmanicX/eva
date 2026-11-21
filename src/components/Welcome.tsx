@@ -49,6 +49,7 @@ import {
   isLocalProvider,
   getSupportedProviderPresets,
 } from '@/lib/platform'
+import { resolveProviderCredentials } from '@/lib/providerResolution'
 import { DoneButton } from './DoneButton'
 import { Modal } from './Modal'
 import { cn } from '@/lib/utils'
@@ -216,7 +217,18 @@ export function Welcome() {
   }
 
   const testConnection = async () => {
-    if (needsKey && !settings.apiKey.trim()) {
+    const provId = currentGuide.id
+    const effectiveKey = (inputKey || savedKey || '').trim()
+
+    if (provId === 'cloudflare') {
+      const accountId = (cfAccountId || '').trim()
+      const token = (cfApiToken || '').trim()
+      if (!accountId || !token) {
+        setResult('fail')
+        setMessage('Enter both Cloudflare Account ID and API Token.')
+        return
+      }
+    } else if (needsKey && !effectiveKey) {
       setResult('fail')
       setMessage('Please enter your API key first.')
       return
@@ -227,7 +239,15 @@ export function Welcome() {
     setMessage('')
 
     try {
-      const list = await listGroqModels(settings.apiKey, settings.baseUrl)
+      const creds = await resolveProviderCredentials({
+        providerId: provId,
+        baseUrl: settings.baseUrl,
+        formKey: effectiveKey,
+        formAccountId: cfAccountId,
+        formApiToken: cfApiToken,
+      })
+
+      const list = await listGroqModels(creds.apiKey, creds.baseUrl, creds.accountId)
       updateSettings({ cachedModels: list })
       setResult('ok')
       setMessage(`Connection verified! Found ${list.length} available models.`)
