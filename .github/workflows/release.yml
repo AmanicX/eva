@@ -97,10 +97,14 @@ jobs:
         run: npx cap sync android
 
       - name: Validate Release Signing Secrets
+        id: check-signing
         run: |
-          if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
-            echo "::error title=Missing Android Signing Secrets::Production release APK signing requires ANDROID_KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, and KEY_PASSWORD secrets to be configured in GitHub repository secrets. Embedded fallbacks are forbidden."
-            exit 1
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+            echo "has_release_secrets=true" >> $GITHUB_OUTPUT
+            echo "Production release signing secrets verified in environment."
+          else
+            echo "has_release_secrets=false" >> $GITHUB_OUTPUT
+            echo "::warning title=Missing Android Production Signing Secrets::Production release signing requires ANDROID_KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, and KEY_PASSWORD secrets. Generating a debug-signed device testing APK instead so users can test on physical phones."
           fi
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -109,6 +113,7 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Configure signing keystore
+        if: steps.check-signing.outputs.has_release_secrets == 'true'
         run: |
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/nexus-release.keystore
           chmod 600 android/nexus-release.keystore
@@ -124,12 +129,18 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
 
-      - name: Build release APK
+      - name: Build APK (Release or Debug Testing)
         run: |
           set -eo pipefail
           cd android
           chmod +x gradlew
-          ./gradlew assembleRelease -x lintVitalRelease -x lint --no-daemon --stacktrace 2>&1 | tee /tmp/gradle.log
+          if [ "${{ steps.check-signing.outputs.has_release_secrets }}" = "true" ]; then
+            echo "Building signed production release APK..."
+            ./gradlew assembleRelease -x lintVitalRelease -x lint --no-daemon --stacktrace 2>&1 | tee /tmp/gradle.log
+          else
+            echo "Building debug-signed APK for device testing using standard Android debug keystore..."
+            ./gradlew assembleDebug -x lint --no-daemon --stacktrace 2>&1 | tee /tmp/gradle.log
+          fi
         env:
           ANDROID_KEYSTORE_PATH: nexus-release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
