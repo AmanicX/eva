@@ -1,5 +1,16 @@
 # Android installation and signing
 
+## Production 2.2.3
+
+`Eva-android.apk` keeps the original production package ID and uses v3 signing
+with a new certificate and proof of rotation from the original Nexus
+certificate. **Android 9+ is required.** Install over the original EVA without
+uninstalling it; the separate Eva Testing app will not be replaced.
+
+The internal version code is 27, so the public tag 2.2.3 does not constitute an
+Android package downgrade from older production builds. See
+[2.2.3 release notes](RELEASE_2.2.3.md) and [key rotation](KEY_ROTATION.md).
+
 ## 2.2.8 installation failure
 
 The source at `v2.2.7` configured a fixed signing key for

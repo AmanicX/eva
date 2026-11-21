@@ -38,9 +38,8 @@ jobs:
       - run: npm ci
 
       - name: Build
-        run: ${{ matrix.script }}
+        run: ${{ matrix.script }} -- --publish never
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - uses: actions/upload-artifact@v4
@@ -182,12 +181,50 @@ jobs:
           if-no-files-found: ignore
 
       - name: Collect and verify APK
+        if: steps.check-signing.outputs.has_release_secrets != 'true'
+        run: bash scripts/collect-android-apk.sh debug
+
+      - name: Sign production APK with rotation lineage
+        if: steps.check-signing.outputs.has_release_secrets == 'true'
         run: |
-          if [ "${{ steps.check-signing.outputs.has_release_secrets }}" = "true" ]; then
-            bash scripts/collect-android-apk.sh release
-          else
-            bash scripts/collect-android-apk.sh debug
-          fi
+          bash scripts/sign-android-release.sh
+          bash scripts/collect-android-apk.sh release
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/android/nexus-release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          ANDROID_SIGNING_LINEAGE_BASE64: ${{ secrets.ANDROID_SIGNING_LINEAGE_BASE64 }}
+          ANDROID_LEGACY_KEYSTORE_BASE64: ${{ secrets.ANDROID_LEGACY_KEYSTORE_BASE64 }}
+          ANDROID_LEGACY_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_LEGACY_KEYSTORE_PASSWORD }}
+
+      - name: Enable emulator acceleration
+        if: github.repository == 'AmanicX/eva'
+        run: sudo chmod 666 /dev/kvm
+
+      - name: Verify Android 16 in-place upgrade
+        if: github.repository == 'AmanicX/eva'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          script: bash scripts/smoke-android-upgrade.sh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Preserve public signing lineage
+        if: steps.check-signing.outputs.has_release_secrets == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-signing-lineage
+          path: android/eva-signing-lineage.bin
+          if-no-files-found: error
+
+      - name: Record Android verification summary
+        run: |
+          echo 'APK signature and package checks passed.' >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -207,6 +244,8 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -215,6 +254,7 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           files: artifacts/**/*
+          body_path: docs/RELEASE_2.2.3.md
           generate_release_notes: true
           draft: false
           prerelease: ${{ github.repository == 'AmanicX/nexus-testing' }}

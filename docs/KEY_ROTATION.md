@@ -96,6 +96,22 @@ For users running legacy Android or upgrading without signature lineage:
 
 ## 5. Build Environment Enforcement
 
+### Production 2.2.3 migration
+
+- The owner approved new production signing secrets and Android 9+ as the new
+  minimum. The original application ID is unchanged.
+- New certificate SHA-256:
+  `316b81f69d8ba5114b5205d5f3ab8939e8279b6d44c1717e7674cb619082e895`.
+- `scripts/sign-android-release.sh` uses the old key **only** to create a
+  proof-of-rotation lineage during an explicitly dispatched migration build.
+  The published APK is v3-signed only with the new key.
+- After the migration succeeds, preserve the public lineage in
+  `ANDROID_SIGNING_LINEAGE_BASE64` and remove both temporary
+  `ANDROID_LEGACY_KEYSTORE_*` secrets. Tagged releases require the saved lineage.
+- `scripts/smoke-android-upgrade.sh` installs the checksum-verified original
+  2.2.2 APK and runs `adb install -r` with 2.2.3 on Android 16, checking the app
+  UID, version, and successful launch. It never uninstalls the original app.
+
 In `android/app/build.gradle`:
 - `signingConfigs.debug` uses standard debug keys for local development.
 - `signingConfigs.release` requires environment variables:
