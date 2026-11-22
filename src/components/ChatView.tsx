@@ -28,7 +28,7 @@ import { Avatar } from './Avatar'
 import { Composer } from './Composer'
 import { MessageBubble } from './MessageBubble'
 import { RightPanel } from './RightPanel'
-import { SceneModal } from './SceneModal'
+import { ImageGenModal } from './ImageGenModal'
 import { ChatConfigModal } from './ChatConfigModal'
 import { cn, download, uid } from '@/lib/utils'
 import type { Message } from '@/types'
@@ -441,7 +441,7 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
                       setMenuOpen(false)
                     }}
                   >
-                    Generate Scene Image
+                    Image Gen
                   </MenuItem>
                   <MenuItem
                     icon={<Cpu size={14} />}
@@ -663,7 +663,7 @@ export function ChatView({ onShowCommands }: { onShowCommands: () => void }) {
         </AnimatePresence>
       </div>
 
-      <SceneModal open={sceneModalOpen} onClose={() => setSceneModalOpen(false)} />
+      <ImageGenModal open={sceneModalOpen} onClose={() => setSceneModalOpen(false)} />
       <ChatConfigModal open={configModalOpen} onClose={() => setConfigModalOpen(false)} />
     </div>
   )

@@ -83,10 +83,10 @@ export function Composer({
           {onOpenScene && (
             <button
               onClick={onOpenScene}
-              title="Generate Scene Image"
+              title="Image Gen"
               className="chip shrink-0 gap-1 text-2xs py-1 text-accent border-accent/30 hover:border-accent"
             >
-              <Sparkles size={12} /> Scene
+              <Sparkles size={12} /> Image Gen
             </button>
           )}
           <button

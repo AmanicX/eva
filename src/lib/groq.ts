@@ -68,8 +68,8 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     id: 'pollinations',
     label: 'Pollinations.ai',
     baseUrl: 'https://text.pollinations.ai/openai',
-    keyHint: 'optional token',
-    keyUrl: 'https://pollinations.ai',
+    keyHint: 'API key (required for Image Gen)',
+    keyUrl: 'https://enter.pollinations.ai/keys',
   },
   {
     id: 'cloudflare',

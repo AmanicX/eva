@@ -1,5 +1,5 @@
 import { chatGroq } from './groq'
-import { buildResolvedFallbackChain, resolveProviderCredentials, type FallbackCandidate } from './providerResolution'
+import { buildResolvedFallbackChain, resolveProviderCredentials, isLocal, type FallbackCandidate } from './providerResolution'
 import { IMAGE_STYLES, type ImageStyleId } from './imageStyles'
 import type { Conversation, PerChatConfig, Settings } from '@/types'
 
@@ -27,6 +27,7 @@ export function getPromptWriters(settings: Settings, chatConfig?: PerChatConfig 
   const quality = (model: string) => /120b|235b|405b|pro\b|opus|gpt-4\.1$|gpt-5/.test(model) ? 3
     : /70b|72b|sonnet|gpt-4o$|27b/.test(model) ? 2 : 1
   return buildResolvedFallbackChain('chat', chatConfig, settings)
+    .filter((w) => w.providerId !== 'pollinations' || settings.keyedProviders.includes('pollinations'))
     .sort((a, b) => quality(b.model) - quality(a.model))
 }
 
@@ -77,7 +78,14 @@ async function writePrompt<T>(
   if (!writer || !writers.some((w) => w.providerId === writer.providerId && w.model === writer.model)) {
     throw new Error('Choose a configured chat model for prompt writing. Local-only privacy and disabled providers are respected.')
   }
-  const credentials = await resolveProviderCredentials({ providerId: writer.providerId, baseUrl: writer.baseUrl })
+  const credentials = await resolveProviderCredentials({
+    providerId: writer.providerId,
+    // The current authenticated OpenAI-compatible API, scoped to this feature.
+    baseUrl: writer.providerId === 'pollinations' ? 'https://gen.pollinations.ai/v1' : writer.baseUrl,
+  })
+  if (!credentials.apiKey && !isLocal(writer.providerId, credentials.baseUrl)) {
+    throw new Error('Add an API key for the selected prompt writer in Settings.')
+  }
   opts.signal?.throwIfAborted()
   const controller = new AbortController()
   const abort = () => controller.abort()

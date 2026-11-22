@@ -43,7 +43,7 @@ import {
   setCloudflareCredentials,
 } from '@/lib/credentials'
 import { GOOGLE_TTS_VOICES, POLLINATIONS_TTS_VOICES } from '@/lib/tts'
-import { GOOGLE_IMAGE_MODELS, POLLINATIONS_IMAGE_MODELS } from '@/lib/imageGeneration'
+import { GOOGLE_IMAGE_MODELS, POLLINATIONS_IMAGE_MODELS, resolveImageModel } from '@/lib/imageGeneration'
 import {
   isMobilePlatform,
   isLocalProvider,
@@ -61,7 +61,7 @@ const STEPS = [
   { label: 'Setup Guide', title: 'Connect & Verify', subtitle: 'Follow the step-by-step instructions for your selected provider.' },
   { label: 'Model', title: 'Pick a Model', subtitle: 'Choose a recommended model or select from your provider’s catalog.' },
   { label: 'Voice', title: 'Speech & Audio', subtitle: 'Configure expressive spoken dialogue and text-to-speech.' },
-  { label: 'Visuals', title: 'Scene Visuals', subtitle: 'Enable striking image generation for your story scenes.' },
+  { label: 'Visuals', title: 'Image Gen', subtitle: 'Generate images from recent chat ideas or your own prompts.' },
   { label: 'Tour', title: 'How Eva Works', subtitle: 'A quick tour of universes, characters, and memory.' },
 ] as const
 
@@ -1179,7 +1179,7 @@ export function Welcome() {
                 &larr; Back to Model
               </button>
               <button onClick={() => setStep(5)} className="btn btn-accent text-xs sm:text-sm">
-                Scene Visuals &rarr;
+                Image Gen &rarr;
               </button>
             </div>
           </div>
@@ -1191,7 +1191,7 @@ export function Welcome() {
         {step === 5 && (
           <div className="space-y-4">
             <div>
-              <h3 className="text-sm font-semibold text-fg">Scene Visuals & Image Generation</h3>
+              <h3 className="text-sm font-semibold text-fg">Image Gen</h3>
               <p className="mt-0.5 text-xs text-muted">
                 Generate visuals from memorable moments in your chats.
               </p>
@@ -1210,7 +1210,7 @@ export function Welcome() {
                       const currentModel = settings.imageDefault?.model
                       const newModel =
                         pid === 'google'
-                          ? (GOOGLE_IMAGE_MODELS.some((m) => m.id === currentModel) ? currentModel : 'imagen-3.0-generate-002')
+                          ? (GOOGLE_IMAGE_MODELS.some((m) => m.id === currentModel) ? currentModel : 'gemini-3.1-flash-image')
                           : (POLLINATIONS_IMAGE_MODELS.some((m) => m.id === currentModel) ? currentModel : 'flux')
                       updateSettings({
                         imageDefault: {
@@ -1221,9 +1221,9 @@ export function Welcome() {
                     }}
                     className="field text-xs py-1.5"
                   >
-                    <option value="pollinations">Pollinations.ai (Flux Family - Free)</option>
+                    <option value="pollinations">Pollinations.ai (API key required)</option>
                     <option value="google">
-                      Google AI Studio (Imagen 3){!settings.keyedProviders.includes('google') ? ' — Requires API key' : ''}
+                      Google AI Studio (Nano Banana){!settings.keyedProviders.includes('google') ? ' — Requires API key' : ''}
                     </option>
                   </select>
                 </div>
@@ -1233,7 +1233,7 @@ export function Welcome() {
                     Image Model
                   </label>
                   <select
-                    value={settings.imageDefault?.model || 'flux'}
+                    value={resolveImageModel(settings.imageDefault?.providerId || 'pollinations', settings.imageDefault?.model)}
                     onChange={(e) => {
                       updateSettings({
                         imageDefault: {

@@ -160,7 +160,7 @@ export function MessageBubble({
               {character?.name ?? 'Assistant'}
             </span>
             <span className="rounded bg-accent/15 px-1.5 py-0.2 text-2xs text-accent border border-accent/30 font-medium">
-              Scene Image
+              Generated image
             </span>
             {message.image.model && (
               <span className="rounded bg-surface-2 px-1.5 py-0.2 text-2xs text-faint border border-border">

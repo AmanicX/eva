@@ -22,6 +22,7 @@
     "cap:open": "cap open android",
     "android:apk": "npm run cap:sync && cd android && gradlew assembleDebug",
     "test": "vitest run",
+    "test:image-gen:ui": "npm run build && node tests/e2e/imageGen.mjs",
     "lint": "oxlint",
     "preview": "vite preview"
   },
@@ -103,6 +104,7 @@
     "electron": "^44.11.5",
     "electron-builder": "^26.15.3",
     "oxlint": "^1.81.0",
+    "playwright": "1.65.1",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "vite": "^8.3.0",

@@ -4,7 +4,7 @@ import { Modal } from './Modal'
 import { useStore } from '@/store/useStore'
 import { PROVIDER_PRESETS, MODEL_SUGGESTIONS } from '@/lib/groq'
 import { GOOGLE_TTS_VOICES, POLLINATIONS_TTS_VOICES } from '@/lib/tts'
-import { GOOGLE_IMAGE_MODELS, POLLINATIONS_IMAGE_MODELS } from '@/lib/imageGeneration'
+import { GOOGLE_IMAGE_MODELS, POLLINATIONS_IMAGE_MODELS, resolveImageModel } from '@/lib/imageGeneration'
 import { isMobilePlatform, isProviderSupportedOnPlatform, isLocalProvider } from '@/lib/platform'
 import type { PerChatConfig } from '@/types'
 
@@ -43,7 +43,7 @@ export function ChatConfigModal({ open, onClose }: ChatConfigModalProps) {
 
     if (conversation.imageConfig?.providerId) {
       setImageProvider(conversation.imageConfig.providerId)
-      setImageModel(conversation.imageConfig.model || '')
+      setImageModel(resolveImageModel(conversation.imageConfig.providerId, conversation.imageConfig.model))
     } else {
       setImageProvider('inherit')
       setImageModel('')
@@ -200,7 +200,7 @@ export function ChatConfigModal({ open, onClose }: ChatConfigModalProps) {
         <div className="rounded-2xl border border-border/80 bg-surface/50 p-4 space-y-3">
           <div className="flex items-center gap-2 text-xs font-semibold text-fg">
             <ImageIcon size={15} className="text-accent" />
-            <span>Scene Image Model</span>
+            <span>Image Gen model</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -214,7 +214,7 @@ export function ChatConfigModal({ open, onClose }: ChatConfigModalProps) {
                   if (val === 'inherit') {
                     setImageModel('')
                   } else if (val === 'google') {
-                    setImageModel('imagen-3.0-generate-002')
+                    setImageModel('gemini-3.1-flash-image')
                   } else {
                     setImageModel('flux')
                   }
@@ -224,7 +224,7 @@ export function ChatConfigModal({ open, onClose }: ChatConfigModalProps) {
                 <option value="inherit">Inherit Global Default</option>
                 <option value="pollinations">Pollinations.ai (Flux)</option>
                 <option value="google">
-                  Google AI Studio (Imagen 3){!settings.keyedProviders.includes('google') ? ' — Requires API key' : ''}
+                  Google AI Studio (Nano Banana){!settings.keyedProviders.includes('google') ? ' — Requires API key' : ''}
                 </option>
               </select>
             </div>

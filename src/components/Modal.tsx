@@ -16,6 +16,7 @@ interface ModalProps {
   footer?: ReactNode
   bodyClassName?: string
   hideCloseButton?: boolean
+  fitKeyboard?: boolean
 }
 
 const SIZES: Record<NonNullable<ModalProps['size']>, string> = {
@@ -36,9 +37,11 @@ export function Modal({
   footer,
   bodyClassName,
   hideCloseButton = false,
+  fitKeyboard = false,
 }: ModalProps) {
   const dragControls = useDragControls()
   const modalRef = useRef<HTMLDivElement>(null)
+  const viewportRef = useRef<HTMLDivElement>(null)
   const previousActiveElementRef = useRef<HTMLElement | null>(null)
   const titleId = useId()
   const subtitleId = useId()
@@ -56,6 +59,27 @@ export function Modal({
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
   }, [])
+
+  // Opt-in for editors: Android/WebView keyboards can shrink only visualViewport.
+  // https://developer.mozilla.org/en-US/docs/Web/API/VisualViewport
+  useEffect(() => {
+    if (!open || !fitKeyboard || !window.visualViewport) return
+    const viewport = window.visualViewport
+    const update = () => {
+      if (!viewportRef.current || !modalRef.current) return
+      Object.assign(viewportRef.current.style, {
+        top: `${viewport.offsetTop}px`, height: `${viewport.height}px`, bottom: 'auto',
+      })
+      modalRef.current.style.maxHeight = `${viewport.height * (window.innerWidth < 640 ? 0.96 : 0.88)}px`
+    }
+    update()
+    viewport.addEventListener('resize', update)
+    viewport.addEventListener('scroll', update)
+    return () => {
+      viewport.removeEventListener('resize', update)
+      viewport.removeEventListener('scroll', update)
+    }
+  }, [open, fitKeyboard])
 
   useEffect(() => {
     if (!open) return
@@ -127,7 +151,7 @@ export function Modal({
   return createPortal(
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center overflow-hidden sm:items-center sm:p-6">
+        <div ref={viewportRef} className="fixed inset-0 z-[100] flex items-end justify-center overflow-hidden sm:items-center sm:p-6">
           <motion.div
             className="absolute inset-0 bg-black/65 sm:bg-black/60 sm:backdrop-blur-xs"
             initial={{ opacity: 0 }}
@@ -256,7 +280,7 @@ export function Modal({
             </div>
 
             {footer && (
-              <div className="flex items-center justify-end gap-2 border-t border-border/80 material px-5 py-3 sm:px-6">
+              <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border/80 material px-5 py-3 sm:px-6">
                 {footer}
               </div>
             )}

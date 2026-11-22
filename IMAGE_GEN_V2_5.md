@@ -47,3 +47,25 @@
 
 Provider tests use mocked HTTP/credentials, not a claim of live paid API success.
 Record runtime, release and installation evidence below as completed.
+
+- 119 unit/integration tests passing after the provider and writer changes.
+- `npm run test:image-gen:ui`: production-bundle Electron/Chromium checks cover
+  chat context isolation, four concepts, independent expansion, manual text
+  preservation, explicit styles, billing errors, IndexedDB restoration after
+  reload, close/reopen cancellation, 320/390/768/1440px, simulated visual-viewport
+  keyboard resizing and reduced motion. No real credentials or provider requests.
+- Screenshots reviewed at all four widths and in keyboard/reduced-motion states.
+  Kept EVA's existing typography, gold accent and animated dialog rather than
+  replacing the app's design system. Mobile controls stack; the footer stays
+  visible while the editor body scrolls.
+- No physical Android device attached. OnePlus 7T / Android 16 / 90 Hz behavior
+  requires on-device verification; desktop emulation is not a substitute.
+- PC application archive reports v2.2.4; no installed binaries changed yet.
+- Dependency audit: zero high/critical; six existing moderate build-only findings
+  stem from electron-builder's minimatch dependency (GHSA-g3hv-75wg-m249). Build
+  globs come from this trusted repository, not remote/user content. No forced
+  builder downgrade; review the upstream fix by 2026-12-06.
+
+Run UI checks with a graphical session available (or Xvfb on Linux).
+Playwright is a dev-only test dependency; tests reuse Electron's Chromium and
+never open the user's EVA profile. Production website files remain untouched.

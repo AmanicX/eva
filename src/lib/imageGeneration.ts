@@ -20,6 +20,7 @@ export interface ImageGenerationResult {
   prompt: string
   providerId: string
   model: string
+  createdAt: number
 }
 
 // Models, not styles. Verified against the providers' official catalogs.
@@ -168,7 +169,7 @@ export async function generateImage(opts: ImageGenerationOptions): Promise<Image
     const id = uid('img')
     const url = await storeImageBlob(id, blob, prompt)
     controller.signal.throwIfAborted()
-    return { id, url, prompt, providerId, model }
+    return { id, url, prompt, providerId, model, createdAt: Date.now() }
   } catch (error) {
     if (opts.signal?.aborted) throw new DOMException('Image generation cancelled.', 'AbortError')
     if (controller.signal.aborted) throw new Error('Image generation timed out after three minutes. Please try again.')

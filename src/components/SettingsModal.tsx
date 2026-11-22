@@ -49,7 +49,7 @@ import {
   setCloudflareCredentials,
 } from '@/lib/credentials'
 import { GOOGLE_TTS_VOICES, POLLINATIONS_TTS_VOICES } from '@/lib/tts'
-import { GOOGLE_IMAGE_MODELS, POLLINATIONS_IMAGE_MODELS } from '@/lib/imageGeneration'
+import { GOOGLE_IMAGE_MODELS, POLLINATIONS_IMAGE_MODELS, resolveImageModel } from '@/lib/imageGeneration'
 import {
   isMobilePlatform,
   isLocalProvider,
@@ -1031,7 +1031,7 @@ export function SettingsModal() {
                         <div className="pt-1">
                           <label className="text-2xs text-muted block mb-1">Preferred Image Model</label>
                           <select
-                            value={settings.providerModels[activePreset.id]?.imageModel || ''}
+                            value={resolveImageModel(activePreset.id, settings.providerModels[activePreset.id]?.imageModel)}
                             onChange={(e) => {
                               const prev = settings.providerModels[activePreset.id] || {}
                               updateSettings({
@@ -1158,7 +1158,7 @@ export function SettingsModal() {
                             const currentModel = settings.imageDefault?.model
                             const newModel =
                               pid === 'google'
-                                ? (GOOGLE_IMAGE_MODELS.some((m) => m.id === currentModel) ? currentModel : 'imagen-3.0-generate-002')
+                                ? (GOOGLE_IMAGE_MODELS.some((m) => m.id === currentModel) ? currentModel : 'gemini-3.1-flash-image')
                                 : (POLLINATIONS_IMAGE_MODELS.some((m) => m.id === currentModel) ? currentModel : 'flux')
                             updateSettings({
                               imageDefault: {
@@ -1171,7 +1171,7 @@ export function SettingsModal() {
                         >
                           <option value="pollinations">Pollinations.ai (Flux)</option>
                           <option value="google">
-                            Google AI (Imagen 3){!hasGoogleKey ? ' — Requires API key' : ''}
+                            Google AI (Nano Banana){!hasGoogleKey ? ' — Requires API key' : ''}
                           </option>
                         </select>
                         {!hasGoogleKey && settings.imageDefault?.providerId === 'google' && (

@@ -133,7 +133,7 @@ export const DEFAULT_SETTINGS: Settings = {
     lmstudio: { chat: true, image: false, tts: false },
   },
   providerModels: {
-    google: { chatModel: 'gemini-2.5-flash', imageModel: 'imagen-3.0-generate-002', ttsVoice: 'Puck' },
+    google: { chatModel: 'gemini-2.5-flash', imageModel: 'gemini-3.1-flash-image', ttsVoice: 'Puck' },
     pollinations: { chatModel: 'openai', imageModel: 'flux', ttsVoice: 'alloy' },
     cloudflare: { chatModel: '@cf/meta/llama-3.3-70b-instruct' },
   },

@@ -83,11 +83,11 @@ export const PROVIDER_KEY_RULES: Record<string, ProviderValidationRule> = {
   },
   pollinations: {
     name: 'Pollinations.ai',
-    // Pollinations is free/open by default; optional API key/token
+    // Current image generation requires an authenticated API key.
     pattern: /^[A-Za-z0-9_\-.:]{4,}$/,
     minLength: 4,
-    hint: 'Pollinations accepts an optional API token or key.',
-    example: 'pk_... or token',
+    hint: 'Image Gen requires a Pollinations API key; access and balance depend on your account.',
+    example: 'sk_...',
   },
   lmstudio: {
     name: 'LM Studio',
