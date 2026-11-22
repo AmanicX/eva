@@ -48,7 +48,7 @@
 Provider tests use mocked HTTP/credentials, not a claim of live paid API success.
 Record runtime, release and installation evidence below as completed.
 
-- 119 unit/integration tests passing after the provider and writer changes.
+- 125 unit/integration tests passing across 23 files.
 - `npm run test:image-gen:ui`: production-bundle Electron/Chromium checks cover
   chat context isolation, four concepts, independent expansion, manual text
   preservation, explicit styles, billing errors, IndexedDB restoration after
@@ -69,3 +69,14 @@ Record runtime, release and installation evidence below as completed.
 Run UI checks with a graphical session available (or Xvfb on Linux).
 Playwright is a dev-only test dependency; tests reuse Electron's Chromium and
 never open the user's EVA profile. Production website files remain untouched.
+
+Release gate: v2.5.0 production-bundle UI checks pass; production dependency
+audit reports zero vulnerabilities. Two pre-existing lint warnings remain in
+DoneButton/ChatConfigModal; the existing large-bundle warning remains. No checks
+or thresholds were suppressed. Inverting the exact-four validation caused five
+writer tests to fail; the condition was restored and the suite passed.
+
+Testing repository authentication restored using the checksum-verified official
+GitHub CLI package. No signing secrets are configured in testing; the APK's
+separate identity and debug-certificate update limitation are documented in the
+release notes. Production signing configuration is unchanged.

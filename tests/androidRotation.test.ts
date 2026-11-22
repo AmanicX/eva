@@ -4,11 +4,11 @@ import { describe, expect, it } from 'vitest'
 const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 
 describe('Production Android update identity', () => {
-  it('keeps the original package and increases the internal version despite the lower public tag', () => {
+  it('keeps the original package and increases the internal version for v2.5', () => {
     const gradle = read('android/app/build.gradle')
     expect(gradle).toContain('applicationId "com.nexus.chatstudio"')
-    expect(gradle).toMatch(/versionName "2\.2\.\d+"/)
-    expect(Number(gradle.match(/versionCode (\d+)/)?.[1])).toBeGreaterThan(26)
+    expect(gradle).toContain(`versionName "${JSON.parse(read('package.json')).version}"`)
+    expect(Number(gradle.match(/versionCode (\d+)/)?.[1])).toBeGreaterThan(28)
     expect(read('android/variables.gradle')).toMatch(/minSdkVersion = 28/)
   })
 

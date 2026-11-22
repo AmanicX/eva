@@ -10,7 +10,29 @@ permissions:
   contents: write
 
 jobs:
+  validate:
+    name: Validate Image Gen
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - name: Production Chromium UI checks
+        run: xvfb-run -a npm run test:image-gen:ui
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: image-gen-ui-failure
+          path: /tmp/opencode/eva-image-gen/*.png
+          if-no-files-found: ignore
+
   build:
+    needs: validate
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -57,6 +79,7 @@ jobs:
           if-no-files-found: error
 
   android:
+    needs: validate
     name: Android APK
     runs-on: ubuntu-latest
     steps:
@@ -253,11 +276,23 @@ jobs:
           path: artifacts
           merge-multiple: true
 
+      - name: Verify all platform installers and write checksums
+        run: |
+          test -n "$(find artifacts -name '*.exe' -print -quit)"
+          test -n "$(find artifacts -name '*.dmg' -print -quit)"
+          test -n "$(find artifacts -name '*.AppImage' -print -quit)"
+          test -n "$(find artifacts -name '*.pacman' -print -quit)"
+          test -n "$(find artifacts -name '*.apk' -print -quit)"
+          cd artifacts
+          find . -type f ! -name '*.sha256' -print0 | sort -z | xargs -0 sha256sum > ../SHA256SUMS.txt
+          mv ../SHA256SUMS.txt .
+
       - uses: softprops/action-gh-release@v2
         with:
           files: artifacts/**/*
+          body_path: RELEASE_NOTES_V2_5.md
           generate_release_notes: true
           draft: false
-          prerelease: false
+          prerelease: ${{ github.repository == 'AmanicX/nexus-testing' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

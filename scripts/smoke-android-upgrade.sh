@@ -19,8 +19,10 @@ adb install -r out/Eva-android.apk
 AFTER_UID=$(adb shell pm list packages -U com.nexus.chatstudio | tr -d '\r')
 test "$BEFORE_UID" = "$AFTER_UID"
 PACKAGE_INFO=$(adb shell dumpsys package com.nexus.chatstudio | tr -d '\r')
-grep -q 'versionCode=28 ' <<< "$PACKAGE_INFO"
-grep -q 'versionName=2.2.4' <<< "$PACKAGE_INFO"
+EXPECTED_VERSION=$(node -p 'require("./package.json").version')
+EXPECTED_CODE=$(sed -n 's/.*versionCode \([0-9]*\).*/\1/p' android/app/build.gradle)
+grep -q "versionCode=$EXPECTED_CODE " <<< "$PACKAGE_INFO"
+grep -Fq "versionName=$EXPECTED_VERSION" <<< "$PACKAGE_INFO"
 adb shell am start -W -n com.nexus.chatstudio/.MainActivity
 adb shell pidof com.nexus.chatstudio
 echo "Android 16: production in-place update succeeded with the same app UID and launched."
