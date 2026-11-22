@@ -44,6 +44,11 @@
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-spring: cubic-bezier(0.22, 1.2, 0.36, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --duration-feedback: 140ms;
+  --duration-fast: 160ms;
+  --duration-normal: 220ms;
+  --duration-drawer: 280ms;
 }
 
 @theme inline {
@@ -244,7 +249,7 @@ html.light,
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -255,7 +260,7 @@ html.light,
 @keyframes pop {
   0% {
     opacity: 0;
-    transform: scale(0.96) translateY(4px);
+    transform: scale(0.96) translateY(3px);
   }
   100% {
     opacity: 1;
@@ -882,13 +887,13 @@ html.light,
 
   /* Animations */
   .anim-rise {
-    animation: rise 0.25s var(--ease-out) both;
+    animation: rise 0.18s var(--ease-out) both;
   }
   .anim-pop {
-    animation: pop 0.2s var(--ease-out) both;
+    animation: pop 0.16s var(--ease-out) both;
   }
   .anim-fade {
-    animation: fade 0.18s ease both;
+    animation: fade 0.15s ease both;
   }
   .caret::after {
     content: '';

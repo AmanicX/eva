@@ -25,6 +25,7 @@ interface Props {
   canRegenerate?: boolean
   streaming?: boolean
   conversationTtsConfig?: PerChatConfig | null
+  animate?: boolean
 }
 
 export function MessageBubble({
@@ -35,6 +36,7 @@ export function MessageBubble({
   canRegenerate,
   streaming,
   conversationTtsConfig,
+  animate = true,
 }: Props) {
   const [copied, setCopied] = useState(false)
   const [ttsLoading, setTtsLoading] = useState(false)
@@ -110,7 +112,7 @@ export function MessageBubble({
 
   if (isUser) {
     return (
-      <div className="group anim-rise flex flex-col items-end gap-1">
+      <div className={cn('group flex flex-col items-end gap-1', animate && 'anim-rise')}>
         <div className="bubble-user max-w-[85%] rounded-2xl rounded-br-sm px-4 py-2.5 text-sm leading-relaxed [overflow-wrap:anywhere] sm:max-w-[75%] shadow-sm">
           <RawText text={message.raw ?? message.content} />
         </div>
@@ -144,7 +146,7 @@ export function MessageBubble({
   // Handle Image Message
   if (message.type === 'image' && message.image) {
     return (
-      <div className="group anim-rise flex items-start gap-3">
+      <div className={cn('group flex items-start gap-3', animate && 'anim-rise')}>
         <Avatar
           name={character?.name ?? 'Eva'}
           avatar={character?.avatar}
@@ -231,7 +233,7 @@ export function MessageBubble({
   const isDocument = bubbleStyle === 'document'
 
   return (
-    <div className="group anim-rise flex items-start gap-3">
+    <div className={cn('group flex items-start gap-3', animate && 'anim-rise')}>
       <Avatar
         name={character?.name ?? 'AI'}
         avatar={character?.avatar}

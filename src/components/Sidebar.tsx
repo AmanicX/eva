@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 import {
   Plus,
   Search,
@@ -17,6 +18,7 @@ import {
 import { useStore } from '@/store/useStore'
 import { THEMES } from '@/data/themes'
 import { providerNeedsKey } from '@/lib/groq'
+import { dropdownVariants, transitionFast } from '@/lib/motion'
 import { Avatar } from './Avatar'
 import { ThemeSwitcher } from './ThemeSwitcher'
 import { cn, timeAgo } from '@/lib/utils'
@@ -88,16 +90,22 @@ export function Sidebar() {
 
   return (
     <>
-      {sidebarOpen && (
-        <button
-          className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm lg:hidden"
-          onClick={() => setUI({ sidebarOpen: false })}
-          aria-label="Close sidebar"
-        />
-      )}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="fixed inset-0 z-30 bg-black/65 sm:bg-black/60 sm:backdrop-blur-xs lg:hidden"
+            onClick={() => setUI({ sidebarOpen: false })}
+            aria-label="Close sidebar"
+          />
+        )}
+      </AnimatePresence>
       <aside
         className={cn(
-          'safe-left fixed inset-y-0 left-0 z-40 flex w-[86%] max-w-xs flex-col border-r border-border/70 material-sidebar transition-transform duration-250 lg:static lg:z-auto lg:w-72 lg:translate-x-0',
+          'safe-left fixed inset-y-0 left-0 z-40 flex w-[86%] max-w-xs flex-col border-r border-border/70 material-sidebar transition-transform duration-250 ease-[cubic-bezier(0.32,0.72,0,1)] lg:static lg:z-auto lg:w-72 lg:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >
@@ -155,38 +163,47 @@ export function Sidebar() {
               >
                 <Globe2 size={15} />
               </button>
-              {worldPicker && (
-                <>
-                  <div className="fixed inset-0 z-20" onClick={() => setWorldPicker(false)} />
-                  <div className="panel anim-pop absolute left-0 z-30 mt-1.5 w-60 rounded-xl p-1.5 shadow-2xl">
-                    <div className="px-2.5 py-1.5 text-2xs font-semibold tracking-wide text-faint uppercase">
-                      Your worlds
-                    </div>
-                    {worlds.length === 0 && (
-                      <p className="px-2.5 py-2 text-xs text-faint">No worlds created yet.</p>
-                    )}
-                    {worlds.map((w) => (
-                      <button
-                        key={w.id}
-                        onClick={() => {
-                          setActiveWorld(w.id)
-                          setWorldPicker(false)
-                        }}
-                        className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs hover:bg-surface-2 transition"
-                      >
-                        <span
-                          className="size-2 rounded-full shrink-0"
-                          style={{ background: w.color }}
-                        />
-                        <span className="truncate">{w.name}</span>
-                        {w.id === activeWorldId && (
-                          <Check size={14} className="ml-auto text-accent shrink-0" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
+              <AnimatePresence>
+                {worldPicker && (
+                  <>
+                    <div className="fixed inset-0 z-20" onClick={() => setWorldPicker(false)} />
+                    <motion.div
+                      variants={dropdownVariants}
+                      initial="initial"
+                      animate="animate"
+                      exit="exit"
+                      transition={transitionFast}
+                      className="panel absolute left-0 z-30 mt-1.5 w-60 origin-top-left rounded-xl p-1.5 shadow-2xl"
+                    >
+                      <div className="px-2.5 py-1.5 text-2xs font-semibold tracking-wide text-faint uppercase">
+                        Your worlds
+                      </div>
+                      {worlds.length === 0 && (
+                        <p className="px-2.5 py-2 text-xs text-faint">No worlds created yet.</p>
+                      )}
+                      {worlds.map((w) => (
+                        <button
+                          key={w.id}
+                          onClick={() => {
+                            setActiveWorld(w.id)
+                            setWorldPicker(false)
+                          }}
+                          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs hover:bg-surface-2 transition"
+                        >
+                          <span
+                            className="size-2 rounded-full shrink-0"
+                            style={{ background: w.color }}
+                          />
+                          <span className="truncate">{w.name}</span>
+                          {w.id === activeWorldId && (
+                            <Check size={14} className="ml-auto text-accent shrink-0" />
+                          )}
+                        </button>
+                      ))}
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
             </div>
           )}
         </div>
@@ -262,7 +279,7 @@ export function Sidebar() {
                 key={c.id}
                 onClick={() => setActiveConversation(c.id)}
                 className={cn(
-                  'group relative flex cursor-pointer items-center gap-2.5 rounded-xl border px-2.5 py-2 transition',
+                  'group relative flex cursor-pointer items-center gap-2.5 rounded-xl border px-2.5 py-2 transition active:scale-[0.99]',
                   active
                     ? 'border-accent/40 bg-accent/10 text-fg'
                     : 'border-transparent hover:bg-surface text-muted hover:text-fg',

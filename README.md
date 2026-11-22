@@ -82,7 +82,9 @@ Download release assets from [GitHub Releases](https://github.com/AmanicX/eva/re
 - Download **`Eva-Setup-2.0.0.exe`** from [Releases](https://github.com/AmanicX/eva/releases) and follow the installer prompts.
 
 ### Android
-- Download **`Eva-android.apk`** from [Releases](https://github.com/AmanicX/eva/releases). Supports Android 8.0 up to **Android 16** (API Level 36).
+- Download **`Eva-android.apk`** from [Releases](https://github.com/AmanicX/eva/releases). Version 2.2.3 requires **Android 9 or newer**, including Android 16, and keeps the original EVA application ID with signing-key rotation for in-place updates.
+- Development APKs are a separate **Eva Testing** app and are not production updates.
+- If an update says **App not installed**, do not delete your existing chats: see [Android installation and signing](docs/ANDROID_INSTALLATION.md).
 
 ### Web App (PWA)
 - Eva is installable as a Progressive Web App (PWA) directly from any modern browser with full offline caching.

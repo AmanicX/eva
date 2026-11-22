@@ -1,6 +1,9 @@
 import { MessageSquare, Sparkles, Globe2 } from 'lucide-react'
+import { motion } from 'motion/react'
 import { useStore } from '@/store/useStore'
 import { THEMES, THEME_ORDER } from '@/data/themes'
+import { springSnappy } from '@/lib/motion'
+import { cn } from '@/lib/utils'
 import type { ThemeId } from '@/types'
 
 const THEME_ICONS: Record<ThemeId, React.ReactNode> = {
@@ -17,7 +20,7 @@ export function ThemeSwitcher() {
     <div
       role="tablist"
       aria-label="Application Mode"
-      className="seg grid w-full grid-cols-3 select-none"
+      className="seg relative grid w-full grid-cols-3 select-none"
     >
       {THEME_ORDER.map((id) => {
         const t = THEMES[id]
@@ -29,12 +32,23 @@ export function ThemeSwitcher() {
             aria-selected={active}
             data-active={active}
             onClick={() => setTheme(id)}
-            className="flex items-center justify-center gap-1.5 transition-all duration-200"
+            className={cn(
+              'relative z-10 flex items-center justify-center gap-1.5 py-1.5 px-2 text-xs font-medium transition-colors !bg-transparent !shadow-none',
+              active ? 'text-fg font-semibold' : 'text-muted hover:text-fg',
+            )}
           >
+            {active && (
+              <motion.div
+                layoutId="activeThemePill"
+                className="absolute inset-0 -z-10 rounded-[calc(var(--radius-lg)-3px)] bg-surface shadow-xs border border-border/60 pointer-events-none"
+                transition={springSnappy}
+              />
+            )}
             <span
-              className={`transition-colors duration-200 ${
-                active ? 'text-accent scale-105' : 'text-faint'
-              }`}
+              className={cn(
+                'transition-colors duration-150',
+                active ? 'text-accent scale-105' : 'text-faint',
+              )}
             >
               {THEME_ICONS[id]}
             </span>

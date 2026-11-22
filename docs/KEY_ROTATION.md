@@ -5,7 +5,7 @@
 The initial repository contained a committed keystore (`android/nexus-release.keystore`) and hardcoded fallback passwords in workflow and build configurations. In accordance with security best practices:
 - **Status:** The old signing key is treated as **permanently compromised**.
 - **Important Security Notice:** Deleting the key and passwords from the current files does **not** revoke the certificate nor remove it from Git history. Anyone with clone access to past commits can extract the private key.
-- **Remediation in Code:** All embedded base64 keystores and password fallbacks have been eliminated from `release.yml`, `ci.yml`, and `build.gradle`. Release signing now strictly fails if required repository secrets are missing.
+- **Remediation in Code:** All embedded base64 keystores and password fallbacks have been eliminated from `release.yml`, `ci.yml`, and `build.gradle`. Production release signing strictly fails if required secrets are missing. Only `AmanicX/nexus-testing` permits an entirely unconfigured signing setup to produce a separately identified `Eva-android-testing.apk` (`com.nexus.chatstudio.testing`), never an update to production EVA.
 - **Application ID:** Preserved as `com.nexus.chatstudio` to maintain application identity and ecosystem compatibility.
 
 ---
@@ -85,16 +85,32 @@ Android 9 (API level 28) and higher support **APK Signature Scheme v3**, which p
 
 For users running legacy Android or upgrading without signature lineage:
 1. Open the existing Eva / Nexus app on Android.
-2. Go to **Settings → Cloud Backup & Sync** and connect a Google or GitHub account (or go to **Settings → Data Management** and export a local backup JSON).
-3. Confirm the backup is synced or saved safely.
+2. Export a local backup JSON using the app's data-management settings. Cloud sync has been removed.
+3. Confirm the backup is saved safely outside the app before uninstalling.
 4. Uninstall the older APK.
 5. Install the new release `Eva-android.apk`.
-6. Open **Settings → Cloud Backup & Sync**, connect the account, and tap **Restore from cloud** (or import the local backup JSON).
-7. All characters, conversations, messages, worlds, and preferences are seamlessly restored.
+6. Import the saved local backup JSON using the app's data-management settings.
+7. Check that your characters, conversations, messages, worlds, and preferences were restored.
 
 ---
 
 ## 5. Build Environment Enforcement
+
+### Production 2.2.3 migration
+
+- The owner approved new production signing secrets and Android 9+ as the new
+  minimum. The original application ID is unchanged.
+- New certificate SHA-256:
+  `316b81f69d8ba5114b5205d5f3ab8939e8279b6d44c1717e7674cb619082e895`.
+- `scripts/sign-android-release.sh` uses the old key **only** to create a
+  proof-of-rotation lineage during an explicitly dispatched migration build.
+  The published APK is v3-signed only with the new key.
+- After the migration succeeds, preserve the public lineage in
+  `ANDROID_SIGNING_LINEAGE_BASE64` and remove both temporary
+  `ANDROID_LEGACY_KEYSTORE_*` secrets. Tagged releases require the saved lineage.
+- `scripts/smoke-android-upgrade.sh` installs the checksum-verified original
+  2.2.2 APK and runs `adb install -r` with 2.2.3 on Android 16, checking the app
+  UID, version, and successful launch. It never uninstalls the original app.
 
 In `android/app/build.gradle`:
 - `signingConfigs.debug` uses standard debug keys for local development.

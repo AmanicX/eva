@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 import { ArrowUp, HelpCircle, Sparkles, Square, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -117,31 +118,43 @@ export function Composer({
               className="scroll-thin max-h-52 flex-1 resize-none bg-transparent py-2 text-sm leading-relaxed text-fg outline-none placeholder:text-faint"
             />
           </div>
-          {streaming ? (
-            <button
-              onClick={onStop}
-              className="btn btn-accent size-10 shrink-0 rounded-xl p-0 shadow-md transition active:scale-95"
-              title="Stop generating"
-              aria-label="Stop generation"
-            >
-              <Square size={14} fill="currentColor" />
-            </button>
-          ) : (
-            <button
-              onClick={onSend}
-              disabled={disabled || !value.trim()}
-              className={cn(
-                'btn size-10 shrink-0 rounded-xl p-0 transition active:scale-95',
-                value.trim()
-                  ? 'btn-accent shadow-md'
-                  : 'bg-surface-2 text-faint border-border opacity-50 cursor-not-allowed',
-              )}
-              title="Send"
-              aria-label="Send message"
-            >
-              <ArrowUp size={18} strokeWidth={2.4} />
-            </button>
-          )}
+          <AnimatePresence mode="wait" initial={false}>
+            {streaming ? (
+              <motion.button
+                key="stop"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.12 }}
+                onClick={onStop}
+                className="btn btn-accent size-10 shrink-0 rounded-xl p-0 shadow-md transition active:scale-95"
+                title="Stop generating"
+                aria-label="Stop generation"
+              >
+                <Square size={14} fill="currentColor" />
+              </motion.button>
+            ) : (
+              <motion.button
+                key="send"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.12 }}
+                onClick={onSend}
+                disabled={disabled || !value.trim()}
+                className={cn(
+                  'btn size-10 shrink-0 rounded-xl p-0 transition active:scale-95',
+                  value.trim()
+                    ? 'btn-accent shadow-md'
+                    : 'bg-surface-2 text-faint border-border opacity-50 cursor-not-allowed',
+                )}
+                title="Send"
+                aria-label="Send message"
+              >
+                <ArrowUp size={18} strokeWidth={2.4} />
+              </motion.button>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Footer shortcuts */}
