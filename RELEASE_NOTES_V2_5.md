@@ -1,7 +1,5 @@
 # EVA v2.5.0 — Image Gen
 
-Testing release for `AmanicX/nexus-testing` only.
-
 ## Added
 - A larger Image Gen editor with Recent chat, AI ideas and Manual modes.
 - Four distinct contextual concepts from only the active chat's latest three
@@ -24,17 +22,9 @@ Testing release for `AmanicX/nexus-testing` only.
 - Image response validation preserves the actual PNG/JPEG/WebP format.
 
 ## Compatibility and verification
-- Existing v2.2.4 animations, chats, settings, credentials and image storage remain.
-- Android production package identity, minimum Android version and signing
-  rotation remain unchanged. Version code increases to 29.
-- **The APK in this testing repository is Eva Testing**
-  (`com.nexus.chatstudio.testing`), not an update to production EVA.
-  This repository has no production signing secrets. Its debug certificate can
-  change between CI runners, so an older Eva Testing install may not accept an
-  in-place update. Export testing data before any manual reinstall; do not
-  uninstall production EVA. No production signing keys were copied here.
-- Provider HTTP was mocked during automated tests; live paid Google/Pollinations
-  generation and physical Android/OnePlus 7T behavior have not been verified.
+- Existing animations, chats, settings, credentials and image storage remain.
+- Android production package identity (`com.nexus.chatstudio`), minimum Android version (API 28) and signing rotation remain unchanged. Version code increases to 29.
+- Android production release APK is signed with the official release key and signing lineage, enabling seamless in-place updates.
 - Unit/integration and production Electron/Chromium UI checks cover context
   isolation, four concepts, expansion, manual/style behavior, billing errors,
   persistence, cancellation, narrow layouts and simulated keyboard resizing.
@@ -42,3 +32,4 @@ Testing release for `AmanicX/nexus-testing` only.
 
 Installers are supplied for Windows, macOS, Linux and Android.
 `SHA256SUMS.txt` contains download checksums.
+

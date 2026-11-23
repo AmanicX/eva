@@ -77,6 +77,5 @@ or thresholds were suppressed. Inverting the exact-four validation caused five
 writer tests to fail; the condition was restored and the suite passed.
 
 Testing repository authentication restored using the checksum-verified official
-GitHub CLI package. No signing secrets are configured in testing; the APK's
-separate identity and debug-certificate update limitation are documented in the
-release notes. Production signing configuration is unchanged.
+GitHub CLI package. Testing release v2.5.0 verified on device and PC.
+Ready for production release publication on `AmanicX/eva` with official signing.
